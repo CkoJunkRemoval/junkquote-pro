@@ -63,7 +63,9 @@ export default function Walkthrough() {
 
           <PhotoPanel />
 
-          <ItemGrid areaName={currentArea.name} />
+          <ItemGrid
+            jobSite={currentArea}
+          />
 
           <NotesPanel />
 
@@ -72,7 +74,7 @@ export default function Walkthrough() {
         <div>
 
           <AreaSummary
-            areaName={currentArea.name}
+            jobSite={currentArea}
           />
 
         </div>
