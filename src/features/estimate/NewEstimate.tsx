@@ -2,34 +2,113 @@
 
 import { useState } from "react";
 
-import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
 import StepHeader from "@/components/estimate/StepHeader";
+import EstimateSummary from "@/components/estimate/EstimateSummary";
 
 import {
   EstimateProvider,
   useEstimate,
 } from "./EstimateContext";
 
+import CustomerScreen from "./steps/CustomerScreen";
+import PropertyScreen from "./steps/PropertyScreen";
+import JobSiteScreen from "./steps/JobSiteScreen";
+import WalkthroughScreen from "./steps/WalkthroughScreen";
+
 function EstimateWizard() {
   const [step, setStep] = useState(1);
 
-  const { estimate, setEstimate } = useEstimate();
+  const { estimate } = useEstimate();
 
   function nextStep() {
+    switch (step) {
+      case 1:
+        if (!estimate.customerType) return;
+        break;
+
+      case 2:
+        if (!estimate.property.type) return;
+        if (!estimate.property.address.trim()) return;
+        break;
+
+      case 3:
+        if (estimate.jobSites.length === 0) return;
+        break;
+    }
+
     if (step < 7) {
-      setStep(step + 1);
+      setStep((current) => current + 1);
     }
   }
 
   function previousStep() {
     if (step > 1) {
-      setStep(step - 1);
+      setStep((current) => current - 1);
+    }
+  }
+
+  function renderStep() {
+    switch (step) {
+      case 1:
+        return <CustomerScreen />;
+
+      case 2:
+        return <PropertyScreen />;
+
+      case 3:
+        return <JobSiteScreen />;
+
+      case 4:
+        return <WalkthroughScreen />;
+
+      case 5:
+        return (
+          <div className="py-12">
+            <h2 className="text-3xl font-bold">
+              Pricing Engine
+            </h2>
+
+            <p className="mt-3 text-slate-500">
+              Automatic pricing will appear here.
+            </p>
+          </div>
+        );
+
+      case 6:
+        return (
+          <div className="py-12">
+            <h2 className="text-3xl font-bold">
+              Review Estimate
+            </h2>
+
+            <p className="mt-3 text-slate-500">
+              Review everything before sending it to the customer.
+            </p>
+          </div>
+        );
+
+      case 7:
+        return (
+          <div className="py-12">
+            <h2 className="text-3xl font-bold">
+              Customer Approval
+            </h2>
+
+            <p className="mt-3 text-slate-500">
+              Signature and approval coming next.
+            </p>
+          </div>
+        );
+
+      default:
+        return null;
     }
   }
 
   return (
-    <div className="max-w-4xl mx-auto py-12">
+    <div className="mx-auto max-w-7xl px-6 py-12">
       <StepHeader
         step={step}
         totalSteps={7}
@@ -37,89 +116,28 @@ function EstimateWizard() {
         description="Let's build an estimate."
       />
 
-      <Card>
-        {step === 1 && (
-          <div className="grid grid-cols-2 gap-6">
-            <button
-              onClick={() =>
-                setEstimate({
-                  ...estimate,
-                  customerType: "existing",
-                })
-              }
-              className={`rounded-2xl border p-8 text-left transition ${
-                estimate.customerType === "existing"
-                  ? "border-blue-600 bg-blue-50"
-                  : "border-slate-300 hover:border-blue-500"
-              }`}
-            >
-              <h2 className="text-2xl font-bold">
-                Existing Customer
-              </h2>
+      <div className="grid grid-cols-1 gap-8 xl:grid-cols-3">
+        <div className="xl:col-span-2">
+          <Card>
+            {renderStep()}
 
-              <p className="mt-3 text-slate-500">
-                Search your customer database.
-              </p>
-            </button>
+            <div className="mt-10 flex justify-between">
+              <Button
+                onClick={previousStep}
+                disabled={step === 1}
+              >
+                Back
+              </Button>
 
-            <button
-              onClick={() =>
-                setEstimate({
-                  ...estimate,
-                  customerType: "new",
-                })
-              }
-              className={`rounded-2xl border p-8 text-left transition ${
-                estimate.customerType === "new"
-                  ? "border-blue-600 bg-blue-50"
-                  : "border-slate-300 hover:border-blue-500"
-              }`}
-            >
-              <h2 className="text-2xl font-bold">
-                New Customer
-              </h2>
-
-              <p className="mt-3 text-slate-500">
-                Create a new customer.
-              </p>
-            </button>
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className="py-10">
-            <h2 className="text-3xl font-bold">
-              Property Information
-            </h2>
-
-            <p className="text-slate-500 mt-3">
-              This step will collect the property details.
-            </p>
-
-            <div className="mt-8 rounded-xl bg-slate-100 p-6">
-              <p>
-                Customer Type:
-                <strong className="ml-2">
-                  {estimate.customerType}
-                </strong>
-              </p>
+              <Button onClick={nextStep}>
+                {step === 7 ? "Finish" : "Continue"}
+              </Button>
             </div>
-          </div>
-        )}
-
-        <div className="flex justify-between mt-10">
-          <Button onClick={previousStep}>
-            Back
-          </Button>
-
-          <Button
-            onClick={nextStep}
-            disabled={!estimate.customerType}
-          >
-            Continue
-          </Button>
+          </Card>
         </div>
-      </Card>
+
+        <EstimateSummary />
+      </div>
     </div>
   );
 }

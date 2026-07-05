@@ -1,7 +1,18 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
-import { Estimate } from "./types";
+import {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+} from "react";
+
+import {
+  Estimate,
+  Customer,
+  Property,
+  JobSite,
+} from "./types";
 
 const initialEstimate: Estimate = {
   customerType: null,
@@ -25,8 +36,6 @@ const initialEstimate: Estimate = {
 
   jobSites: [],
 
-  items: [],
-
   pricing: {
     subtotal: 0,
     labor: 0,
@@ -38,10 +47,39 @@ const initialEstimate: Estimate = {
   approved: false,
 };
 
-type EstimateContextType = {
+interface EstimateContextType {
   estimate: Estimate;
-  setEstimate: React.Dispatch<React.SetStateAction<Estimate>>;
-};
+
+  // Temporary compatibility for existing screens
+  setEstimate: React.Dispatch<
+    React.SetStateAction<Estimate>
+  >;
+
+  // New API
+  setCustomerType: (
+    customerType: Estimate["customerType"]
+  ) => void;
+
+  updateCustomer: (
+    customer: Partial<Customer>
+  ) => void;
+
+  updateProperty: (
+    property: Partial<Property>
+  ) => void;
+
+  setJobSites: (
+    jobSites: JobSite[]
+  ) => void;
+
+  updatePricing: (
+    pricing: Estimate["pricing"]
+  ) => void;
+
+  setApproved: (
+    approved: boolean
+  ) => void;
+}
 
 const EstimateContext =
   createContext<EstimateContextType | null>(null);
@@ -49,14 +87,84 @@ const EstimateContext =
 export function EstimateProvider({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   const [estimate, setEstimate] =
-    useState(initialEstimate);
+    useState<Estimate>(initialEstimate);
+
+  function setCustomerType(
+    customerType: Estimate["customerType"]
+  ) {
+    setEstimate((prev) => ({
+      ...prev,
+      customerType,
+    }));
+  }
+
+  function updateCustomer(
+    customer: Partial<Customer>
+  ) {
+    setEstimate((prev) => ({
+      ...prev,
+      customer: {
+        ...prev.customer,
+        ...customer,
+      },
+    }));
+  }
+
+  function updateProperty(
+    property: Partial<Property>
+  ) {
+    setEstimate((prev) => ({
+      ...prev,
+      property: {
+        ...prev.property,
+        ...property,
+      },
+    }));
+  }
+
+  function setJobSites(
+    jobSites: JobSite[]
+  ) {
+    setEstimate((prev) => ({
+      ...prev,
+      jobSites,
+    }));
+  }
+
+  function updatePricing(
+    pricing: Estimate["pricing"]
+  ) {
+    setEstimate((prev) => ({
+      ...prev,
+      pricing,
+    }));
+  }
+
+  function setApproved(
+    approved: boolean
+  ) {
+    setEstimate((prev) => ({
+      ...prev,
+      approved,
+    }));
+  }
 
   return (
     <EstimateContext.Provider
-      value={{ estimate, setEstimate }}
+      value={{
+        estimate,
+        setEstimate,
+
+        setCustomerType,
+        updateCustomer,
+        updateProperty,
+        setJobSites,
+        updatePricing,
+        setApproved,
+      }}
     >
       {children}
     </EstimateContext.Provider>
