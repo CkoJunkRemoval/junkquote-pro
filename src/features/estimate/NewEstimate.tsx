@@ -12,10 +12,14 @@ import {
   useEstimate,
 } from "./EstimateContext";
 
-import CustomerScreen from "./steps/CustomerScreen";
-import PropertyScreen from "./steps/PropertyScreen";
-import JobSiteScreen from "./steps/JobSiteScreen";
-import WalkthroughScreen from "./steps/WalkthroughScreen";
+import CustomerStep from "./steps/CustomerScreen";
+import PropertyStep from "./steps/PropertyScreen";
+import JobSiteStep from "./steps/JobSiteScreen";
+import ItemsStep from "./steps/ItemsScreen";
+
+import ReviewEstimate from "./review/ReviewEstimate";
+import CustomerApproval from "./approval/CustomerApproval";
+import EstimateComplete from "./complete/EstimateComplete";
 
 function EstimateWizard() {
   const [step, setStep] = useState(1);
@@ -38,7 +42,7 @@ function EstimateWizard() {
         break;
     }
 
-    if (step < 7) {
+    if (step < 8) {
       setStep((current) => current + 1);
     }
   }
@@ -52,16 +56,16 @@ function EstimateWizard() {
   function renderStep() {
     switch (step) {
       case 1:
-        return <CustomerScreen />;
+        return <CustomerStep />;
 
       case 2:
-        return <PropertyScreen />;
+        return <PropertyStep />;
 
       case 3:
-        return <JobSiteScreen />;
+        return <JobSiteStep />;
 
       case 4:
-        return <WalkthroughScreen />;
+        return <ItemsStep />;
 
       case 5:
         return (
@@ -71,36 +75,19 @@ function EstimateWizard() {
             </h2>
 
             <p className="mt-3 text-slate-500">
-              Automatic pricing will appear here.
+              Automatic pricing is now being calculated behind the scenes.
             </p>
           </div>
         );
 
       case 6:
-        return (
-          <div className="py-12">
-            <h2 className="text-3xl font-bold">
-              Review Estimate
-            </h2>
-
-            <p className="mt-3 text-slate-500">
-              Review everything before sending it to the customer.
-            </p>
-          </div>
-        );
+        return <ReviewEstimate />;
 
       case 7:
-        return (
-          <div className="py-12">
-            <h2 className="text-3xl font-bold">
-              Customer Approval
-            </h2>
+        return <CustomerApproval />;
 
-            <p className="mt-3 text-slate-500">
-              Signature and approval coming next.
-            </p>
-          </div>
-        );
+      case 8:
+        return <EstimateComplete />;
 
       default:
         return null;
@@ -108,20 +95,24 @@ function EstimateWizard() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-12">
+    <div className="max-w-7xl mx-auto py-12 px-6">
       <StepHeader
         step={step}
-        totalSteps={7}
+        totalSteps={8}
         title="New Estimate"
         description="Let's build an estimate."
       />
 
-      <div className="grid grid-cols-1 gap-8 xl:grid-cols-3">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+
         <div className="xl:col-span-2">
+
           <Card>
+
             {renderStep()}
 
             <div className="mt-10 flex justify-between">
+
               <Button
                 onClick={previousStep}
                 disabled={step === 1}
@@ -130,13 +121,21 @@ function EstimateWizard() {
               </Button>
 
               <Button onClick={nextStep}>
-                {step === 7 ? "Finish" : "Continue"}
+                {step === 8
+                  ? "Done"
+                  : step === 7
+                  ? "Finish"
+                  : "Continue"}
               </Button>
+
             </div>
+
           </Card>
+
         </div>
 
         <EstimateSummary />
+
       </div>
     </div>
   );
