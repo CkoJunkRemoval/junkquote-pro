@@ -18,8 +18,6 @@ export interface EstimateItem {
 
   itemId: string;
 
-  quantity: number;
-
   name: string;
 
   category: string;
