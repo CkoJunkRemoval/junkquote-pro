@@ -1,0 +1,127 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  OWNER
+  MANAGER
+  ESTIMATOR
+  CREW_LEADER
+  CREW_MEMBER
+  OFFICE
+}
+
+model Company {
+  id        String   @id @default(uuid())
+  name      String
+  phone     String?
+  email     String?
+  website   String?
+  active    Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  settings  CompanySettings?
+  users     User[]
+  customers Customer[]
+
+  @@map("companies")
+}
+
+model CompanySettings {
+  id            String   @id @default(uuid())
+
+  companyId     String   @unique
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  timezone      String   @default("America/New_York")
+  currency      String   @default("USD")
+  businessHours String?
+  taxRate       Float    @default(0)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("company_settings")
+}
+
+model User {
+  id           String   @id @default(uuid())
+
+  companyId    String
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  firstName    String
+  lastName     String
+
+  email        String   @unique
+  passwordHash String
+
+  role         UserRole
+
+  active       Boolean  @default(true)
+  lastLogin    DateTime?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([companyId])
+
+  @@map("users")
+}
+
+model Customer {
+  id         String   @id @default(uuid())
+
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  firstName  String
+  lastName   String
+  phone      String
+  email      String?
+  notes      String?
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  properties Property[]
+
+  @@index([companyId])
+  @@index([lastName])
+
+  @@map("customers")
+}
+
+model Property {
+  id             String   @id @default(uuid())
+
+  customerId     String
+  customer       Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  nickname       String?
+
+  address        String
+  city           String
+  state          String
+  zip            String
+
+  gateCode       String?
+  accessNotes    String?
+  parkingNotes   String?
+  dangerousPets  String?
+  hoaNotes       String?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([customerId])
+
+  @@map("properties")
+}

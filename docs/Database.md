@@ -1,26 +1,74 @@
 # JunkQuote Pro Database Blueprint
 
-Version 1.0
+Version 2.0
 
 ---
 
 # Philosophy
 
-The database is the backbone of JunkQuote Pro.
+The database is the foundation of JunkQuote Pro.
 
-Everything should connect naturally.
+Every piece of information has one owner.
 
-No duplicated information.
+Every relationship has one source of truth.
 
-No unnecessary complexity.
+No duplicated data.
 
-Every piece of information should have one source of truth.
+No orphaned records.
+
+Every record belongs to a company.
+
+The database is designed for a multi-tenant SaaS platform capable of supporting thousands of independent junk removal businesses.
 
 ---
 
-# Company
+# Platform
 
-Stores company-wide settings.
+The platform contains many companies.
+
+Each company operates inside its own isolated workspace.
+
+No company can access another company's data.
+
+Platform
+
+↓
+
+Companies
+
+↓
+
+Users
+
+↓
+
+Customers
+
+↓
+
+Properties
+
+↓
+
+Estimates
+
+↓
+
+Jobs
+
+↓
+
+Invoices
+
+↓
+
+Payments
+
+---
+
+# Companies
+
+Represents a junk removal business.
 
 Fields
 
@@ -33,6 +81,10 @@ Fields
 - Business Hours
 - Time Zone
 - Subscription Plan
+- Tax Rate
+- Currency
+- Created Date
+- Active
 
 Relationships
 
@@ -40,13 +92,23 @@ Company
 
 ├── Users
 
+├── Employees
+
 ├── Customers
 
-├── Pricing Rules
+├── Estimates
 
 ├── Jobs
 
+├── Invoices
+
+├── Pricing Rules
+
+├── Trucks
+
 ├── Reports
+
+├── Activities
 
 └── Settings
 
@@ -54,16 +116,16 @@ Company
 
 # Users
 
-Represents employees.
+Represents login accounts.
 
 Fields
 
 - Name
 - Email
-- Password
+- Password Hash
 - Role
-- Active
 - Last Login
+- Active
 
 Roles
 
@@ -73,9 +135,32 @@ Manager
 
 Estimator
 
-Crew
+Crew Leader
+
+Crew Member
 
 Office
+
+Future versions support custom permissions.
+
+---
+
+# Employees
+
+Represents employees.
+
+Fields
+
+- First Name
+- Last Name
+- Phone
+- Email
+- Hire Date
+- Hourly Rate
+- Certifications
+- Driver License
+- Assigned Truck
+- Active
 
 ---
 
@@ -89,6 +174,9 @@ Fields
 - Last Name
 - Phone
 - Email
+- Preferred Contact
+- Notes
+- Status
 
 Relationships
 
@@ -100,7 +188,11 @@ Properties
 
 ↓
 
-Walkthroughs
+Estimates
+
+↓
+
+Jobs
 
 ↓
 
@@ -110,24 +202,20 @@ Invoices
 
 # Properties
 
-Every physical location.
+Represents every service location.
 
 Fields
 
+- Nickname
 - Address
 - City
 - State
 - ZIP
-
 - Gate Code
-
 - Access Notes
-
-- Preferred Parking
-
-- Dangerous Pets
-
+- Parking Notes
 - HOA Rules
+- Dangerous Pets
 
 Relationships
 
@@ -135,7 +223,7 @@ Property
 
 ↓
 
-Walkthrough History
+Estimates
 
 ↓
 
@@ -143,17 +231,42 @@ Jobs
 
 ↓
 
-Photos
+Attachments
 
 ---
 
-# Walkthroughs
+# Estimates
 
-One walkthrough equals one estimate.
+Represents customer quotes.
+
+Status
+
+Draft
+
+Ready
+
+Sent
+
+Viewed
+
+Pending Signature
+
+Approved
+
+Scheduled
+
+Completed
+
+Invoiced
+
+Paid
+
+Archived
 
 Fields
 
-- Date
+- Estimate Number
+- Created Date
 - Estimator
 - Status
 - Total
@@ -161,35 +274,41 @@ Fields
 
 Contains
 
+Customer
+
+Property
+
 Job Sites
+
+Estimate Items
 
 Pricing
 
-Photos
-
-Customer Approval
-
 Timeline
+
+Attachments
+
+Approval Information
 
 ---
 
 # Job Sites
 
-Garage
+Examples
 
-Attic
+Garage
 
 Basement
 
+Bedroom
+
 Kitchen
 
-Bedroom
+Attic
 
 Office
 
 Warehouse
-
-OR
 
 Custom Area
 
@@ -201,8 +320,6 @@ Photos
 
 Notes
 
-Completion Status
-
 Subtotal
 
 ---
@@ -211,55 +328,82 @@ Subtotal
 
 Fields
 
-Item
-
-Quantity
-
-Photos
-
-Notes
-
-Price
-
-Overrides
+- Item
+- Quantity
+- Volume
+- Labor
+- Disposal
+- Price Override
+- Photos
+- Notes
 
 ---
 
 # Jobs
 
-Scheduled work.
+Created only after an estimate is approved.
 
 Fields
 
-Crew
+- Job Number
+- Crew
+- Truck
+- Schedule
+- Status
+- Completion Photos
+- Completion Notes
+- Completion Signature
 
-Truck
+Relationships
 
-Date
+Job
 
-Time
+↓
 
-Status
+Invoice
 
-Completion Photos
+↓
+
+Payment
 
 ---
 
 # Invoices
 
-Invoice Number
+Fields
 
-Due Date
+- Invoice Number
+- Issue Date
+- Due Date
+- Amount
+- Tax
+- Status
 
-Amount
+Statuses
+
+Draft
+
+Sent
 
 Paid
 
-Payment History
+Overdue
+
+Cancelled
 
 ---
 
 # Payments
+
+Fields
+
+- Method
+- Amount
+- Date
+- Transaction ID
+- Notes
+
+Methods
 
 Cash
 
@@ -267,33 +411,129 @@ Card
 
 Check
 
+ACH
+
 Online
-
-Amount
-
-Reference Number
 
 ---
 
-# Pricing
+# Pricing Rules
 
-Company Defaults
+Stores company pricing.
 
 Truck Pricing
 
-Item Pricing
+Labor Rates
 
-Labor
+Disposal Fees
 
-Stairs
+Fuel Surcharges
 
-Fuel
-
-Disposal
+Stair Charges
 
 Taxes
 
-Discounts
+Discount Rules
+
+Minimum Charges
+
+---
+
+# Trucks
+
+Fields
+
+- Truck Number
+- License Plate
+- VIN
+- Capacity
+- Mileage
+- Status
+- Assigned Crew
+
+---
+
+# Attachments
+
+Stores uploaded files.
+
+Photos
+
+Videos
+
+Signed Estimates
+
+Invoices
+
+Receipts
+
+Contracts
+
+Permits
+
+---
+
+# Timeline
+
+Every estimate records events.
+
+Estimate Created
+
+Estimate Updated
+
+Estimate Sent
+
+Estimate Viewed
+
+Estimate Approved
+
+Estimate Declined
+
+Job Scheduled
+
+Crew Assigned
+
+Job Completed
+
+Invoice Generated
+
+Invoice Paid
+
+---
+
+# Activities
+
+Every major action creates an activity.
+
+Customer Created
+
+Estimate Created
+
+Estimate Sent
+
+Customer Viewed Estimate
+
+Customer Signed Estimate
+
+Estimate Approved
+
+Job Scheduled
+
+Job Completed
+
+Invoice Paid
+
+Activities power:
+
+Dashboard
+
+Notifications
+
+Timeline
+
+Reports
+
+Audit Logs
 
 ---
 
@@ -301,58 +541,116 @@ Discounts
 
 Revenue
 
-Employees
-
-Customers
-
-Jobs
+Average Ticket
 
 Conversion Rate
 
-Average Ticket
+Jobs Completed
+
+Employee Performance
+
+Truck Utilization
+
+Marketing Sources
+
+Customer Retention
 
 ---
 
 # Notifications
 
+Estimate Viewed
+
 Estimate Approved
 
 Job Assigned
 
-Payment Received
+Job Reminder
 
-Invoice Overdue
+Invoice Paid
 
-Customer Follow-up
+Overdue Invoice
 
----
-
-# Support
-
-Tickets
-
-Chat
-
-AI Assistant
-
-Feature Requests
-
-Bug Reports
+Follow-up Reminder
 
 ---
 
-# Future
+# Company Settings
 
-AI
+Business Information
 
-CRM
+Branding
 
-Marketing
+Logo
 
-Fleet
+Business Hours
 
-Inventory
+Service Area
 
-Payroll
+Pricing Defaults
 
-Accounting
+Tax Rate
+
+Accepted Payments
+
+Terms & Conditions
+
+Email Templates
+
+SMS Templates
+
+---
+
+# Customer Portal
+
+Customers can
+
+View Estimates
+
+Approve Estimates
+
+Sign Estimates
+
+Download PDFs
+
+View Invoices
+
+Pay Online
+
+View Job History
+
+Message the Company
+
+---
+
+# Integrations
+
+PostgreSQL
+
+Prisma ORM
+
+Authentication
+
+Stripe
+
+Twilio
+
+Resend
+
+Google Calendar
+
+QuickBooks
+
+Cloud Storage
+
+GPS Routing
+
+---
+
+# Long-Term Vision
+
+JunkQuote Pro is not simply estimating software.
+
+It is a complete operating platform built specifically for junk removal companies.
+
+Every feature should reduce work, improve customer experience, and help companies complete more jobs with less effort.

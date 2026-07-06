@@ -14,6 +14,8 @@ import {
   JobSite,
 } from "./types";
 
+import { EstimateStatus } from "./status";
+
 const initialEstimate: Estimate = {
   customerType: null,
 
@@ -44,18 +46,18 @@ const initialEstimate: Estimate = {
     total: 0,
   },
 
-  approved: false,
+  status: EstimateStatus.Draft,
+
+  timeline: [],
 };
 
 interface EstimateContextType {
   estimate: Estimate;
 
-  // Temporary compatibility for existing screens
   setEstimate: React.Dispatch<
     React.SetStateAction<Estimate>
   >;
 
-  // New API
   setCustomerType: (
     customerType: Estimate["customerType"]
   ) => void;
@@ -76,8 +78,8 @@ interface EstimateContextType {
     pricing: Estimate["pricing"]
   ) => void;
 
-  setApproved: (
-    approved: boolean
+  setStatus: (
+    status: EstimateStatus
   ) => void;
 }
 
@@ -143,12 +145,12 @@ export function EstimateProvider({
     }));
   }
 
-  function setApproved(
-    approved: boolean
+  function setStatus(
+    status: EstimateStatus
   ) {
     setEstimate((prev) => ({
       ...prev,
-      approved,
+      status,
     }));
   }
 
@@ -156,14 +158,20 @@ export function EstimateProvider({
     <EstimateContext.Provider
       value={{
         estimate,
+
         setEstimate,
 
         setCustomerType,
+
         updateCustomer,
+
         updateProperty,
+
         setJobSites,
+
         updatePricing,
-        setApproved,
+
+        setStatus,
       }}
     >
       {children}

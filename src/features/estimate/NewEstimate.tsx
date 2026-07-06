@@ -18,8 +18,7 @@ import JobSiteStep from "./steps/JobSiteScreen";
 import ItemsStep from "./steps/ItemsScreen";
 
 import ReviewEstimate from "./review/ReviewEstimate";
-import CustomerApproval from "./approval/CustomerApproval";
-import EstimateComplete from "./complete/EstimateComplete";
+import EstimateReady from "./ready/EstimateReady";
 
 function EstimateWizard() {
   const [step, setStep] = useState(1);
@@ -30,6 +29,9 @@ function EstimateWizard() {
     switch (step) {
       case 1:
         if (!estimate.customerType) return;
+        if (!estimate.customer.firstName.trim()) return;
+        if (!estimate.customer.lastName.trim()) return;
+        if (!estimate.customer.phone.trim()) return;
         break;
 
       case 2:
@@ -42,7 +44,7 @@ function EstimateWizard() {
         break;
     }
 
-    if (step < 8) {
+    if (step < 6) {
       setStep((current) => current + 1);
     }
   }
@@ -68,44 +70,43 @@ function EstimateWizard() {
         return <ItemsStep />;
 
       case 5:
-        return (
-          <div className="py-12">
-            <h2 className="text-3xl font-bold">
-              Pricing Engine
-            </h2>
-
-            <p className="mt-3 text-slate-500">
-              Automatic pricing is now being calculated behind the scenes.
-            </p>
-          </div>
-        );
-
-      case 6:
         return <ReviewEstimate />;
 
-      case 7:
-        return <CustomerApproval />;
-
-      case 8:
-        return <EstimateComplete />;
+      case 6:
+        return <EstimateReady />;
 
       default:
         return null;
     }
   }
 
+  const showSidebar = step <= 4;
+
   return (
     <div className="max-w-7xl mx-auto py-12 px-6">
+
       <StepHeader
         step={step}
-        totalSteps={8}
+        totalSteps={6}
         title="New Estimate"
-        description="Let's build an estimate."
+        description="Create a professional estimate."
       />
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+      <div
+        className={`grid gap-8 ${
+          showSidebar
+            ? "grid-cols-1 xl:grid-cols-3"
+            : "grid-cols-1"
+        }`}
+      >
 
-        <div className="xl:col-span-2">
+        <div
+          className={
+            showSidebar
+              ? "xl:col-span-2"
+              : "w-full"
+          }
+        >
 
           <Card>
 
@@ -120,13 +121,11 @@ function EstimateWizard() {
                 Back
               </Button>
 
-              <Button onClick={nextStep}>
-                {step === 8
-                  ? "Done"
-                  : step === 7
-                  ? "Finish"
-                  : "Continue"}
-              </Button>
+              {step < 6 && (
+                <Button onClick={nextStep}>
+                  Continue
+                </Button>
+              )}
 
             </div>
 
@@ -134,9 +133,12 @@ function EstimateWizard() {
 
         </div>
 
-        <EstimateSummary />
+        {showSidebar && (
+          <EstimateSummary />
+        )}
 
       </div>
+
     </div>
   );
 }

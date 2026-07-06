@@ -1,3 +1,8 @@
+import {
+  EstimateStatus,
+  TimelineEvent,
+} from "./status";
+
 export type CustomerType = "new" | "existing";
 
 export type PropertyType =
@@ -18,11 +23,11 @@ export interface EstimateItem {
 
   itemId: string;
 
+  quantity: number;
+
   name: string;
 
   category: string;
-
-  quantity: number;
 
   notes: string;
 
@@ -100,5 +105,7 @@ export interface Estimate {
 
   pricing: PricingSummary;
 
-  approved: boolean;
+  status: EstimateStatus;
+
+  timeline: TimelineEvent[];
 }
