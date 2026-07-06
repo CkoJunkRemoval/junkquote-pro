@@ -21,8 +21,9 @@ export default function ItemGrid({
 
   const filteredItems = useMemo(() => {
     return ITEM_LIBRARY.filter((item) => {
-      const matchesArea =
-        item.commonAreas.includes(jobSite.name);
+      const matchesArea = item.commonAreas.includes(
+        jobSite.name
+      );
 
       const matchesSearch = item.name
         .toLowerCase()
@@ -32,22 +33,53 @@ export default function ItemGrid({
     });
   }, [jobSite.name, search]);
 
-  function isSelected(itemId: string) {
-    return jobSite.items.some(
+  function getEstimateItem(itemId: string) {
+    return jobSite.items.find(
       (item) => item.itemId === itemId
     );
   }
 
-  function toggleItem(itemId: string) {
-    const selected = isSelected(itemId);
+  function isSelected(itemId: string) {
+    return !!getEstimateItem(itemId);
+  }
 
+  function updateItemQuantity(
+    itemId: string,
+    change: number
+  ) {
     const updatedJobSites = estimate.jobSites.map(
       (site) => {
         if (site.id !== jobSite.id) {
           return site;
         }
 
-        if (selected) {
+        const existing = site.items.find(
+          (item) => item.itemId === itemId
+        );
+
+        if (!existing) {
+          if (change < 1) {
+            return site;
+          }
+
+          return {
+            ...site,
+            items: [
+              ...site.items,
+              {
+                id: crypto.randomUUID(),
+                itemId,
+                quantity: 1,
+                notes: "",
+              },
+            ],
+          };
+        }
+
+        const newQuantity =
+          existing.quantity + change;
+
+        if (newQuantity <= 0) {
           return {
             ...site,
             items: site.items.filter(
@@ -58,15 +90,14 @@ export default function ItemGrid({
 
         return {
           ...site,
-          items: [
-            ...site.items,
-            {
-              id: crypto.randomUUID(),
-              itemId,
-              quantity: 1,
-              notes: "",
-            },
-          ],
+          items: site.items.map((item) =>
+            item.itemId === itemId
+              ? {
+                  ...item,
+                  quantity: newQuantity,
+                }
+              : item
+          ),
         };
       }
     );
@@ -79,9 +110,7 @@ export default function ItemGrid({
 
   return (
     <div className="space-y-6">
-
       <div>
-
         <h2 className="text-2xl font-bold">
           Items
         </h2>
@@ -89,7 +118,6 @@ export default function ItemGrid({
         <p className="mt-1 text-slate-500">
           Select items found in this area.
         </p>
-
       </div>
 
       <input
@@ -103,33 +131,41 @@ export default function ItemGrid({
       />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-
         {filteredItems.length === 0 ? (
-
           <div className="rounded-xl border border-dashed p-6 text-slate-500">
             No matching items.
           </div>
-
         ) : (
+          filteredItems.map((item) => {
+            const estimateItem =
+              getEstimateItem(item.id);
 
-          filteredItems.map((item) => (
-
-            <ItemCard
-              key={item.id}
-              title={item.name}
-              category={item.category}
-              selected={isSelected(item.id)}
-              onClick={() =>
-                toggleItem(item.id)
-              }
-            />
-
-          ))
-
+            return (
+              <ItemCard
+                key={item.id}
+                title={item.name}
+                category={item.category}
+                selected={!!estimateItem}
+                quantity={
+                  estimateItem?.quantity ?? 1
+                }
+                onClick={() =>
+                  updateItemQuantity(
+                    item.id,
+                    estimateItem ? -1 : 1
+                  )
+                }
+                onIncrease={() =>
+                  updateItemQuantity(item.id, 1)
+                }
+                onDecrease={() =>
+                  updateItemQuantity(item.id, -1)
+                }
+              />
+            );
+          })
         )}
-
       </div>
-
     </div>
   );
 }
