@@ -1,82 +1,121 @@
 "use client";
 
 import Card from "@/components/ui/Card";
+
 import { useEstimate } from "@/features/estimate/EstimateContext";
-import { DEFAULT_PRICING } from "@/data/pricing";
+
+import { calculateEstimate } from "@/data/pricing/calculateEstimate";
 
 export default function EstimateSummary() {
   const { estimate } = useEstimate();
 
+  const totals = calculateEstimate(estimate);
+
   return (
-    <Card className="sticky top-6">
-
-      <h2 className="text-2xl font-bold mb-6">
-        Estimate Summary
-      </h2>
-
+    <Card>
       <div className="space-y-6">
 
         <div>
-          <p className="text-sm text-slate-500">
-            Customer
-          </p>
+          <h2 className="text-2xl font-bold">
+            Estimate Summary
+          </h2>
 
-          <p className="font-semibold">
-            {estimate.customerType ?? "-"}
-          </p>
-        </div>
-
-        <div>
-          <p className="text-sm text-slate-500">
-            Property
-          </p>
-
-          <p className="capitalize font-semibold">
-            {estimate.property.type || "-"}
-          </p>
-
-          <p className="text-sm text-slate-500 mt-1">
-            {estimate.property.address || ""}
+          <p className="mt-1 text-slate-500">
+            Live estimate overview
           </p>
         </div>
 
-        <div>
-          <p className="text-sm text-slate-500">
-            Job Sites
-          </p>
+        <div className="space-y-4">
 
-          {estimate.jobSites.length === 0 ? (
-            <p>-</p>
-          ) : (
-            <ul className="space-y-1 mt-2">
+          <div className="flex justify-between">
+            <span>Areas</span>
 
-              {estimate.jobSites.map(site => (
-                <li key={site.id}>
-                  • {site.name}
-                </li>
-              ))}
+            <strong>
+              {estimate.jobSites.length}
+            </strong>
+          </div>
 
-            </ul>
-          )}
+          <div className="flex justify-between">
+            <span>Items</span>
+
+            <strong>
+              {totals.itemCount}
+            </strong>
+          </div>
+
+          <div className="flex justify-between">
+            <span>Heavy Items</span>
+
+            <strong>
+              {totals.heavyItems}
+            </strong>
+          </div>
+
+          <div className="flex justify-between">
+            <span>Truck Volume</span>
+
+            <strong>
+              {totals.truckVolume}
+            </strong>
+          </div>
+
+          <hr />
+
+          <div className="flex justify-between">
+            <span>Base Price</span>
+
+            <strong>
+              ${totals.basePrice.toFixed(2)}
+            </strong>
+          </div>
+
+          <div className="flex justify-between">
+            <span>Disposal Fees</span>
+
+            <strong>
+              ${totals.disposalFees.toFixed(2)}
+            </strong>
+          </div>
+
+          <div className="flex justify-between">
+            <span>Minimum Charge</span>
+
+            <strong>
+              ${totals.minimumCharge.toFixed(2)}
+            </strong>
+          </div>
+
+          <div className="flex justify-between">
+            <span>Labor</span>
+
+            <strong>
+              ${totals.labor.toFixed(2)}
+            </strong>
+          </div>
+
+          <div className="flex justify-between">
+            <span>Tax</span>
+
+            <strong>
+              ${totals.tax.toFixed(2)}
+            </strong>
+          </div>
 
         </div>
 
         <hr />
 
-        <div>
+        <div className="flex justify-between text-2xl font-bold">
 
-          <p className="text-sm text-slate-500">
-            Minimum Charge
-          </p>
+          <span>Estimated Total</span>
 
-          <p className="text-3xl font-bold">
-            ${DEFAULT_PRICING.minimumCharge}
-          </p>
+          <span>
+            ${totals.total.toFixed(2)}
+          </span>
 
         </div>
 
       </div>
-
     </Card>
   );
 }
