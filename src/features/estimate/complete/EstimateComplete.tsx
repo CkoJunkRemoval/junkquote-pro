@@ -5,18 +5,22 @@ import Button from "@/components/ui/Button";
 
 import { useEstimate } from "../EstimateContext";
 
-import { calculateEstimate } from "@/data/pricing/calculateEstimate";
+import { buildEstimatePackage } from "@/data/output/buildEstimatePackage";
+import { buildEstimatePdf } from "@/data/output/buildEstimatePdf";
+import { generateEstimatePdf } from "@/data/output/generateEstimatePdf";
 
 export default function EstimateComplete() {
   const { estimate } = useEstimate();
 
-  const totals = calculateEstimate(estimate);
+  const estimatePackage =
+    buildEstimatePackage(estimate);
 
-  const estimateNumber =
-    "CKO-" +
-    new Date().getFullYear() +
-    "-" +
-    Math.floor(Math.random() * 90000 + 10000);
+  function handleGeneratePdf() {
+    const pdf =
+      buildEstimatePdf(estimatePackage);
+
+    generateEstimatePdf(pdf);
+  }
 
   return (
     <div className="space-y-8">
@@ -36,7 +40,7 @@ export default function EstimateComplete() {
             </h1>
 
             <p className="mt-3 text-slate-500">
-              The estimate has been successfully created.
+              Your estimate has been created successfully.
             </p>
 
           </div>
@@ -48,44 +52,7 @@ export default function EstimateComplete() {
             </div>
 
             <div className="mt-2 text-2xl font-bold">
-              {estimateNumber}
-            </div>
-
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2">
-
-            <div>
-
-              <h3 className="font-semibold">
-                Customer
-              </h3>
-
-              <div className="mt-2 text-slate-600">
-
-                {estimate.customer.firstName}{" "}
-                {estimate.customer.lastName}
-
-              </div>
-
-              <div className="text-slate-600">
-                {estimate.customer.phone}
-              </div>
-
-            </div>
-
-            <div>
-
-              <h3 className="font-semibold">
-                Property
-              </h3>
-
-              <div className="mt-2 text-slate-600">
-
-                {estimate.property.address}
-
-              </div>
-
+              {estimatePackage.estimateNumber}
             </div>
 
           </div>
@@ -95,12 +62,12 @@ export default function EstimateComplete() {
             <div className="flex justify-between">
 
               <span className="text-lg">
-                Final Estimate
+                Estimated Total
               </span>
 
               <span className="text-3xl font-bold text-blue-700">
 
-                ${totals.total.toFixed(2)}
+                ${estimatePackage.pricing.total.toFixed(2)}
 
               </span>
 
@@ -114,7 +81,9 @@ export default function EstimateComplete() {
               Save Estimate
             </Button>
 
-            <Button>
+            <Button
+              onClick={handleGeneratePdf}
+            >
               Generate PDF
             </Button>
 
@@ -123,7 +92,7 @@ export default function EstimateComplete() {
             </Button>
 
             <Button>
-              New Estimate
+              Start New Estimate
             </Button>
 
           </div>
