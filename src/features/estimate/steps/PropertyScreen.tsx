@@ -30,12 +30,43 @@ export default function PropertyStep() {
   const [propertySaveSuccess, setPropertySaveSuccess] = useState("");
   const [savingProperty, setSavingProperty] = useState(false);
   const getPropertiesRef = useRef(getProperties);
+  const firstPropertyInputRef = useRef<HTMLInputElement | null>(null);
+  const selectedPropertyRef = useRef<HTMLButtonElement | null>(null);
+  const scrollToSelectedPropertyRef = useRef(false);
 
   const customerId = estimate.customer.id;
 
   useEffect(() => {
     getPropertiesRef.current = getProperties;
   }, [getProperties]);
+
+  useEffect(() => {
+    if (showPropertyForm) {
+      firstPropertyInputRef.current?.focus();
+    }
+  }, [showPropertyForm]);
+
+  useEffect(() => {
+    if (scrollToSelectedPropertyRef.current && selectedPropertyId) {
+      selectedPropertyRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+      scrollToSelectedPropertyRef.current = false;
+    }
+  }, [properties, selectedPropertyId]);
+
+  useEffect(() => {
+    if (!propertySaveSuccess) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setPropertySaveSuccess("");
+    }, 3000);
+
+    return () => window.clearTimeout(timer);
+  }, [propertySaveSuccess]);
 
   function selectProperty(property: CustomerProperty) {
     if (property.id === selectedPropertyId) {
@@ -88,6 +119,7 @@ export default function PropertyStep() {
       const updatedProperties = await getPropertiesRef.current(customerId);
 
       setProperties(updatedProperties);
+      scrollToSelectedPropertyRef.current = true;
       selectProperty(
         updatedProperties.find(
           (property) => property.id === createdProperty.id
@@ -218,20 +250,27 @@ export default function PropertyStep() {
           <p className="text-xl font-semibold">
             No properties found.
           </p>
+        </div>
+      )}
 
+      {!loadingProperties && (
+        <div className={properties.length > 0 ? "space-y-4" : ""}>
           {!showPropertyForm && (
             <button
               type="button"
               onClick={() => setShowPropertyForm(true)}
-              className="mt-5 rounded-xl bg-blue-700 px-6 py-3 font-semibold text-white transition hover:bg-blue-800"
+              className="rounded-xl bg-blue-700 px-6 py-3 font-semibold text-white transition hover:bg-blue-800"
             >
-              Create Property
+              {properties.length > 0
+                ? "Add Another Property"
+                : "Create Property"}
             </button>
           )}
 
           {showPropertyForm && (
-            <div className="mt-6 space-y-4 text-left">
+            <div className="space-y-4 rounded-2xl border border-slate-300 p-6 text-left">
               <input
+                ref={firstPropertyInputRef}
                 type="text"
                 placeholder="Address *"
                 value={propertyForm.address}
@@ -336,7 +375,7 @@ export default function PropertyStep() {
       )}
 
       {propertySaveSuccess && (
-        <p className="text-sm font-medium text-green-600">
+        <p className="rounded-xl border border-green-200 bg-green-50 p-3 text-sm font-medium text-green-700">
           {propertySaveSuccess}
         </p>
       )}
@@ -350,6 +389,7 @@ export default function PropertyStep() {
               <button
                 key={property.id}
                 type="button"
+                ref={isSelected ? selectedPropertyRef : null}
                 onClick={() => selectProperty(property)}
                 disabled={isSelected}
                 className={`w-full rounded-2xl border p-6 text-left transition ${

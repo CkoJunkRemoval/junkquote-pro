@@ -3,6 +3,8 @@ type StepHeaderProps = {
   totalSteps: number;
   title: string;
   description: string;
+  estimateId?: string | null;
+  customerName?: string;
 };
 
 export default function StepHeader({
@@ -10,6 +12,8 @@ export default function StepHeader({
   totalSteps,
   title,
   description,
+  estimateId,
+  customerName,
 }: StepHeaderProps) {
   return (
     <div className="mb-10">
@@ -24,6 +28,18 @@ export default function StepHeader({
       <p className="text-slate-500 mt-2">
         {description}
       </p>
+
+      <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-600">
+        <span className="font-semibold text-slate-800">
+          Draft Estimate
+        </span>
+        <span>
+          Estimate ID: {estimateId ?? "Pending"}
+        </span>
+        <span>
+          Customer Name: {customerName || "Not selected"}
+        </span>
+      </div>
     </div>
   );
 }

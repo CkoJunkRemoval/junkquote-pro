@@ -25,6 +25,7 @@ export default function CustomerStep() {
   } = useCustomers();
 
   const [searchText, setSearchText] = useState("");
+  const [hasSubmittedSearch, setHasSubmittedSearch] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] =
     useState<string | null>(null);
   const [savingCustomer, setSavingCustomer] = useState(false);
@@ -40,6 +41,7 @@ export default function CustomerStep() {
       setSaveError("");
       setSavedCustomerId(null);
       setSearchText("");
+      setHasSubmittedSearch(false);
       setSelectedCustomerId(null);
       clearCustomers();
       setCustomer({
@@ -55,6 +57,7 @@ export default function CustomerStep() {
   }
 
   async function handleSearch() {
+    setHasSubmittedSearch(true);
     await search(searchText);
   }
 
@@ -167,9 +170,16 @@ export default function CustomerStep() {
           <input
             type="text"
             value={searchText}
-            onChange={(e) =>
-              setSearchText(e.target.value)
-            }
+            onChange={(e) => {
+              setSearchText(e.target.value);
+              setHasSubmittedSearch(false);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && searchText.trim() && !loading) {
+                event.preventDefault();
+                void handleSearch();
+              }
+            }}
             placeholder="Search by name or phone..."
             className="w-full rounded-xl border border-slate-300 p-3"
           />
@@ -177,6 +187,7 @@ export default function CustomerStep() {
           <Button
             type="button"
             onClick={handleSearch}
+            disabled={loading || !searchText.trim()}
           >
             Search
           </Button>
@@ -188,8 +199,9 @@ export default function CustomerStep() {
           )}
 
           {!loading &&
+            hasSubmittedSearch &&
             customers.length === 0 &&
-            searchText.trim() !== "" && (
+            (
               <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-slate-500">
                 No customers found.
               </div>

@@ -192,14 +192,14 @@ export function EstimateProvider({
     }));
   }
 
-  function setJobSites(
+  const setJobSites = useCallback((
     jobSites: JobSite[]
-  ) {
+  ) => {
     setEstimate((prev) => ({
       ...prev,
       jobSites,
     }));
-  }
+  }, []);
 
   function updatePricing(
     pricing: Estimate["pricing"]

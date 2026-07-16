@@ -23,7 +23,13 @@ import EstimateReady from "./ready/EstimateReady";
 function EstimateWizard() {
   const [step, setStep] = useState(1);
 
-  const { estimate } = useEstimate();
+  const { estimate, estimateId } = useEstimate();
+  const customerName = [
+    estimate.customer.firstName,
+    estimate.customer.lastName,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   function nextStep() {
     switch (step) {
@@ -90,6 +96,8 @@ function EstimateWizard() {
         totalSteps={6}
         title="New Estimate"
         description="Create a professional estimate."
+        estimateId={estimateId}
+        customerName={customerName}
       />
 
       <div

@@ -148,6 +148,8 @@ model Estimate {
 
   status     EstimateStatus @default(Draft)
 
+  jobSites   JobSite[]
+
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
 
@@ -156,4 +158,24 @@ model Estimate {
   @@index([propertyId])
 
   @@map("estimates")
+}
+
+model JobSite {
+  id            String   @id @default(uuid())
+
+  estimateId    String
+  estimate      Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+
+  name          String
+  status        String   @default("not-started")
+  customerNotes String   @default("")
+  crewNotes     String   @default("")
+  internalNotes String   @default("")
+  sortOrder     Int
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([estimateId])
+  @@map("job_sites")
 }
