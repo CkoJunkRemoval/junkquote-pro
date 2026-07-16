@@ -41,6 +41,7 @@ function toJobSite(jobSite: PersistedJobSite): JobSite {
 
 export default function JobSiteScreen() {
   const { estimate, estimateId, setJobSites } = useEstimate();
+  const jobSitesRef = useRef(estimate.jobSites);
   const [loadingJobSites, setLoadingJobSites] = useState(false);
   const [savingJobSiteId, setSavingJobSiteId] = useState<string | null>(null);
   const [savedJobSiteId, setSavedJobSiteId] = useState<string | null>(null);
@@ -49,6 +50,10 @@ export default function JobSiteScreen() {
   >({});
   const newJobSiteIdRef = useRef<string | null>(null);
   const savedMessageTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    jobSitesRef.current = estimate.jobSites;
+  }, [estimate.jobSites]);
 
   useEffect(() => {
     if (!estimateId) {
@@ -68,7 +73,19 @@ export default function JobSiteScreen() {
       })
       .then((jobSites) => {
         if (isCurrent) {
-          setJobSites(jobSites.map(toJobSite));
+          setJobSites(
+            jobSites.map((jobSite) => {
+              const currentJobSite = jobSitesRef.current.find(
+                (current) => current.id === jobSite.id
+              );
+
+              return {
+                ...toJobSite(jobSite),
+                items: currentJobSite?.items ?? [],
+                subtotal: currentJobSite?.subtotal ?? 0,
+              };
+            })
+          );
         }
       })
       .catch((error) => {

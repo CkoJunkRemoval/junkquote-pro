@@ -1,0 +1,89 @@
+import { describe, expect, it } from "vitest";
+
+import { calculateEstimate } from "./calculateEstimate";
+import { Estimate, EstimateItem } from "@/features/estimate/types";
+import { EstimateStatus } from "@/features/estimate/status";
+
+function createEstimate(items: EstimateItem[], discount = 0): Estimate {
+  return {
+    customerType: "existing",
+    customer: {
+      id: "customer-1",
+      firstName: "Taylor",
+      lastName: "Smith",
+      phone: "555-0100",
+      email: "taylor@example.com",
+    },
+    property: {
+      id: "property-1",
+      type: "house",
+      address: "123 Main St",
+      city: "Exampleville",
+      state: "NY",
+      zip: "10001",
+      gateCode: "",
+      notes: "",
+    },
+    jobSites: [
+      {
+        id: "job-site-1",
+        name: "Garage",
+        status: "not-started",
+        customerNotes: "",
+        crewNotes: "",
+        internalNotes: "",
+        photos: [],
+        items,
+        subtotal: 0,
+      },
+    ],
+    pricing: {
+      subtotal: 0,
+      labor: 0,
+      disposal: 0,
+      discount,
+      total: 0,
+    },
+    status: EstimateStatus.Draft,
+    timeline: [],
+  };
+}
+
+function item(itemId: string, quantity = 1): EstimateItem {
+  return {
+    id: `${itemId}-1`,
+    itemId,
+    name: itemId,
+    category: "Test",
+    quantity,
+    notes: "",
+  };
+}
+
+describe("calculateEstimate minimum charge", () => {
+  it("uses the minimum for no items", () => {
+    expect(calculateEstimate(createEstimate([])).total).toBe(125);
+  });
+
+  it("uses the minimum for one item below the minimum", () => {
+    expect(calculateEstimate(createEstimate([item("box")])).total).toBe(125);
+  });
+
+  it("uses the minimum once for multiple items below the minimum", () => {
+    expect(
+      calculateEstimate(createEstimate([item("box", 2)])).total
+    ).toBe(125);
+  });
+
+  it("uses the calculated total for items above the minimum", () => {
+    expect(
+      calculateEstimate(createEstimate([item("refrigerator")])).total
+    ).toBe(218.75);
+  });
+
+  it("applies the minimum after discounts", () => {
+    expect(
+      calculateEstimate(createEstimate([item("box", 2)], 25)).total
+    ).toBe(125);
+  });
+});

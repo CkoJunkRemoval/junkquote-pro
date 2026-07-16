@@ -11,7 +11,10 @@ import {
 } from "react";
 
 import { createEstimateAction } from "@/app/actions/estimates/createEstimate";
+import { loadEstimateAction } from "@/app/actions/estimates/loadEstimate";
+import { saveEstimateProgressAction } from "@/app/actions/estimates/saveEstimateProgress";
 import { DEVELOPMENT_COMPANY_ID } from "@/lib/config";
+import { calculateEstimate } from "@/data/pricing/calculateEstimate";
 
 import {
   Estimate,
@@ -21,6 +24,7 @@ import {
 } from "./types";
 
 import { EstimateStatus } from "./status";
+import { hydrateDraftEstimate } from "./draftEstimateHydration";
 
 const initialEstimate: Estimate = {
   customerType: null,
@@ -61,8 +65,12 @@ const initialEstimate: Estimate = {
 interface EstimateContextType {
   estimate: Estimate;
   estimateId: string | null;
+  isLoadingEstimate: boolean;
+  wizardStep: number;
 
   saveEstimate: () => Promise<void>;
+  resetEstimate: () => void;
+  setWizardStep: (step: number) => void;
 
   setEstimate: React.Dispatch<
     React.SetStateAction<Estimate>
@@ -102,12 +110,18 @@ const EstimateContext =
 
 export function EstimateProvider({
   children,
+  initialEstimateId = null,
 }: {
   children: ReactNode;
+  initialEstimateId?: string | null;
 }) {
   const [estimate, setEstimate] =
     useState<Estimate>(initialEstimate);
   const [estimateId, setEstimateId] = useState<string | null>(null);
+  const [isLoadingEstimate, setIsLoadingEstimate] = useState(
+    Boolean(initialEstimateId)
+  );
+  const [wizardStep, setWizardStepState] = useState(1);
   const creatingEstimateRef = useRef(false);
   const estimateSelectionRef = useRef<string | null>(null);
 
@@ -149,6 +163,82 @@ export function EstimateProvider({
       console.error("Estimate creation failed:", error);
     });
   }, [saveEstimate]);
+
+  const hydrateEstimate = useCallback(async (id: string) => {
+    try {
+      const savedEstimate = await loadEstimateAction(id);
+
+      if (!savedEstimate) {
+        throw new Error("Draft estimate not found.");
+      }
+
+      const restored = hydrateDraftEstimate(savedEstimate);
+
+      estimateSelectionRef.current =
+        `${savedEstimate.customerId}:${savedEstimate.propertyId}`;
+      setEstimateId(savedEstimate.id);
+      setWizardStepState(restored.wizardStep);
+      setEstimate(restored.estimate);
+    } finally {
+      setIsLoadingEstimate(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!initialEstimateId) {
+      return;
+    }
+
+    void hydrateEstimate(initialEstimateId).catch((error) => {
+      console.error("Estimate loading failed:", error);
+    });
+  }, [hydrateEstimate, initialEstimateId]);
+
+  useEffect(() => {
+    if (!estimateId || typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem("junkquote:estimateId", estimateId);
+    const url = new URL(window.location.href);
+    url.searchParams.set("estimateId", estimateId);
+    window.history.replaceState({}, "", url);
+  }, [estimateId]);
+
+  const saveDraftProgress = useCallback(async () => {
+    if (!estimateId || isLoadingEstimate) {
+      return;
+    }
+
+    const totals = calculateEstimate(estimate);
+    await saveEstimateProgressAction({
+      estimateId,
+      currentStep: wizardStep,
+      pricingSubtotal: totals.subtotal,
+      pricingLabor: totals.labor,
+      pricingDisposal: totals.disposalFees,
+      pricingDiscount: estimate.pricing.discount,
+      pricingTotal: totals.total,
+    });
+  }, [estimate, estimateId, isLoadingEstimate, wizardStep]);
+
+  useEffect(() => {
+    void saveDraftProgress().catch((error) => {
+      console.error("Estimate progress saving failed:", error);
+    });
+  }, [saveDraftProgress]);
+
+  const resetEstimate = useCallback(() => {
+    creatingEstimateRef.current = false;
+    estimateSelectionRef.current = null;
+    setEstimateId(null);
+    setWizardStepState(1);
+    setEstimate(initialEstimate);
+  }, []);
+
+  const setWizardStep = useCallback((step: number) => {
+    setWizardStepState(Math.min(6, Math.max(1, step)));
+  }, []);
 
   function setCustomerType(
     customerType: Estimate["customerType"]
@@ -224,7 +314,11 @@ export function EstimateProvider({
       value={{
         estimate,
         estimateId,
+        isLoadingEstimate,
+        wizardStep,
         saveEstimate,
+        resetEstimate,
+        setWizardStep,
         setEstimate,
         setCustomerType,
         setCustomer,

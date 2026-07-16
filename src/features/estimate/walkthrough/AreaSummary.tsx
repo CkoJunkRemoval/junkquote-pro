@@ -16,7 +16,6 @@ export default function AreaSummary({
     0
   );
 
-  let subtotal = 0;
   let totalVolume = 0;
   let heavyItems = 0;
 
@@ -26,11 +25,6 @@ export default function AreaSummary({
     );
 
     if (!libraryItem) return;
-
-    subtotal +=
-      (libraryItem.basePrice +
-        libraryItem.disposalFee) *
-      estimateItem.quantity;
 
     totalVolume +=
       libraryItem.volume *
@@ -88,7 +82,7 @@ export default function AreaSummary({
           <span>Subtotal</span>
 
           <span>
-            ${subtotal.toFixed(2)}
+            ${jobSite.subtotal.toFixed(2)}
           </span>
         </div>
 

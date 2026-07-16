@@ -1,5 +1,5 @@
 import { ITEM_LIBRARY } from "@/data/items";
-import { Estimate } from "@/features/estimate/types";
+import { Estimate, JobSite } from "@/features/estimate/types";
 
 import { DEFAULT_PRICING } from "./defaultPricing";
 import { calculateLabor } from "./calculateLabor";
@@ -28,6 +28,32 @@ export interface EstimateTotals {
   subtotal: number;
 
   total: number;
+}
+
+export function calculateJobSiteSubtotal(jobSite: JobSite) {
+  let basePrice = 0;
+  let disposalFees = 0;
+
+  jobSite.items.forEach((estimateItem) => {
+    const item = ITEM_LIBRARY.find(
+      (libraryItem) => libraryItem.id === estimateItem.itemId
+    );
+
+    if (!item) return;
+
+    basePrice +=
+      (estimateItem.priceOverride ?? item.basePrice) *
+      estimateItem.quantity;
+
+    disposalFees +=
+      item.disposalFee * estimateItem.quantity;
+  });
+
+  return (
+    basePrice +
+    disposalFees +
+    disposalFees * DEFAULT_PRICING.disposalMarkup
+  );
 }
 
 export function calculateEstimate(
@@ -59,7 +85,7 @@ export function calculateEstimate(
         estimateItem.quantity;
 
       basePrice +=
-        item.basePrice *
+        (estimateItem.priceOverride ?? item.basePrice) *
         estimateItem.quantity;
 
       disposalFees +=
@@ -84,10 +110,7 @@ export function calculateEstimate(
     disposalFees +
     disposalMarkup;
 
-  const minimumCharge = Math.max(
-    subtotal,
-    DEFAULT_PRICING.minimumJob
-  );
+  const minimumCharge = DEFAULT_PRICING.minimumJob;
 
   const laborCalculation =
     calculateLabor(
@@ -99,14 +122,19 @@ export function calculateEstimate(
   const labor =
     laborCalculation.laborCost;
 
+  const calculatedTotal = Math.max(
+    0,
+    subtotal + labor - estimate.pricing.discount
+  );
+
   const tax =
-    (minimumCharge + labor) *
-    DEFAULT_PRICING.taxRate;
+    calculatedTotal * DEFAULT_PRICING.taxRate;
 
   const total =
-    minimumCharge +
-    labor +
-    tax;
+    Math.max(
+      calculatedTotal + tax,
+      minimumCharge
+    );
 
   return {
     itemCount,

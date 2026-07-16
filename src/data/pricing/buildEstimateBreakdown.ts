@@ -24,7 +24,8 @@ export function buildEstimateBreakdown(
       if (!item) return;
 
       const unitPrice =
-        item.basePrice + item.disposalFee;
+        (estimateItem.priceOverride ?? item.basePrice) +
+        item.disposalFee;
 
       rows.push({
         area: site.name,

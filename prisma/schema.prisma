@@ -148,6 +148,13 @@ model Estimate {
 
   status     EstimateStatus @default(Draft)
 
+  pricingSubtotal Float @default(0)
+  pricingLabor    Float @default(0)
+  pricingDisposal Float @default(0)
+  pricingDiscount Float @default(0)
+  pricingTotal    Float @default(0)
+  currentStep     Int   @default(1)
+
   jobSites   JobSite[]
 
   createdAt  DateTime       @default(now())
@@ -173,9 +180,33 @@ model JobSite {
   internalNotes String   @default("")
   sortOrder     Int
 
+  items         EstimateItem[]
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   @@index([estimateId])
   @@map("job_sites")
+}
+
+model EstimateItem {
+  id            String   @id @default(uuid())
+
+  jobSiteId     String
+  jobSite       JobSite  @relation(fields: [jobSiteId], references: [id], onDelete: Cascade)
+
+  itemId        String
+  name          String
+  category      String
+  quantity      Int      @default(1)
+  notes         String   @default("")
+  priceOverride Float?
+  sortOrder     Int
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([jobSiteId, itemId])
+  @@index([jobSiteId])
+  @@map("estimate_items")
 }
