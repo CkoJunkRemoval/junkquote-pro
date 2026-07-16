@@ -16,6 +16,10 @@ enum UserRole {
   OFFICE
 }
 
+enum EstimateStatus {
+  Draft
+}
+
 model Company {
   id        String   @id @default(uuid())
   name      String
@@ -30,6 +34,7 @@ model Company {
   settings  CompanySettings?
   users     User[]
   customers Customer[]
+  estimates Estimate[]
 
   @@map("companies")
 }
@@ -92,6 +97,7 @@ model Customer {
   updatedAt  DateTime @updatedAt
 
   properties Property[]
+  estimates  Estimate[]
 
   @@index([companyId])
   @@index([lastName])
@@ -121,7 +127,33 @@ model Property {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+  estimates Estimate[]
+
   @@index([customerId])
 
   @@map("properties")
+}
+
+model Estimate {
+  id         String         @id @default(uuid())
+
+  companyId  String
+  company    Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  customerId String
+  customer   Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  propertyId String
+  property   Property       @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  status     EstimateStatus @default(Draft)
+
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  @@index([companyId])
+  @@index([customerId])
+  @@index([propertyId])
+
+  @@map("estimates")
 }

@@ -21,9 +21,12 @@ export default function CustomerStep() {
     loading,
     search,
     create,
+    clearCustomers,
   } = useCustomers();
 
   const [searchText, setSearchText] = useState("");
+  const [selectedCustomerId, setSelectedCustomerId] =
+    useState<string | null>(null);
   const [savingCustomer, setSavingCustomer] = useState(false);
   const [savedCustomerId, setSavedCustomerId] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState("");
@@ -32,9 +35,21 @@ export default function CustomerStep() {
   function handleCustomerType(
     type: "existing" | "new"
   ) {
-    setSaveSuccess("");
-    setSaveError("");
-    setSavedCustomerId(null);
+    if (type !== estimate.customerType) {
+      setSaveSuccess("");
+      setSaveError("");
+      setSavedCustomerId(null);
+      setSearchText("");
+      setSelectedCustomerId(null);
+      clearCustomers();
+      setCustomer({
+        id: "",
+        firstName: "",
+        lastName: "",
+        phone: "",
+        email: "",
+      });
+    }
 
     setCustomerType(type);
   }
@@ -78,13 +93,18 @@ export default function CustomerStep() {
   }
 
   function selectCustomer(customer: Customer) {
-    updateCustomer({
+    if (customer.id === selectedCustomerId) {
+      return;
+    }
+
+    setCustomer({
       id: customer.id,
       firstName: customer.firstName,
       lastName: customer.lastName,
       phone: customer.phone,
       email: customer.email ?? "",
     });
+    setSelectedCustomerId(customer.id);
   }
 
   return (
@@ -179,35 +199,50 @@ export default function CustomerStep() {
 
             <div className="space-y-3">
 
-              {customers.map((customer) => (
+              {selectedCustomerId && (
+                <p className="text-sm font-medium text-green-600">
+                  Customer Selected
+                </p>
+              )}
 
-                <button
-                  key={customer.id}
-                  type="button"
-                  onClick={() =>
-                    selectCustomer(customer)
-                  }
-                  className="w-full rounded-xl border border-slate-300 p-4 text-left transition hover:border-blue-600 hover:bg-slate-50"
-                >
+              {customers.map((customer) => {
+                const isSelected = customer.id === selectedCustomerId;
 
-                  <div className="font-semibold">
-                    {customer.firstName}{" "}
-                    {customer.lastName}
-                  </div>
+                return (
 
-                  <div className="text-sm text-slate-500">
-                    {customer.phone}
-                  </div>
+                  <button
+                    key={customer.id}
+                    type="button"
+                    onClick={() =>
+                      selectCustomer(customer)
+                    }
+                    disabled={isSelected}
+                    className={`w-full rounded-xl border p-4 text-left transition ${
+                      isSelected
+                        ? "cursor-not-allowed border-blue-600 bg-blue-50"
+                        : "border-slate-300 hover:border-blue-600 hover:bg-slate-50"
+                    }`}
+                  >
 
-                  {customer.email && (
-                    <div className="text-sm text-slate-500">
-                      {customer.email}
+                    <div className="font-semibold">
+                      {customer.firstName}{" "}
+                      {customer.lastName}
                     </div>
-                  )}
 
-                </button>
+                    <div className="text-sm text-slate-500">
+                      {customer.phone}
+                    </div>
 
-              ))}
+                    {customer.email && (
+                      <div className="text-sm text-slate-500">
+                        {customer.email}
+                      </div>
+                    )}
+
+                  </button>
+
+                );
+              })}
 
             </div>
 

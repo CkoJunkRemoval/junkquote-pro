@@ -5,6 +5,7 @@ import { useState } from "react";
 import { DEVELOPMENT_COMPANY_ID } from "@/lib/config";
 
 import { createCustomerAction } from "@/app/actions/customers/createCustomer";
+import { getCustomerPropertiesAction } from "@/app/actions/customers/getCustomerProperties";
 import { updateCustomerAction } from "@/app/actions/customers/updateCustomer";
 import { searchCustomerAction } from "@/app/actions/customers/searchCustomer";
 
@@ -65,6 +66,10 @@ export function useCustomers() {
     return updateCustomerAction(data);
   }
 
+  async function getProperties(customerId: string) {
+    return getCustomerPropertiesAction(customerId);
+  }
+
   function clearCustomers() {
     setCustomers([]);
   }
@@ -75,6 +80,7 @@ export function useCustomers() {
     search,
     create,
     update,
+    getProperties,
     clearCustomers,
   };
 }

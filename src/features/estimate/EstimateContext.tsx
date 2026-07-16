@@ -3,9 +3,15 @@
 import {
   createContext,
   useContext,
+  useCallback,
+  useEffect,
+  useRef,
   useState,
   ReactNode,
 } from "react";
+
+import { createEstimateAction } from "@/app/actions/estimates/createEstimate";
+import { DEVELOPMENT_COMPANY_ID } from "@/lib/config";
 
 import {
   Estimate,
@@ -54,6 +60,9 @@ const initialEstimate: Estimate = {
 
 interface EstimateContextType {
   estimate: Estimate;
+  estimateId: string | null;
+
+  saveEstimate: () => Promise<void>;
 
   setEstimate: React.Dispatch<
     React.SetStateAction<Estimate>
@@ -98,6 +107,48 @@ export function EstimateProvider({
 }) {
   const [estimate, setEstimate] =
     useState<Estimate>(initialEstimate);
+  const [estimateId, setEstimateId] = useState<string | null>(null);
+  const creatingEstimateRef = useRef(false);
+  const estimateSelectionRef = useRef<string | null>(null);
+
+  const saveEstimate = useCallback(async () => {
+    const customerId = estimate.customer.id;
+    const propertyId = estimate.property.id;
+
+    if (!customerId || !propertyId) {
+      return;
+    }
+
+    const selectionKey = `${customerId}:${propertyId}`;
+
+    if (
+      creatingEstimateRef.current ||
+      (estimateId && estimateSelectionRef.current === selectionKey)
+    ) {
+      return;
+    }
+
+    creatingEstimateRef.current = true;
+
+    try {
+      const createdEstimate = await createEstimateAction({
+        companyId: DEVELOPMENT_COMPANY_ID,
+        customerId,
+        propertyId,
+      });
+
+      estimateSelectionRef.current = selectionKey;
+      setEstimateId(createdEstimate.id);
+    } finally {
+      creatingEstimateRef.current = false;
+    }
+  }, [estimate.customer.id, estimate.property.id, estimateId]);
+
+  useEffect(() => {
+    void saveEstimate().catch((error) => {
+      console.error("Estimate creation failed:", error);
+    });
+  }, [saveEstimate]);
 
   function setCustomerType(
     customerType: Estimate["customerType"]
@@ -172,6 +223,8 @@ export function EstimateProvider({
     <EstimateContext.Provider
       value={{
         estimate,
+        estimateId,
+        saveEstimate,
         setEstimate,
         setCustomerType,
         setCustomer,

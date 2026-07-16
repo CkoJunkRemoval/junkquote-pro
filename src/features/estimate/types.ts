@@ -67,6 +67,8 @@ export interface Customer {
 }
 
 export interface Property {
+  id?: string;
+
   type: PropertyType | "";
 
   address: string;
