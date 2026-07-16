@@ -162,6 +162,12 @@ model Estimate {
   pricingTotal    Float @default(0)
   currentStep     Int   @default(1)
 
+  sentAt                  DateTime?
+  sentByEmailAt           DateTime?
+  sentBySmsAt             DateTime?
+  approvalToken           String?   @unique
+  approvalTokenExpiresAt  DateTime?
+
   jobSites   JobSite[]
 
   createdAt  DateTime       @default(now())

@@ -8,14 +8,22 @@ import { buildEstimatePackage } from "@/data/output/buildEstimatePackage";
 import { buildEstimatePdf } from "@/data/output/buildEstimatePdf";
 import { generateEstimatePdf } from "@/data/output/generateEstimatePdf";
 import { statusTransitions } from "@/lib/estimates/statusWorkflow";
+import {
+  prepareEstimateDeliveryAction,
+} from "@/app/actions/estimates/prepareEstimateDelivery";
+import type { EstimateDeliveryMethod } from "@/lib/estimates/prepareEstimateDelivery";
 
 import { useEstimate } from "../EstimateContext";
 import { EstimateStatus } from "../status";
 
 export default function EstimateReady() {
-  const { estimate, setStatus } = useEstimate();
+  const { estimate, estimateId, setStatus } = useEstimate();
   const [isSavingStatus, setIsSavingStatus] = useState(false);
   const [statusError, setStatusError] = useState<string | null>(null);
+  const [isPreparingDelivery, setIsPreparingDelivery] = useState(false);
+  const [approvalUrl, setApprovalUrl] = useState<string | null>(null);
+  const [deliveryMessage, setDeliveryMessage] = useState<string | null>(null);
+  const [deliveryError, setDeliveryError] = useState<string | null>(null);
   const estimatePackage = buildEstimatePackage(estimate);
   const availableTransitions = statusTransitions[estimate.status];
 
@@ -31,6 +39,45 @@ export default function EstimateReady() {
       );
     } finally {
       setIsSavingStatus(false);
+    }
+  }
+
+  async function prepareDelivery(method: EstimateDeliveryMethod) {
+    if (!estimateId) {
+      setDeliveryError("Estimate must be saved before preparing delivery.");
+      return null;
+    }
+
+    setIsPreparingDelivery(true);
+    setDeliveryError(null);
+    setDeliveryMessage(null);
+
+    try {
+      const delivery = await prepareEstimateDeliveryAction(estimateId, method);
+      setApprovalUrl(delivery.approvalUrl);
+      return delivery.approvalUrl;
+    } catch (error) {
+      setDeliveryError(
+        error instanceof Error ? error.message : "Unable to prepare estimate delivery."
+      );
+      return null;
+    } finally {
+      setIsPreparingDelivery(false);
+    }
+  }
+
+  async function copyApprovalLink() {
+    const url = await prepareDelivery("link");
+
+    if (!url) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(url);
+      setDeliveryMessage("Approval link copied to the clipboard.");
+    } catch {
+      setDeliveryMessage("Approval link generated. Copy it from the field below.");
     }
   }
 
@@ -100,6 +147,59 @@ export default function EstimateReady() {
             )}
             {statusError && <p className="mt-3 text-red-600">{statusError}</p>}
           </div>
+
+          {estimate.status === EstimateStatus.Ready && (
+            <div className="rounded-xl border border-slate-200 p-6">
+              <h2 className="text-xl font-bold">Delivery</h2>
+              <p className="mt-1 text-slate-500">
+                Prepare a customer approval link. Email and SMS provider delivery are not connected yet.
+              </p>
+
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Button
+                  type="button"
+                  disabled={isPreparingDelivery}
+                  onClick={() => void prepareDelivery("email").then((url) => {
+                    if (url) setDeliveryMessage("Email delivery is not connected yet. Share the generated link manually.");
+                  })}
+                >
+                  Send by Email
+                </Button>
+                <Button
+                  type="button"
+                  disabled={isPreparingDelivery}
+                  onClick={() => void prepareDelivery("sms").then((url) => {
+                    if (url) setDeliveryMessage("Text delivery is not connected yet. Share the generated link manually.");
+                  })}
+                >
+                  Send by Text
+                </Button>
+                <Button type="button" disabled={isPreparingDelivery} onClick={() => void copyApprovalLink()}>
+                  Copy Approval Link
+                </Button>
+                <Button
+                  type="button"
+                  disabled={isPreparingDelivery}
+                  onClick={() => void prepareDelivery("device").then((url) => {
+                    if (url) setDeliveryMessage("Signing on this device will be available when the approval screen is implemented.");
+                  })}
+                >
+                  Sign on This Device
+                </Button>
+              </div>
+
+              {approvalUrl && (
+                <input
+                  readOnly
+                  value={approvalUrl}
+                  aria-label="Approval link"
+                  className="mt-4 w-full rounded-lg border border-slate-300 p-3 text-sm"
+                />
+              )}
+              {deliveryMessage && <p className="mt-3 text-sm text-slate-600">{deliveryMessage}</p>}
+              {deliveryError && <p className="mt-3 text-sm text-red-600">{deliveryError}</p>}
+            </div>
+          )}
 
           <Button type="button" onClick={() => generateEstimatePdf(buildEstimatePdf(estimatePackage))}>
             Generate PDF
