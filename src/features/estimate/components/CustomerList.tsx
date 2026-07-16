@@ -1,6 +1,6 @@
 "use client";
 
-import { Customer } from "@/generated/prisma";
+import type { Customer } from "@/generated/prisma/client";
 
 interface CustomerListProps {
   customers: Customer[];

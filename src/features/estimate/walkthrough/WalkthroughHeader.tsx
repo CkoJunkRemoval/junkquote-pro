@@ -15,7 +15,7 @@ export default function WalkthroughHeader({
 }: WalkthroughHeaderProps) {
   const progress = (current / total) * 100;
 
-  const status = area.completed
+  const status = area.status === "completed"
     ? "Completed"
     : "In Progress";
 

@@ -9,7 +9,7 @@ import { getCustomerPropertiesAction } from "@/app/actions/customers/getCustomer
 import { updateCustomerAction } from "@/app/actions/customers/updateCustomer";
 import { searchCustomerAction } from "@/app/actions/customers/searchCustomer";
 
-import type { Customer } from "@prisma/client";
+import type { Customer } from "@/generated/prisma/client";
 
 export function useCustomers() {
   const [customers, setCustomers] = useState<Customer[]>([]);
