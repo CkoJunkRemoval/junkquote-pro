@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { respondToEstimateApprovalAction } from "@/app/actions/estimates/respondToEstimateApproval";
 import type { PublicEstimateApproval } from "@/lib/estimates/getPublicEstimateByApprovalToken";
+import SignaturePad from "@/components/estimate/SignaturePad";
 
 export default function PublicEstimateApproval({
   token,
@@ -15,13 +16,15 @@ export default function PublicEstimateApproval({
   const [response, setResponse] = useState<"Approved" | "Declined" | null>(null);
   const [isResponding, setIsResponding] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [signerName, setSignerName] = useState("");
+  const [signatureData, setSignatureData] = useState("");
 
   async function respond(action: "approve" | "decline") {
     setIsResponding(true);
     setError(null);
 
     try {
-      const result = await respondToEstimateApprovalAction(token, action);
+      const result = await respondToEstimateApprovalAction(token, action, signerName, signatureData);
       setResponse(result.status as "Approved" | "Declined");
     } catch (responseError) {
       setError(
@@ -95,6 +98,7 @@ export default function PublicEstimateApproval({
         <section className="rounded-2xl border border-blue-200 bg-blue-50 p-6">
           <h2 className="text-xl font-bold">Ready to respond?</h2>
           <p className="mt-2 text-slate-700">This link expires {estimate.approvalTokenExpiresAt.toLocaleString()}.</p>
+          <div className="mt-4 space-y-3"><input value={signerName} onChange={(event) => setSignerName(event.target.value)} placeholder="Signer full name" className="w-full rounded-lg border p-3" /><SignaturePad onChange={setSignatureData} /></div>
           <div className="mt-4 flex flex-wrap gap-3">
             <button type="button" disabled={isResponding} onClick={() => void respond("approve")} className="rounded-xl bg-green-700 px-5 py-3 font-semibold text-white disabled:bg-slate-400">
               Approve Estimate

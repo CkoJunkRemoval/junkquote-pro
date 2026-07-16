@@ -27,6 +27,11 @@ enum EstimateStatus {
   Archived
 }
 
+enum SignatureMethod {
+  PublicLink
+  TeamDevice
+}
+
 model Company {
   id        String   @id @default(uuid())
   name      String
@@ -167,6 +172,10 @@ model Estimate {
   sentBySmsAt             DateTime?
   approvalToken           String?   @unique
   approvalTokenExpiresAt  DateTime?
+  signatureData           String?
+  signedAt                DateTime?
+  signerName              String?
+  signatureMethod         SignatureMethod?
 
   jobSites   JobSite[]
 

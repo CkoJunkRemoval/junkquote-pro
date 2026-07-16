@@ -7,7 +7,9 @@ import {
 
 export async function respondToEstimateApprovalAction(
   token: string,
-  response: PublicEstimateResponse
+  response: PublicEstimateResponse,
+  signerName?: string,
+  signatureData?: string
 ) {
-  return respondToEstimateApproval(token, response);
+  return respondToEstimateApproval(token, response, signerName, signatureData);
 }

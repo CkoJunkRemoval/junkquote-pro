@@ -1,9 +1,10 @@
 import { prisma } from "../prisma";
 import { getPublicApprovalError, type PublicApprovalStatus } from "./publicEstimateApproval";
+import { validateSignature } from "./signatureValidation";
 
 export type PublicEstimateResponse = "approve" | "decline";
 
-export async function respondToEstimateApproval(token: string, response: PublicEstimateResponse) {
+export async function respondToEstimateApproval(token: string, response: PublicEstimateResponse, signerName?: string, signatureData?: string) {
   const estimate = await prisma.estimate.findUnique({
     where: { approvalToken: token },
     select: { status: true, approvalTokenExpiresAt: true },
@@ -18,9 +19,12 @@ export async function respondToEstimateApproval(token: string, response: PublicE
   }
 
   const nextStatus = response === "approve" ? "Approved" : "Declined";
+  if (response === "approve") validateSignature(signerName ?? "", signatureData ?? "");
   const result = await prisma.estimate.updateMany({
-    where: { approvalToken: token, status: "Sent" },
-    data: { status: nextStatus },
+    where: { approvalToken: token, status: "Sent", ...(response === "approve" ? { signatureData: null } : {}) },
+    data: response === "approve"
+      ? { status: nextStatus, signerName: signerName!.trim(), signatureData: signatureData!, signedAt: new Date(), signatureMethod: "PublicLink" }
+      : { status: nextStatus },
   });
 
   if (result.count !== 1) {

@@ -12,18 +12,24 @@ import {
   prepareEstimateDeliveryAction,
 } from "@/app/actions/estimates/prepareEstimateDelivery";
 import type { EstimateDeliveryMethod } from "@/lib/estimates/prepareEstimateDelivery";
+import { signEstimateOnTeamDeviceAction } from "@/app/actions/estimates/signEstimateOnTeamDevice";
+import SignaturePad from "@/components/estimate/SignaturePad";
 
 import { useEstimate } from "../EstimateContext";
 import { EstimateStatus } from "../status";
 
 export default function EstimateReady() {
-  const { estimate, estimateId, setStatus } = useEstimate();
+  const { estimate, estimateId, setStatus, setEstimate } = useEstimate();
   const [isSavingStatus, setIsSavingStatus] = useState(false);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [isPreparingDelivery, setIsPreparingDelivery] = useState(false);
   const [approvalUrl, setApprovalUrl] = useState<string | null>(null);
   const [deliveryMessage, setDeliveryMessage] = useState<string | null>(null);
   const [deliveryError, setDeliveryError] = useState<string | null>(null);
+  const [showTeamSignature, setShowTeamSignature] = useState(false);
+  const [teamSignerName, setTeamSignerName] = useState("");
+  const [teamSignature, setTeamSignature] = useState("");
+  const [teamSignatureError, setTeamSignatureError] = useState<string | null>(null);
   const estimatePackage = buildEstimatePackage(estimate);
   const availableTransitions = statusTransitions[estimate.status];
 
@@ -79,6 +85,14 @@ export default function EstimateReady() {
     } catch {
       setDeliveryMessage("Approval link generated. Copy it from the field below.");
     }
+  }
+
+  async function signOnTeamDevice() {
+    if (!estimateId) return;
+    setIsSavingStatus(true); setTeamSignatureError(null);
+    try { await signEstimateOnTeamDeviceAction(estimateId, teamSignerName, teamSignature); setEstimate((current) => ({ ...current, status: EstimateStatus.Approved })); setShowTeamSignature(false); }
+    catch (error) { setTeamSignatureError(error instanceof Error ? error.message : "Unable to save signature."); }
+    finally { setIsSavingStatus(false); }
   }
 
   return (
@@ -180,9 +194,7 @@ export default function EstimateReady() {
                 <Button
                   type="button"
                   disabled={isPreparingDelivery}
-                  onClick={() => void prepareDelivery("device").then((url) => {
-                    if (url) setDeliveryMessage("Signing on this device will be available when the approval screen is implemented.");
-                  })}
+                  onClick={() => setShowTeamSignature(true)}
                 >
                   Sign on This Device
                 </Button>
@@ -199,6 +211,20 @@ export default function EstimateReady() {
               {deliveryMessage && <p className="mt-3 text-sm text-slate-600">{deliveryMessage}</p>}
               {deliveryError && <p className="mt-3 text-sm text-red-600">{deliveryError}</p>}
             </div>
+          )}
+
+          {estimate.status === EstimateStatus.Sent && (
+            <div className="rounded-xl border border-slate-200 p-6">
+              <h2 className="text-xl font-bold">Team Device Approval</h2>
+              <p className="mt-1 text-slate-500">Capture the customer signature on this device.</p>
+              <Button type="button" className="mt-4" onClick={() => setShowTeamSignature(true)}>
+                Sign on This Device
+              </Button>
+            </div>
+          )}
+
+          {(estimate.status === EstimateStatus.Ready || estimate.status === EstimateStatus.Sent) && showTeamSignature && (
+            <div className="rounded-xl border border-slate-200 p-6"><h2 className="text-xl font-bold">Sign on This Device</h2><input value={teamSignerName} onChange={(event) => setTeamSignerName(event.target.value)} placeholder="Signer full name" className="mt-4 w-full rounded-lg border p-3" /><div className="mt-4"><SignaturePad onChange={setTeamSignature} /></div><div className="mt-4 flex gap-3"><Button type="button" disabled={isSavingStatus} onClick={() => void signOnTeamDevice()}>Save Signature</Button><Button type="button" disabled={isSavingStatus} onClick={() => setShowTeamSignature(false)}>Cancel</Button></div>{teamSignatureError && <p className="mt-3 text-red-600">{teamSignatureError}</p>}</div>
           )}
 
           <Button type="button" onClick={() => generateEstimatePdf(buildEstimatePdf(estimatePackage))}>
