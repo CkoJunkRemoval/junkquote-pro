@@ -21,11 +21,13 @@ export interface EstimatePackage {
 
   pricing: ReturnType<
     typeof calculateEstimate
-  >;
+  > & { discount: number };
 
   truckFill: ReturnType<
     typeof calculateTruckFill
   >;
+
+  status: Estimate["status"];
 }
 
 export function buildEstimatePackage(
@@ -65,8 +67,9 @@ export function buildEstimatePackage(
 
     breakdown,
 
-    pricing,
+    pricing: { ...pricing, discount: estimate.pricing.discount },
 
     truckFill,
+    status: estimate.status,
   };
 }

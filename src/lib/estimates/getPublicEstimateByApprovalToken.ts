@@ -13,6 +13,7 @@ export interface PublicEstimateApproval {
   pricing: { subtotal: number; labor: number; disposal: number; discount: number; total: number };
   status: PublicApprovalStatus;
   approvalTokenExpiresAt: Date;
+  signature?: { signerName: string; signedAt: Date; method: string; data: string };
 }
 
 export async function getPublicEstimateByApprovalToken(token: string): Promise<PublicEstimateApproval> {
@@ -84,5 +85,8 @@ export async function getPublicEstimateByApprovalToken(token: string): Promise<P
     },
     status: publicStatus,
     approvalTokenExpiresAt: estimate.approvalTokenExpiresAt,
+    signature: estimate.signatureData && estimate.signerName && estimate.signedAt && estimate.signatureMethod
+      ? { signerName: estimate.signerName, signedAt: estimate.signedAt, method: estimate.signatureMethod, data: estimate.signatureData }
+      : undefined,
   };
 }

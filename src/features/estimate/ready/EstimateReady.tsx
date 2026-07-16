@@ -228,7 +228,7 @@ export default function EstimateReady() {
           )}
 
           <Button type="button" onClick={() => generateEstimatePdf(buildEstimatePdf(estimatePackage))}>
-            Generate PDF
+            Download PDF
           </Button>
         </div>
       </Card>

@@ -18,6 +18,8 @@ export interface EstimatePdf {
   sections: PdfSection[];
 
   total: string;
+  status?: string;
+  signature?: { signerName: string; signedAt: string; method: string; image: string };
 }
 
 export function buildEstimatePdf(
@@ -50,6 +52,22 @@ export function buildEstimatePdf(
             label: "Email",
             value: estimate.customer.email,
           },
+        ],
+      },
+      ...estimate.jobSites.map((jobSite) => ({
+        title: `Job Site: ${jobSite.name}`,
+        rows: [
+          ...(jobSite.customerNotes ? [{ label: "Notes", value: jobSite.customerNotes }] : []),
+          ...jobSite.items.map((item) => ({ label: item.name, value: `Quantity: ${item.quantity}${item.notes ? ` — ${item.notes}` : ""}` })),
+        ],
+      })),
+      {
+        title: "Pricing",
+        rows: [
+          { label: "Subtotal", value: `$${estimate.pricing.subtotal.toFixed(2)}` },
+          { label: "Labor", value: `$${estimate.pricing.labor.toFixed(2)}` },
+          { label: "Disposal", value: `$${estimate.pricing.disposalFees.toFixed(2)}` },
+          { label: "Discount", value: `$${estimate.pricing.discount.toFixed(2)}` },
         ],
       },
 
@@ -112,5 +130,6 @@ export function buildEstimatePdf(
 
     total:
       `$${estimate.pricing.total.toFixed(2)}`,
+    status: estimate.status,
   };
 }

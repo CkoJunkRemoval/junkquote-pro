@@ -5,6 +5,9 @@ import { useState } from "react";
 import { respondToEstimateApprovalAction } from "@/app/actions/estimates/respondToEstimateApproval";
 import type { PublicEstimateApproval } from "@/lib/estimates/getPublicEstimateByApprovalToken";
 import SignaturePad from "@/components/estimate/SignaturePad";
+import { loadSignedPublicEstimatePdfAction } from "@/app/actions/estimates/loadSignedPublicEstimatePdf";
+import { buildPublicEstimatePdf } from "@/data/output/buildPublicEstimatePdf";
+import { generateEstimatePdf } from "@/data/output/generateEstimatePdf";
 
 export default function PublicEstimateApproval({
   token,
@@ -37,12 +40,19 @@ export default function PublicEstimateApproval({
     }
   }
 
+  async function downloadSignedCopy() {
+    try { generateEstimatePdf(buildPublicEstimatePdf(await loadSignedPublicEstimatePdfAction(token))); }
+    catch (downloadError) { setError(downloadError instanceof Error ? downloadError.message : "Unable to download signed copy."); }
+  }
+
   if (response || estimate.status === "Approved") {
     return (
       <main className="mx-auto max-w-2xl px-6 py-16">
         <div className="rounded-2xl border border-green-200 bg-green-50 p-8 text-center">
           <h1 className="text-3xl font-bold text-green-900">Estimate Approved</h1>
           <p className="mt-3 text-green-800">Thank you. Your approval has been recorded.</p>
+          <button type="button" onClick={() => void downloadSignedCopy()} className="mt-5 rounded-xl bg-green-700 px-5 py-3 font-semibold text-white">Download Signed Copy</button>
+          {error && <p className="mt-3 text-red-700">{error}</p>}
         </div>
       </main>
     );
