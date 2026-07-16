@@ -1,238 +1,162 @@
 # JunkQuote Pro Roadmap
 
-> Our goal is simple:
->
-> Build the fastest, easiest, and most intelligent estimating platform for junk removal companies.
+_Last Updated: July 2026_
 
 ---
 
-# Project Vision
+# Vision
+
+Build the fastest, easiest, and most complete operating system for junk removal companies.
 
 JunkQuote Pro is not just estimating software.
 
-It is a complete operating system for junk removal businesses.
-
-The software should guide the estimator through the same process they naturally follow on every job.
-
-Customer
-→ Property
-→ Walkthrough
-→ Pricing
-→ Approval
-→ Scheduling
-→ Job Completion
-→ Invoice
-→ Payment
-
-Every feature should answer one question:
-
-**Does this save time, improve accuracy, or create a better customer experience?**
-
-If the answer is no, it doesn't belong.
+It is an end-to-end platform that manages customers, estimates, scheduling, jobs, invoices, payments, reporting, and business operations.
 
 ---
 
-# Development Rules
+# Current Status
 
-✅ Replace entire files instead of partial edits
+## Platform Foundation ✅
 
-✅ Every sprint must compile
-
-✅ Git commit after every completed sprint
-
-✅ One feature at a time
-
-✅ Build for the field first
-
----
-
-# Current Architecture
-
-Estimate
-
-├── Customer
-
-├── Property
-
-├── Job Sites
-
-│     ├── Photos
-
-│     ├── Items
-
-│     ├── Notes
-
-│     └── Completed
-
-├── Pricing
-
-├── Timeline
-
-└── Approval
+- [x] Next.js Application
+- [x] TypeScript
+- [x] Tailwind CSS
+- [x] PostgreSQL (Neon)
+- [x] Prisma ORM
+- [x] Git Repository
+- [x] Architecture Documentation
+- [x] Database Blueprint
+- [x] Schema Blueprint
+- [x] API Blueprint
 
 ---
 
-# Completed
+# Customer Workflow
 
-## Dashboard
+- [x] Customer Screen
+- [x] Customer Context
+- [x] Customer Models
+- [x] Customer CRUD Library
+- [x] Customer Server Actions
+- [ ] Existing Customer Search
+- [ ] Save New Customer
+- [ ] Customer Auto-Fill
+- [ ] Customer History
 
-- Sidebar
-- Header
-- Command Center
-- Quick Actions
-- Business Snapshot
-- Business Pulse
+---
 
-## Estimate Engine
+# Property Workflow
 
-- Estimate Context
-- Estimate Types
-- Wizard Navigation
-- Customer Step
-- Property Step
-- Job Site Step
+- [x] Property Screen
+- [ ] Save Property
+- [ ] Property Search
+- [ ] Link Property to Customer
+- [ ] Property History
 
-## Data
+---
 
-- Item Library
-- Pricing Defaults
-- Pricing Foundation
+# Estimate Workflow
 
-## UI
+- [x] Estimate Wizard
+- [x] Walkthrough
+- [x] Job Sites
+- [x] Item Selection
+- [x] Pricing Summary
+- [x] Estimate Review
+- [x] Estimate Ready Screen
+- [x] PDF Generation
+- [ ] Save Estimate
+- [ ] Load Estimate
+- [ ] Duplicate Estimate
 
-- Estimate Summary
-- Progress Header
-- Responsive Layout
+---
+
+# Approval Workflow
+
+- [x] Ready Screen
+- [x] Approval Design
+- [ ] Email Approval
+- [ ] SMS Approval
+- [ ] Customer Signature
+- [ ] Estimate Tracking
+
+---
+
+# Scheduling
+
+- [ ] Calendar
+- [ ] Crew Assignment
+- [ ] Truck Assignment
+- [ ] Route Planning
+
+---
+
+# Jobs
+
+- [ ] Work Orders
+- [ ] Completion Photos
+- [ ] Job Notes
+- [ ] Completion Signature
+
+---
+
+# Invoices
+
+- [ ] Invoice Generation
+- [ ] Payment Tracking
+- [ ] Stripe Integration
+
+---
+
+# Customer Portal
+
+- [ ] View Estimate
+- [ ] Approve Estimate
+- [ ] Sign Estimate
+- [ ] View Invoice
+- [ ] Online Payment
+
+---
+
+# Reporting
+
+- [ ] Dashboard
+- [ ] Revenue
+- [ ] Conversion Rate
+- [ ] Customer Analytics
+- [ ] Employee Performance
 
 ---
 
 # Current Sprint
 
-🚧 Walkthrough Engine
+## Milestone 6B
 
-Current Goal:
+### Customer Management
 
-Build a room-by-room walkthrough that mirrors how an estimator walks through a property.
+Current Goal
 
----
-
-# Next Sprints
-
-## Sprint 4.0
-
-Walkthrough Engine
-
-- Room Navigation
-- Room Progress
-- Completion Status
+- Existing Customer Search
+- Save New Customer
+- Customer Auto-Fill
+- Store Customer ID
+- Finish Customer Workflow
 
 ---
 
-## Sprint 4.1
+# Next Sprint
 
-Smart Item Picker
+Milestone 6C
 
-- Suggested Items
-- Favorites
-- Custom Items
+Property Persistence
 
----
-
-## Sprint 4.2
-
-Photos
-
-- Camera
-- Gallery
-- Area Photos
-
----
-
-## Sprint 4.3
-
-Notes
-
-- Room Notes
-- Voice Notes
-- Crew Notes
-
----
-
-## Sprint 4.4
-
-Pricing Engine
-
-- Live Pricing
-- Truck Pricing
-- Labor
-- Discounts
-- Fees
-
----
-
-## Sprint 4.5
-
-Customer Approval
-
-- Signature
-- Terms
-- Approval Timestamp
-
----
-
-# Phase 2
-
-Business Operations
-
-- Scheduling
-- Calendar
-- Employees
-- Trucks
-- Routes
-- CRM
-- Customer History
+- Save Property
+- Link Property
+- Existing Property Search
 - Property History
 
 ---
 
-# Phase 3
+# Long-Term Goal
 
-Office Management
-
-- Invoicing
-- Payments
-- Accounting
-- Reports
-- Payroll
-- Fleet
-
----
-
-# Phase 4
-
-AI
-
-- AI Item Detection
-- Voice Estimating
-- Smart Pricing Suggestions
-- Automatic Follow-ups
-- Route Optimization
-- Business Insights
-
----
-
-# Long-Term Vision
-
-The software should eventually be able to manage an entire junk removal company from the first phone call to the final payment.
-
-The estimator should never feel like they're filling out forms.
-
-They should feel like they're simply walking a property while the software quietly builds everything in the background.
-
----
-
-# Core Philosophy
-
-The software adapts to the company.
-
-The company should never have to adapt to the software.
+Become the industry standard operating platform for junk removal companies.

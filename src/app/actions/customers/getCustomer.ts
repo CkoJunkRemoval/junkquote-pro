@@ -3,7 +3,7 @@
 import { getCustomer } from "@/lib/customers/getCustomer";
 
 export async function getCustomerAction(
-  customerId: string
+  id: string
 ) {
-  return getCustomer(customerId);
+  return getCustomer(id);
 }

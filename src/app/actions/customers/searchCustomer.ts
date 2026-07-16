@@ -1,23 +1,10 @@
 "use server";
 
-import { searchCustomers } from "@/lib/customers/searchCustomer";
+import { searchCustomer } from "@/lib/customers/searchCustomer";
 
-export interface SearchCustomersActionInput {
-  companyId: string;
-  search: string;
-}
-
-export async function searchCustomersAction(
-  input: SearchCustomersActionInput
+export async function searchCustomerAction(
+  companyId: string,
+  search: string
 ) {
-  const search = input.search.trim();
-
-  if (search.length === 0) {
-    return [];
-  }
-
-  return searchCustomers(
-    input.companyId,
-    search
-  );
+  return searchCustomer(companyId, search);
 }

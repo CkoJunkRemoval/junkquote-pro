@@ -20,6 +20,7 @@ const initialEstimate: Estimate = {
   customerType: null,
 
   customer: {
+    id: "",
     firstName: "",
     lastName: "",
     phone: "",
@@ -62,6 +63,10 @@ interface EstimateContextType {
     customerType: Estimate["customerType"]
   ) => void;
 
+  setCustomer: (
+    customer: Customer
+  ) => void;
+
   updateCustomer: (
     customer: Partial<Customer>
   ) => void;
@@ -100,6 +105,15 @@ export function EstimateProvider({
     setEstimate((prev) => ({
       ...prev,
       customerType,
+    }));
+  }
+
+  function setCustomer(
+    customer: Customer
+  ) {
+    setEstimate((prev) => ({
+      ...prev,
+      customer,
     }));
   }
 
@@ -158,19 +172,13 @@ export function EstimateProvider({
     <EstimateContext.Provider
       value={{
         estimate,
-
         setEstimate,
-
         setCustomerType,
-
+        setCustomer,
         updateCustomer,
-
         updateProperty,
-
         setJobSites,
-
         updatePricing,
-
         setStatus,
       }}
     >

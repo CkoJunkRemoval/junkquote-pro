@@ -1,6 +1,6 @@
 import { prisma } from "../prisma";
 
-export async function searchCustomers(
+export async function searchCustomer(
   companyId: string,
   search: string
 ) {
