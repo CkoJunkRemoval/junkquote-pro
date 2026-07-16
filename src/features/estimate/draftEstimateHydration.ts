@@ -9,6 +9,7 @@ export interface PersistedDraftEstimate {
   propertyId: string;
   currentStep: number;
   pricingDiscount: number;
+  status: string;
   customer: {
     id: string;
     firstName: string;
@@ -100,7 +101,7 @@ export function hydrateDraftEstimate(savedEstimate: PersistedDraftEstimate) {
       discount: savedEstimate.pricingDiscount,
       total: 0,
     },
-    status: EstimateStatus.Draft,
+    status: savedEstimate.status as EstimateStatus,
     timeline: [],
   };
   const totals = calculateEstimate(estimate);

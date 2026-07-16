@@ -9,6 +9,7 @@ function createDraft(overrides: Partial<PersistedDraftEstimate> = {}): Persisted
     propertyId: "property-1",
     currentStep: 4,
     pricingDiscount: 15,
+    status: "Draft",
     customer: {
       id: "customer-1",
       firstName: "Ada",

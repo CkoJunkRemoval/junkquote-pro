@@ -18,6 +18,13 @@ enum UserRole {
 
 enum EstimateStatus {
   Draft
+  Ready
+  Sent
+  Approved
+  Declined
+  Scheduled
+  Completed
+  Archived
 }
 
 model Company {

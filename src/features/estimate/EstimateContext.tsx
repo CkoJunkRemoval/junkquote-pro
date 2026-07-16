@@ -13,6 +13,7 @@ import {
 import { createEstimateAction } from "@/app/actions/estimates/createEstimate";
 import { loadEstimateAction } from "@/app/actions/estimates/loadEstimate";
 import { saveEstimateProgressAction } from "@/app/actions/estimates/saveEstimateProgress";
+import { updateEstimateStatusAction } from "@/app/actions/estimates/updateEstimateStatus";
 import { DEVELOPMENT_COMPANY_ID } from "@/lib/config";
 import { calculateEstimate } from "@/data/pricing/calculateEstimate";
 
@@ -102,7 +103,7 @@ interface EstimateContextType {
 
   setStatus: (
     status: EstimateStatus
-  ) => void;
+  ) => Promise<void>;
 }
 
 const EstimateContext =
@@ -206,7 +207,7 @@ export function EstimateProvider({
   }, [estimateId]);
 
   const saveDraftProgress = useCallback(async () => {
-    if (!estimateId || isLoadingEstimate) {
+    if (!estimateId || isLoadingEstimate || estimate.status !== EstimateStatus.Draft) {
       return;
     }
 
@@ -300,9 +301,14 @@ export function EstimateProvider({
     }));
   }
 
-  function setStatus(
+  async function setStatus(
     status: EstimateStatus
   ) {
+    if (!estimateId) {
+      throw new Error("Estimate must be saved before changing status.");
+    }
+
+    await updateEstimateStatusAction(estimateId, status);
     setEstimate((prev) => ({
       ...prev,
       status,
