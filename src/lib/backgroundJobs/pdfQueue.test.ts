@@ -1,0 +1,4 @@
+import { describe, expect, it, vi } from "vitest";
+vi.mock("./databaseQueue", () => ({ databaseJobQueue: {} }));
+import { enqueueEstimatePdf, enqueueInvoicePdf, enqueueReceipt } from "./pdfQueue";
+describe("PDF queue", () => { it("queues each PDF type with tenant-owned idempotency", async () => { const enqueue = vi.fn().mockResolvedValue({ id: "job" }); const queue = { enqueue } as never; await enqueueEstimatePdf("tenant-a", "estimate-1", "user-1", queue); await enqueueInvoicePdf("tenant-a", "invoice-1", "user-1", queue); await enqueueReceipt("tenant-a", "payment-1", "user-1", queue); expect(enqueue.mock.calls.map(([input]) => input.type)).toEqual(["GenerateEstimatePdf", "GenerateInvoicePdf", "GenerateReceipt"]); expect(enqueue).toHaveBeenCalledWith(expect.objectContaining({ companyId: "tenant-a", idempotencyKey: "invoice:invoice-1" })); }); });

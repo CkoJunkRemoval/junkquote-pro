@@ -95,6 +95,38 @@ enum EmployeeStatus {
   Inactive
 }
 
+enum BackgroundJobType {
+  SendCommunication
+  GenerateEstimatePdf
+  GenerateInvoicePdf
+  GenerateReceipt
+  CleanupFiles
+  ScheduledReminder
+  WebhookDelivery
+  Future
+}
+
+enum BackgroundJobStatus {
+  Pending
+  Running
+  Completed
+  Failed
+  Cancelled
+}
+
+enum BackgroundJobPriority {
+  Low
+  Normal
+  High
+  Critical
+}
+
+enum ReminderType {
+  EstimateReminder
+  UpcomingJob
+  OutstandingInvoice
+}
+
 model Company {
   id        String   @id @default(uuid())
   name      String
@@ -136,6 +168,8 @@ model Company {
   employees Employee[]
   crews     Crew[]
   assignments JobAssignment[]
+  backgroundJobs BackgroundJob[]
+  reminderSchedules ReminderSchedule[]
 
   @@map("companies")
 }
@@ -178,6 +212,8 @@ model User {
   updatedAt    DateTime @updatedAt
 
   memberships  CompanyMembership[]
+  createdBackgroundJobs BackgroundJob[]
+  createdReminderSchedules ReminderSchedule[]
 
   @@index([companyId])
 
@@ -539,4 +575,49 @@ model EstimateItem {
   @@unique([jobSiteId, itemId])
   @@index([jobSiteId])
   @@map("estimate_items")
+}
+
+model BackgroundJob {
+  id              String                @id @default(uuid())
+  companyId       String
+  company         Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  type            BackgroundJobType
+  status          BackgroundJobStatus   @default(Pending)
+  priority        BackgroundJobPriority @default(Normal)
+  payload         Json
+  idempotencyKey  String?
+  attempts        Int                   @default(0)
+  maxAttempts     Int                   @default(3)
+  lastError       String?
+  availableAt     DateTime              @default(now())
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdByUserId String?
+  createdByUser   User?                 @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  @@unique([companyId, type, idempotencyKey])
+  @@index([status, availableAt, priority, createdAt])
+  @@index([companyId, status, createdAt])
+  @@map("background_jobs")
+}
+
+model ReminderSchedule {
+  id              String       @id @default(uuid())
+  companyId       String
+  company         Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  type            ReminderType
+  targetId        String?
+  enabled         Boolean      @default(true)
+  scheduledFor    DateTime
+  payload         Json
+  lastEnqueuedAt  DateTime?
+  createdByUserId String?
+  createdByUser   User?        @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([companyId, type, enabled, scheduledFor])
+  @@map("reminder_schedules")
 }
