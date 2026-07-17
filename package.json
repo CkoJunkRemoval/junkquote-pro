@@ -7,7 +7,14 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "npm run test:unit",
+    "test:unit": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:all": "npm run test:unit && npm run test:integration",
+    "test:db:provision": "node scripts/provision-test-db.mjs",
+    "test:db:reset": "node scripts/test-db-reset.mjs",
+    "test:db:prepare": "node scripts/test-db-prepare.mjs",
+    "test:db:generate": "prisma generate"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",

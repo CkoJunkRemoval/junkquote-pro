@@ -7,4 +7,5 @@ export default defineConfig({
       "@": resolve(__dirname, "src"),
     },
   },
+  test: { exclude: ["tests/integration/**", "node_modules/**"] },
 });

@@ -1,12 +1,11 @@
-import { DEVELOPMENT_COMPANY_ID } from "@/lib/config";
 import { prisma } from "../prisma";
 
 export interface CreateInvoiceInput { estimateId: string; jobId?: string; }
 
-export async function createInvoice(input: CreateInvoiceInput) {
+export async function createInvoice(companyId: string, input: CreateInvoiceInput) {
   return prisma.$transaction(async (tx) => {
     const estimate = await tx.estimate.findFirst({
-      where: { id: input.estimateId, companyId: DEVELOPMENT_COMPANY_ID },
+      where: { id: input.estimateId, companyId, customer: { companyId }, property: { customer: { companyId } } },
       select: { id: true, companyId: true, customerId: true, propertyId: true, status: true, pricingSubtotal: true, pricingLabor: true, pricingDisposal: true, pricingDiscount: true, pricingTotal: true },
     });
     if (!estimate) throw new Error("Estimate not found.");
@@ -17,7 +16,7 @@ export async function createInvoice(input: CreateInvoiceInput) {
     let jobId: string | undefined;
     let isCompletedJob = false;
     if (input.jobId) {
-      const job = await tx.job.findFirst({ where: { id: input.jobId, estimateId: estimate.id, companyId: DEVELOPMENT_COMPANY_ID }, select: { id: true, status: true } });
+      const job = await tx.job.findFirst({ where: { id: input.jobId, estimateId: estimate.id, companyId, customer: { companyId }, estimate: { companyId } }, select: { id: true, status: true } });
       if (!job) throw new Error("Job not found for this estimate.");
       jobId = job.id;
       isCompletedJob = job.status === "Completed";
@@ -29,9 +28,9 @@ export async function createInvoice(input: CreateInvoiceInput) {
 
     const [latestInvoice, company] = await Promise.all([
       tx.invoice.findFirst({ orderBy: { invoiceNumber: "desc" }, select: { invoiceNumber: true } }),
-      tx.company.findFirst({ where: { id: DEVELOPMENT_COMPANY_ID }, select: { invoicePrefix: true, defaultPaymentTermsDays: true } }),
+      tx.company.findUnique({ where: { id: companyId }, select: { invoicePrefix: true, defaultPaymentTermsDays: true } }),
     ]);
-    if (!company) throw new Error("Development company not found.");
+    if (!company) throw new Error("Company not found.");
     const invoiceNumber = (latestInvoice?.invoiceNumber ?? 0) + 1;
     const subtotal = estimate.pricingSubtotal + estimate.pricingLabor + estimate.pricingDisposal;
     const issuedDate = new Date();
@@ -57,4 +56,11 @@ export async function createInvoice(input: CreateInvoiceInput) {
       },
     });
   });
+}
+
+export function createInvoiceFromEstimate(companyId: string, estimateId: string) { return createInvoice(companyId, { estimateId }); }
+export async function createInvoiceFromJob(companyId: string, jobId: string) {
+  const job = await prisma.job.findFirst({ where: { id: jobId, companyId, estimate: { companyId }, customer: { companyId } }, select: { estimateId: true } });
+  if (!job) throw new Error("Job not found.");
+  return createInvoice(companyId, { estimateId: job.estimateId, jobId });
 }
