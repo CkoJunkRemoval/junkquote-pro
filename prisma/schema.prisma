@@ -16,6 +16,19 @@ enum UserRole {
   OFFICE
 }
 
+enum MembershipRole {
+  Owner
+  Admin
+  Manager
+  Office
+  Crew
+}
+
+enum MembershipStatus {
+  Active
+  Suspended
+}
+
 enum EstimateStatus {
   Draft
   Ready
@@ -32,12 +45,80 @@ enum SignatureMethod {
   TeamDevice
 }
 
+enum JobStatus {
+  Unscheduled
+  Scheduled
+  InProgress
+  Completed
+  Cancelled
+}
+
+enum InvoiceStatus {
+  Draft
+  Sent
+  Partial
+  Paid
+  Overdue
+  Cancelled
+}
+
+enum PaymentMethod {
+  Cash
+  Check
+  CreditCard
+  DebitCard
+  ACH
+  CashApp
+  ApplePay
+  Other
+}
+
+enum JobPhotoCategory {
+  Before
+  During
+  After
+  Damage
+  Disposal
+  Other
+}
+
+enum EmployeeRole {
+  Owner
+  Manager
+  CrewLead
+  CrewMember
+  Office
+}
+
+enum EmployeeStatus {
+  Active
+  Inactive
+}
+
 model Company {
   id        String   @id @default(uuid())
   name      String
+  legalName String   @default("JunkQuote Pro")
+  displayName String @default("JunkQuote Pro")
   phone     String?
   email     String?
   website   String?
+  addressLine1 String?
+  addressLine2 String?
+  city String?
+  state String?
+  postalCode String?
+  logoUrl String?
+  primaryColor String?
+  secondaryColor String?
+  invoicePrefix String @default("INV")
+  estimatePrefix String @default("EST")
+  defaultTaxRate Float @default(0)
+  defaultPaymentTermsDays Int @default(30)
+  defaultEstimateExpirationDays Int @default(30)
+  defaultMinimumCharge Float @default(0)
+  timezone String @default("America/New_York")
+  currencyCode String @default("USD")
   active    Boolean  @default(true)
 
   createdAt DateTime @default(now())
@@ -45,8 +126,16 @@ model Company {
 
   settings  CompanySettings?
   users     User[]
+  memberships CompanyMembership[]
   customers Customer[]
   estimates Estimate[]
+  jobs      Job[]
+  invoices  Invoice[]
+  payments  Payment[]
+  jobPhotos JobPhoto[]
+  employees Employee[]
+  crews     Crew[]
+  assignments JobAssignment[]
 
   @@map("companies")
 }
@@ -74,8 +163,8 @@ model User {
   companyId    String
   company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
-  firstName    String
-  lastName     String
+  firstName    String?
+  lastName     String?
 
   email        String   @unique
   passwordHash String
@@ -88,9 +177,27 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  memberships  CompanyMembership[]
+
   @@index([companyId])
 
   @@map("users")
+}
+
+model CompanyMembership {
+  id        String           @id @default(uuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyId String
+  company   Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  role      MembershipRole   @default(Owner)
+  status    MembershipStatus @default(Active)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@unique([userId, companyId])
+  @@index([companyId, status])
+  @@map("company_memberships")
 }
 
 model Customer {
@@ -110,6 +217,8 @@ model Customer {
 
   properties Property[]
   estimates  Estimate[]
+  jobs       Job[]
+  invoices   Invoice[]
 
   @@index([companyId])
   @@index([lastName])
@@ -140,6 +249,8 @@ model Property {
   updatedAt      DateTime @updatedAt
 
   estimates Estimate[]
+  jobs      Job[]
+  invoices  Invoice[]
 
   @@index([customerId])
 
@@ -148,6 +259,7 @@ model Property {
 
 model Estimate {
   id         String         @id @default(uuid())
+  displayNumber String?     @unique
 
   companyId  String
   company    Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -178,6 +290,8 @@ model Estimate {
   signatureMethod         SignatureMethod?
 
   jobSites   JobSite[]
+  job        Job?
+  invoice    Invoice?
 
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
@@ -187,6 +301,199 @@ model Estimate {
   @@index([propertyId])
 
   @@map("estimates")
+}
+
+model Job {
+  id              String    @id @default(uuid())
+
+  companyId       String
+  company         Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  estimateId      String    @unique
+  estimate        Estimate  @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+
+  customerId      String
+  customer        Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  propertyId      String
+  property        Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  status          JobStatus @default(Unscheduled)
+  scheduledStart  DateTime?
+  scheduledEnd    DateTime?
+  crewNotes       String    @default("")
+  customerNotes   String    @default("")
+  completionNotes String    @default("")
+  invoice         Invoice?
+  photos          JobPhoto[]
+  assignments     JobAssignment[]
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([companyId])
+  @@index([customerId])
+  @@index([propertyId])
+  @@index([scheduledStart])
+  @@map("jobs")
+}
+
+model Invoice {
+  id            String        @id @default(uuid())
+
+  companyId     String
+  company       Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  customerId    String
+  customer      Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  propertyId    String
+  property      Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  jobId         String?       @unique
+  job           Job?          @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  estimateId    String        @unique
+  estimate      Estimate      @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+
+  invoiceNumber Int           @unique
+  displayNumber String?       @unique
+  subtotal      Float
+  tax           Float         @default(0)
+  discounts     Float         @default(0)
+  total         Float
+  balanceDue    Float
+  status        InvoiceStatus @default(Draft)
+  dueDate       DateTime?
+  issuedDate    DateTime?
+  paidDate      DateTime?
+  notes         String        @default("")
+  payments      Payment[]
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([companyId])
+  @@index([customerId])
+  @@index([propertyId])
+  @@index([status])
+  @@map("invoices")
+}
+
+model Payment {
+  id              String        @id @default(uuid())
+
+  companyId       String
+  company         Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  invoiceId       String
+  invoice         Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  amount          Float
+  method          PaymentMethod
+  referenceNumber String?
+  paymentDate     DateTime
+  notes           String        @default("")
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([companyId])
+  @@index([invoiceId])
+  @@map("payments")
+}
+
+model JobPhoto {
+  id           String           @id @default(uuid())
+  companyId    String
+  company      Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  jobId        String
+  job          Job              @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  jobSiteId    String?
+  jobSite      JobSite?         @relation(fields: [jobSiteId], references: [id], onDelete: SetNull)
+  category     JobPhotoCategory @default(Other)
+  fileUrl      String
+  thumbnailUrl String?
+  fileName     String
+  mimeType     String
+  fileSize     Int
+  caption      String?
+  sortOrder    Int
+  takenAt      DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([companyId])
+  @@index([jobId, category, sortOrder])
+  @@index([jobSiteId])
+  @@map("job_photos")
+}
+
+model Employee {
+  id         String         @id @default(uuid())
+  companyId  String
+  company    Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  firstName  String
+  lastName   String
+  email      String?
+  phone      String?
+  role       EmployeeRole
+  status     EmployeeStatus @default(Active)
+  hourlyRate Float?
+  color      String?
+  notes      String?
+  crewMembers CrewMember[]
+  assignments JobAssignment[]
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  @@index([companyId])
+  @@map("employees")
+}
+
+model Crew {
+  id         String          @id @default(uuid())
+  companyId  String
+  company    Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name       String
+  color      String?
+  active     Boolean         @default(true)
+  members    CrewMember[]
+  assignments JobAssignment[]
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  @@index([companyId])
+  @@map("crews")
+}
+
+model CrewMember {
+  crewId     String
+  crew       Crew     @relation(fields: [crewId], references: [id], onDelete: Cascade)
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  isLead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  @@id([crewId, employeeId])
+  @@map("crew_members")
+}
+
+model JobAssignment {
+  id         String    @id @default(uuid())
+  companyId  String
+  company    Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  jobId      String
+  job        Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  employeeId String?
+  employee   Employee? @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  crewId     String?
+  crew       Crew?     @relation(fields: [crewId], references: [id], onDelete: Cascade)
+  assignedAt DateTime  @default(now())
+  notes      String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  @@unique([jobId, employeeId])
+  @@unique([jobId, crewId])
+  @@index([companyId])
+  @@map("job_assignments")
 }
 
 model JobSite {
@@ -203,6 +510,7 @@ model JobSite {
   sortOrder     Int
 
   items         EstimateItem[]
+  photos        JobPhoto[]
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

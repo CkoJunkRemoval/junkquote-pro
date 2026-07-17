@@ -20,6 +20,7 @@ export interface EstimatePdf {
   total: string;
   status?: string;
   signature?: { signerName: string; signedAt: string; method: string; image: string };
+  branding?: { name: string; logoUrl?: string | null; primaryColor?: string | null; secondaryColor?: string | null };
 }
 
 export function buildEstimatePdf(

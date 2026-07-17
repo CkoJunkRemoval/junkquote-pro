@@ -5,9 +5,8 @@ import { useState } from "react";
 import { respondToEstimateApprovalAction } from "@/app/actions/estimates/respondToEstimateApproval";
 import type { PublicEstimateApproval } from "@/lib/estimates/getPublicEstimateByApprovalToken";
 import SignaturePad from "@/components/estimate/SignaturePad";
-import { loadSignedPublicEstimatePdfAction } from "@/app/actions/estimates/loadSignedPublicEstimatePdf";
-import { buildPublicEstimatePdf } from "@/data/output/buildPublicEstimatePdf";
-import { generateEstimatePdf } from "@/data/output/generateEstimatePdf";
+import { downloadSignedPublicEstimatePdfAction } from "@/app/actions/estimates/downloadSignedPublicEstimatePdf";
+import { downloadPdf } from "@/data/output/downloadPdf";
 
 export default function PublicEstimateApproval({
   token,
@@ -41,7 +40,7 @@ export default function PublicEstimateApproval({
   }
 
   async function downloadSignedCopy() {
-    try { generateEstimatePdf(buildPublicEstimatePdf(await loadSignedPublicEstimatePdfAction(token))); }
+    try { downloadPdf(await downloadSignedPublicEstimatePdfAction(token), "signed-estimate.pdf"); }
     catch (downloadError) { setError(downloadError instanceof Error ? downloadError.message : "Unable to download signed copy."); }
   }
 

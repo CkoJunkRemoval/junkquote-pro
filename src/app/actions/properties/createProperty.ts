@@ -4,9 +4,11 @@ import {
   createProperty,
   type CreatePropertyInput,
 } from "@/lib/properties/createProperty";
+import { requireCompanyRole } from "@/lib/auth/tenant";
 
 export async function createPropertyAction(
   input: CreatePropertyInput
 ) {
-  return createProperty(input);
+  const { companyId } = await requireCompanyRole("Owner", "Admin", "Manager", "Office");
+  return createProperty(companyId, input);
 }

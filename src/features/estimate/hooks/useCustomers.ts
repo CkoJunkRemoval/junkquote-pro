@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 
-import { DEVELOPMENT_COMPANY_ID } from "@/lib/config";
 
 import { createCustomerAction } from "@/app/actions/customers/createCustomer";
 import { getCustomerPropertiesAction } from "@/app/actions/customers/getCustomerProperties";
@@ -24,10 +23,7 @@ export function useCustomers() {
     setLoading(true);
 
     try {
-      const results = await searchCustomerAction(
-        DEVELOPMENT_COMPANY_ID,
-        searchText
-      );
+      const results = await searchCustomerAction(searchText);
 
       setCustomers(results);
     } catch (error) {
@@ -46,7 +42,6 @@ export function useCustomers() {
     notes?: string;
   }) {
     return createCustomerAction({
-      companyId: DEVELOPMENT_COMPANY_ID,
       firstName: data.firstName,
       lastName: data.lastName,
       phone: data.phone,

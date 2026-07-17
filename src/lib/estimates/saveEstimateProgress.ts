@@ -1,4 +1,3 @@
-import { DEVELOPMENT_COMPANY_ID } from "@/lib/config";
 
 import { prisma } from "../prisma";
 
@@ -12,12 +11,12 @@ export interface SaveEstimateProgressInput {
   pricingTotal: number;
 }
 
-export async function saveEstimateProgress(input: SaveEstimateProgressInput) {
+export async function saveEstimateProgress(companyId: string, input: SaveEstimateProgressInput) {
   const { estimateId, ...data } = input;
   const result = await prisma.estimate.updateMany({
     where: {
       id: estimateId,
-      companyId: DEVELOPMENT_COMPANY_ID,
+      companyId,
       status: "Draft",
     },
     data,

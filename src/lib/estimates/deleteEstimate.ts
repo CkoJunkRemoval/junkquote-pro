@@ -1,12 +1,11 @@
-import { DEVELOPMENT_COMPANY_ID } from "@/lib/config";
 
 import { prisma } from "../prisma";
 
-export async function deleteEstimate(estimateId: string) {
+export async function deleteEstimate(companyId: string, estimateId: string) {
   const result = await prisma.estimate.deleteMany({
     where: {
       id: estimateId,
-      companyId: DEVELOPMENT_COMPANY_ID,
+      companyId,
       status: "Draft",
     },
   });

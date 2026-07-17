@@ -5,6 +5,7 @@ type StepHeaderProps = {
   description: string;
   estimateId?: string | null;
   customerName?: string;
+  onBackToEstimates?: () => void;
 };
 
 export default function StepHeader({
@@ -14,9 +15,19 @@ export default function StepHeader({
   description,
   estimateId,
   customerName,
+  onBackToEstimates,
 }: StepHeaderProps) {
   return (
     <div className="mb-10">
+      {onBackToEstimates && (
+        <button
+          type="button"
+          onClick={onBackToEstimates}
+          className="mb-5 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          Back to Estimates
+        </button>
+      )}
       <p className="text-sm font-semibold text-blue-600">
         Step {step} of {totalSteps}
       </p>

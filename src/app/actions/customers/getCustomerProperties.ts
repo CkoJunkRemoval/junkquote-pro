@@ -1,9 +1,11 @@
 "use server";
 
 import { getCustomerProperties } from "@/lib/customers/getCustomerProperties";
+import { requireCompanyRole } from "@/lib/auth/tenant";
 
 export async function getCustomerPropertiesAction(
   customerId: string
 ) {
-  return getCustomerProperties(customerId);
+  const { companyId } = await requireCompanyRole("Owner", "Admin", "Manager", "Office");
+  return getCustomerProperties(companyId, customerId);
 }

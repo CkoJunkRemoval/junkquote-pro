@@ -4,9 +4,10 @@ import {
   saveEstimateProgress,
   type SaveEstimateProgressInput,
 } from "@/lib/estimates/saveEstimateProgress";
+import { requireCompanyRole } from "@/lib/auth/tenant";
 
 export async function saveEstimateProgressAction(
   input: SaveEstimateProgressInput
 ) {
-  return saveEstimateProgress(input);
+  const { companyId } = await requireCompanyRole("Owner", "Admin", "Manager", "Office"); return saveEstimateProgress(companyId, input);
 }

@@ -10,10 +10,12 @@ export interface CreatePropertyInput {
   accessNotes?: string;
 }
 
-export async function createProperty(input: CreatePropertyInput) {
+export async function createProperty(companyId: string, input: CreatePropertyInput) {
+  const customer = await prisma.customer.findFirst({ where: { id: input.customerId, companyId }, select: { id: true } });
+  if (!customer) throw new Error("Customer not found.");
   return prisma.property.create({
     data: {
-      customerId: input.customerId,
+      customerId: customer.id,
       address: input.address.trim(),
       city: input.city.trim(),
       state: input.state.trim(),

@@ -14,7 +14,6 @@ import { createEstimateAction } from "@/app/actions/estimates/createEstimate";
 import { loadEstimateAction } from "@/app/actions/estimates/loadEstimate";
 import { saveEstimateProgressAction } from "@/app/actions/estimates/saveEstimateProgress";
 import { updateEstimateStatusAction } from "@/app/actions/estimates/updateEstimateStatus";
-import { DEVELOPMENT_COMPANY_ID } from "@/lib/config";
 import { calculateEstimate } from "@/data/pricing/calculateEstimate";
 
 import {
@@ -71,6 +70,7 @@ interface EstimateContextType {
 
   saveEstimate: () => Promise<void>;
   resetEstimate: () => void;
+  refreshEstimate: () => Promise<void>;
   setWizardStep: (step: number) => void;
 
   setEstimate: React.Dispatch<
@@ -147,7 +147,6 @@ export function EstimateProvider({
 
     try {
       const createdEstimate = await createEstimateAction({
-        companyId: DEVELOPMENT_COMPANY_ID,
         customerId,
         propertyId,
       });
@@ -202,6 +201,7 @@ export function EstimateProvider({
 
     window.localStorage.setItem("junkquote:estimateId", estimateId);
     const url = new URL(window.location.href);
+    url.searchParams.delete("new");
     url.searchParams.set("estimateId", estimateId);
     window.history.replaceState({}, "", url);
   }, [estimateId]);
@@ -236,6 +236,11 @@ export function EstimateProvider({
     setWizardStepState(1);
     setEstimate(initialEstimate);
   }, []);
+
+  const refreshEstimate = useCallback(async () => {
+    if (!estimateId) return;
+    await hydrateEstimate(estimateId);
+  }, [estimateId, hydrateEstimate]);
 
   const setWizardStep = useCallback((step: number) => {
     setWizardStepState(Math.min(6, Math.max(1, step)));
@@ -324,6 +329,7 @@ export function EstimateProvider({
         wizardStep,
         saveEstimate,
         resetEstimate,
+        refreshEstimate,
         setWizardStep,
         setEstimate,
         setCustomerType,

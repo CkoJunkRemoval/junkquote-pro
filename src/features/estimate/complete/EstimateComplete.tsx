@@ -15,11 +15,11 @@ export default function EstimateComplete() {
   const estimatePackage =
     buildEstimatePackage(estimate);
 
-  function handleGeneratePdf() {
+  async function handleGeneratePdf() {
     const pdf =
       buildEstimatePdf(estimatePackage);
 
-    generateEstimatePdf(pdf);
+    await generateEstimatePdf(pdf);
   }
 
   return (

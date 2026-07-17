@@ -2,7 +2,7 @@ import { prisma } from "../prisma";
 import { getPublicApprovalError, type PublicApprovalStatus } from "./publicEstimateApproval";
 
 export interface PublicEstimateApproval {
-  company: { name: string; phone: string | null; email: string | null; website: string | null };
+  company: { name: string; phone: string | null; email: string | null; website: string | null; logoUrl: string | null; primaryColor: string | null; secondaryColor: string | null };
   customerName: string;
   propertyAddress: { address: string; city: string; state: string; zip: string };
   jobSites: Array<{
@@ -54,10 +54,13 @@ export async function getPublicEstimateByApprovalToken(token: string): Promise<P
 
   return {
     company: {
-      name: estimate.company.name,
+      name: estimate.company.displayName || estimate.company.name,
       phone: estimate.company.phone,
       email: estimate.company.email,
       website: estimate.company.website,
+      logoUrl: estimate.company.logoUrl,
+      primaryColor: estimate.company.primaryColor,
+      secondaryColor: estimate.company.secondaryColor,
     },
     customerName: `${estimate.customer.firstName} ${estimate.customer.lastName}`.trim(),
     propertyAddress: {

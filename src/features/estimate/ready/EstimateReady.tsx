@@ -5,8 +5,8 @@ import { useState } from "react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { buildEstimatePackage } from "@/data/output/buildEstimatePackage";
-import { buildEstimatePdf } from "@/data/output/buildEstimatePdf";
-import { generateEstimatePdf } from "@/data/output/generateEstimatePdf";
+import { downloadEstimatePdfAction } from "@/app/actions/estimates/downloadEstimatePdf";
+import { downloadPdf as downloadPdfFile } from "@/data/output/downloadPdf";
 import { statusTransitions } from "@/lib/estimates/statusWorkflow";
 import {
   prepareEstimateDeliveryAction,
@@ -14,12 +14,14 @@ import {
 import type { EstimateDeliveryMethod } from "@/lib/estimates/prepareEstimateDelivery";
 import { signEstimateOnTeamDeviceAction } from "@/app/actions/estimates/signEstimateOnTeamDevice";
 import SignaturePad from "@/components/estimate/SignaturePad";
+import CreateJobButton from "@/features/jobs/CreateJobButton";
+import CreateInvoiceButton from "@/features/invoices/CreateInvoiceButton";
 
 import { useEstimate } from "../EstimateContext";
 import { EstimateStatus } from "../status";
 
 export default function EstimateReady() {
-  const { estimate, estimateId, setStatus, setEstimate } = useEstimate();
+  const { estimate, estimateId, setStatus, setEstimate, refreshEstimate } = useEstimate();
   const [isSavingStatus, setIsSavingStatus] = useState(false);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [isPreparingDelivery, setIsPreparingDelivery] = useState(false);
@@ -90,9 +92,14 @@ export default function EstimateReady() {
   async function signOnTeamDevice() {
     if (!estimateId) return;
     setIsSavingStatus(true); setTeamSignatureError(null);
-    try { await signEstimateOnTeamDeviceAction(estimateId, teamSignerName, teamSignature); setEstimate((current) => ({ ...current, status: EstimateStatus.Approved })); setShowTeamSignature(false); }
+    try { await signEstimateOnTeamDeviceAction(estimateId, teamSignerName, teamSignature); await refreshEstimate(); setEstimate((current) => ({ ...current, status: EstimateStatus.Approved })); setShowTeamSignature(false); }
     catch (error) { setTeamSignatureError(error instanceof Error ? error.message : "Unable to save signature."); }
     finally { setIsSavingStatus(false); }
+  }
+
+  async function downloadPdf() {
+    if (!estimateId) return;
+    downloadPdfFile(await downloadEstimatePdfAction(estimateId), "estimate.pdf");
   }
 
   return (
@@ -162,6 +169,14 @@ export default function EstimateReady() {
             {statusError && <p className="mt-3 text-red-600">{statusError}</p>}
           </div>
 
+          {estimate.status === EstimateStatus.Approved && estimateId && (
+            <div className="rounded-xl border border-slate-200 p-6">
+              <h2 className="text-xl font-bold">Job</h2>
+              <p className="mt-1 text-slate-500">Create a job from this approved estimate.</p>
+              <div className="mt-4 flex flex-wrap gap-3"><CreateJobButton estimateId={estimateId} /><CreateInvoiceButton estimateId={estimateId} /></div>
+            </div>
+          )}
+
           {estimate.status === EstimateStatus.Ready && (
             <div className="rounded-xl border border-slate-200 p-6">
               <h2 className="text-xl font-bold">Delivery</h2>
@@ -227,7 +242,7 @@ export default function EstimateReady() {
             <div className="rounded-xl border border-slate-200 p-6"><h2 className="text-xl font-bold">Sign on This Device</h2><input value={teamSignerName} onChange={(event) => setTeamSignerName(event.target.value)} placeholder="Signer full name" className="mt-4 w-full rounded-lg border p-3" /><div className="mt-4"><SignaturePad onChange={setTeamSignature} /></div><div className="mt-4 flex gap-3"><Button type="button" disabled={isSavingStatus} onClick={() => void signOnTeamDevice()}>Save Signature</Button><Button type="button" disabled={isSavingStatus} onClick={() => setShowTeamSignature(false)}>Cancel</Button></div>{teamSignatureError && <p className="mt-3 text-red-600">{teamSignatureError}</p>}</div>
           )}
 
-          <Button type="button" onClick={() => generateEstimatePdf(buildEstimatePdf(estimatePackage))}>
+          <Button type="button" onClick={() => void downloadPdf()}>
             Download PDF
           </Button>
         </div>

@@ -21,7 +21,6 @@ import ReviewEstimate from "./review/ReviewEstimate";
 import EstimateReady from "./ready/EstimateReady";
 import { deleteEstimateAction } from "@/app/actions/estimates/deleteEstimate";
 import { listDraftEstimatesAction } from "@/app/actions/estimates/listDraftEstimates";
-import { DEVELOPMENT_COMPANY_ID } from "@/lib/config";
 
 type DraftEstimate = Awaited<ReturnType<typeof listDraftEstimatesAction>>[number];
 
@@ -30,8 +29,9 @@ function getSavedEstimateId() {
     return null;
   }
 
+  const searchParams = new URLSearchParams(window.location.search);
   return (
-    new URLSearchParams(window.location.search).get("estimateId") ||
+    (searchParams.get("new") === "1" ? "new" : searchParams.get("estimateId")) ||
     window.localStorage.getItem("junkquote:estimateId")
   );
 }
@@ -40,6 +40,7 @@ function clearSavedEstimateId() {
   window.localStorage.removeItem("junkquote:estimateId");
   const url = new URL(window.location.href);
   url.searchParams.delete("estimateId");
+  url.searchParams.delete("new");
   window.history.replaceState({}, "", url);
 }
 
@@ -56,7 +57,7 @@ function ResumeDraftEstimates({
   const [deletingEstimateId, setDeletingEstimateId] = useState<string | null>(null);
 
   useEffect(() => {
-    void listDraftEstimatesAction(DEVELOPMENT_COMPANY_ID)
+    void listDraftEstimatesAction()
       .then(setDrafts)
       .catch((loadError) => {
         setError(loadError instanceof Error ? loadError.message : "Unable to load drafts.");
@@ -96,7 +97,7 @@ function ResumeDraftEstimates({
             <h1 className="text-2xl font-bold text-slate-900">Estimates</h1>
             <p className="mt-1 text-slate-600">Start a new estimate or continue a saved draft.</p>
           </div>
-          <Button onClick={onStartNew}>New Estimate</Button>
+          <Button onClick={onStartNew}>Start New Estimate</Button>
         </div>
 
         <div className="mt-8 border-t border-slate-200 pt-6">
@@ -161,9 +162,11 @@ function ResumeDraftEstimates({
 function EstimateWizard({
   isResuming,
   onDeleteDraft,
+  onBackToEstimates,
 }: {
   isResuming: boolean;
   onDeleteDraft: (estimateId: string) => Promise<void>;
+  onBackToEstimates: () => void;
 }) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -182,6 +185,27 @@ function EstimateWizard({
   ]
     .filter(Boolean)
     .join(" ");
+
+  function leaveEstimate() {
+    const hasUnsavedInMemoryChanges = !estimateId && Boolean(
+      estimate.customerType ||
+      estimate.customer.firstName ||
+      estimate.customer.lastName ||
+      estimate.customer.phone ||
+      estimate.property.address ||
+      estimate.jobSites.length
+    );
+
+    if (
+      hasUnsavedInMemoryChanges &&
+      !window.confirm("You have unsaved changes. Leave this estimate?")
+    ) {
+      return;
+    }
+
+    resetEstimate();
+    onBackToEstimates();
+  }
 
   async function deleteCurrentDraft() {
     if (!estimateId || !window.confirm("Delete this draft estimate? This cannot be undone.")) {
@@ -272,6 +296,7 @@ function EstimateWizard({
         description="Create a professional estimate."
         estimateId={estimateId}
         customerName={customerName}
+        onBackToEstimates={leaveEstimate}
       />
 
       {isResuming && estimateId && (
@@ -359,6 +384,11 @@ export default function NewEstimate() {
     setSelectedEstimateId("new");
   }
 
+  function returnToLanding() {
+    clearSavedEstimateId();
+    setSelectedEstimateId(null);
+  }
+
   if (!resumeEstimateId) {
     return (
       <ResumeDraftEstimates
@@ -378,6 +408,7 @@ export default function NewEstimate() {
       <EstimateWizard
         isResuming={resumeEstimateId !== "new"}
         onDeleteDraft={deleteCurrentDraft}
+        onBackToEstimates={returnToLanding}
       />
     </EstimateProvider>
   );

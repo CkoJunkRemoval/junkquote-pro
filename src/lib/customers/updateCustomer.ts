@@ -9,12 +9,13 @@ export interface UpdateCustomerInput {
   notes?: string;
 }
 
-export async function updateCustomer(
-  input: UpdateCustomerInput
+export async function updateCustomer(companyId: string, input: UpdateCustomerInput
 ) {
+  const customer = await prisma.customer.findFirst({ where: { id: input.id, companyId }, select: { id: true } });
+  if (!customer) throw new Error("Customer not found.");
   return prisma.customer.update({
     where: {
-      id: input.id,
+      id: customer.id,
     },
     data: {
       firstName: input.firstName.trim(),

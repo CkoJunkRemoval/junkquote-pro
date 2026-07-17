@@ -1,7 +1,6 @@
 import { prisma } from "../prisma";
 
 export interface CreateCustomerInput {
-  companyId: string;
   firstName: string;
   lastName: string;
   phone: string;
@@ -9,12 +8,11 @@ export interface CreateCustomerInput {
   notes?: string;
 }
 
-export async function createCustomer(
-  input: CreateCustomerInput
+export async function createCustomer(companyId: string, input: CreateCustomerInput
 ) {
   return prisma.customer.create({
     data: {
-      companyId: input.companyId,
+      companyId,
       firstName: input.firstName.trim(),
       lastName: input.lastName.trim(),
       phone: input.phone.trim(),

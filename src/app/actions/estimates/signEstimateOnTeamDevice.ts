@@ -1,5 +1,6 @@
 "use server";
 import { signEstimateOnTeamDevice } from "@/lib/estimates/signEstimateOnTeamDevice";
+import { requireCompanyRole } from "@/lib/auth/tenant";
 export async function signEstimateOnTeamDeviceAction(estimateId: string, signerName: string, signatureData: string) {
-  return signEstimateOnTeamDevice(estimateId, signerName, signatureData);
+  const { companyId } = await requireCompanyRole("Owner", "Admin", "Manager", "Office"); return signEstimateOnTeamDevice(companyId, estimateId, signerName, signatureData);
 }

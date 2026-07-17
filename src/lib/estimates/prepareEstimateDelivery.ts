@@ -1,18 +1,16 @@
-import { DEVELOPMENT_COMPANY_ID } from "@/lib/config";
 
 import { prisma } from "../prisma";
 import { generateApprovalToken } from "./approvalToken";
 
 export type EstimateDeliveryMethod = "email" | "sms" | "link" | "device";
 
-export async function prepareEstimateDelivery(
-  estimateId: string,
+export async function prepareEstimateDelivery(companyId: string, estimateId: string,
   method: EstimateDeliveryMethod
 ) {
   const estimate = await prisma.estimate.findFirst({
     where: {
       id: estimateId,
-      companyId: DEVELOPMENT_COMPANY_ID,
+      companyId,
       status: "Ready",
     },
     select: { id: true },

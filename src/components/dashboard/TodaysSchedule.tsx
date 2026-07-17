@@ -25,7 +25,7 @@ export default function TodaysSchedule() {
   return (
     <Card>
       <h2 className="text-2xl font-bold mb-6">
-        Today's Schedule
+        Today&apos;s Schedule
       </h2>
 
       <div className="space-y-4">

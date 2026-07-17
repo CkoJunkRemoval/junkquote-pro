@@ -1,4 +1,3 @@
-import { DEVELOPMENT_COMPANY_ID } from "@/lib/config";
 
 import { prisma } from "../prisma";
 import {
@@ -8,12 +7,11 @@ import {
 
 export type { EstimateWorkflowStatus } from "./statusWorkflow";
 
-export async function updateEstimateStatus(
-  estimateId: string,
+export async function updateEstimateStatus(companyId: string, estimateId: string,
   nextStatus: EstimateWorkflowStatus
 ) {
   const estimate = await prisma.estimate.findFirst({
-    where: { id: estimateId, companyId: DEVELOPMENT_COMPANY_ID },
+    where: { id: estimateId, companyId },
     select: { status: true },
   });
 

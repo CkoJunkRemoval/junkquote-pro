@@ -1,85 +1,48 @@
-import {
-  House,
-  PlusCircle,
-  Users,
-  FileText,
-  Truck,
-  Calendar,
-  BarChart3,
-  Settings,
-} from "lucide-react";
+"use client";
 
-const menuItems = [
-  { name: "Home", icon: House },
-  { name: "New Job", icon: PlusCircle },
-  { name: "Customers", icon: Users },
-  { name: "Quotes", icon: FileText },
-  { name: "Jobs", icon: Truck },
-  { name: "Calendar", icon: Calendar },
-  { name: "Reports", icon: BarChart3 },
-  { name: "Settings", icon: Settings },
+import Link from "next/link";
+import Image from "next/image";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { getCompanyBranding } from "@/app/actions/company/branding";
+import { BarChart3, BriefcaseBusiness, CalendarDays, ChevronLeft, FileText, LayoutDashboard, MapPinned, Settings, Tags, Users, X } from "lucide-react";
+
+const items = [
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Estimates", href: "/estimates", icon: FileText },
+  { label: "Invoices", href: "/invoices", icon: FileText },
+  { label: "Customers", href: "/customers", icon: Users },
+  { label: "Properties", href: "/properties", icon: MapPinned },
+  { label: "Jobs", href: "/jobs", icon: BriefcaseBusiness },
+  { label: "Schedule", href: "/schedule", icon: CalendarDays },
+  { label: "Pricing", href: "/pricing", icon: Tags },
+  { label: "Reports", href: "/reports", icon: BarChart3 },
+  { label: "Settings", href: "/settings", icon: Settings },
 ];
 
-export default function Sidebar() {
-  return (
-    <aside className="w-72 bg-slate-900 text-white flex flex-col min-h-screen">
+export default function Sidebar({ collapsed, mobileOpen, onClose, onToggle }: { collapsed: boolean; mobileOpen: boolean; onClose: () => void; onToggle: () => void }) {
+  const pathname = usePathname();
+  const [company, setCompany] = useState<{ displayName: string; logoUrl: string | null } | null>(null);
+  useEffect(() => { void getCompanyBranding().then((value) => setCompany({ displayName: value.displayName || value.name, logoUrl: value.logoUrl })).catch(() => undefined); }, []);
+  const width = collapsed ? "lg:w-20" : "lg:w-64";
 
-      <div className="border-b border-slate-800 p-6">
-        <h1 className="text-3xl font-bold tracking-tight">
-          JunkQuote
-          <span className="text-blue-400"> Pro</span>
-        </h1>
-
-        <p className="text-slate-400 text-sm mt-2">
-          Less typing. More hauling.
-        </p>
+  return <>
+    {mobileOpen && <button aria-label="Close navigation" onClick={onClose} className="fixed inset-0 z-30 bg-slate-950/50 lg:hidden" />}
+    <aside className={`fixed inset-y-0 left-0 z-40 flex w-64 -translate-x-full flex-col bg-slate-950 text-white transition-transform lg:static lg:translate-x-0 ${width} ${mobileOpen ? "translate-x-0" : ""}`}>
+      <div className="flex h-20 items-center justify-between border-b border-slate-800 px-5">
+        <Link href="/dashboard" onClick={onClose} className="flex min-w-0 items-center gap-3">
+          {company?.logoUrl ? <Image src={company.logoUrl} alt="Company logo" width={36} height={36} className="h-9 w-9 shrink-0 rounded-lg bg-white object-contain" /> : <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-blue-600 font-bold">JQ</span>}
+          {!collapsed && <span className="min-w-0"><span className="block text-lg font-bold">JunkQuote Pro</span><span className="block truncate text-xs text-slate-400">{company?.displayName ?? "Your company"}</span></span>}
+        </Link>
+        <button onClick={onClose} className="lg:hidden"><X size={20} /></button>
       </div>
-
-      <nav className="flex-1 px-4 py-6">
-
-        <p className="text-xs uppercase tracking-widest text-slate-500 px-3 mb-4">
-          Navigation
-        </p>
-
-        <div className="space-y-2">
-
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-
-            return (
-              <button
-                key={item.name}
-                className="w-full flex items-center gap-4 rounded-xl px-4 py-3 text-left hover:bg-slate-800 transition-all"
-              >
-                <Icon size={20} />
-
-                <span className="font-medium">
-                  {item.name}
-                </span>
-              </button>
-            );
-          })}
-
-        </div>
-
+      <nav className="flex-1 space-y-1 p-3">
+        {items.map(({ label, href, icon: Icon }) => {
+          const active = pathname === href || (href === "/estimates" && pathname === "/estimate");
+          return <Link key={href} href={href} onClick={onClose} title={collapsed ? label : undefined} className={`flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition ${active ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"}`}><Icon size={20} /><span className={collapsed ? "hidden" : ""}>{label}</span></Link>;
+        })}
       </nav>
-
-      <div className="border-t border-slate-800 p-5">
-
-        <div className="rounded-xl bg-slate-800 p-4">
-
-          <p className="text-sm font-semibold">
-            Version
-          </p>
-
-          <p className="text-slate-400 text-sm">
-            v0.2.0 Alpha
-          </p>
-
-        </div>
-
-      </div>
-
+      <div className="hidden border-t border-slate-800 p-3 lg:block"><button onClick={onToggle} className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-slate-300 hover:bg-slate-800"><ChevronLeft className={collapsed ? "rotate-180" : ""} size={20} /><span className={collapsed ? "hidden" : ""}>Collapse</span></button></div>
     </aside>
-  );
+  </>;
 }

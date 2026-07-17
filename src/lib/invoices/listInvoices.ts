@@ -1,0 +1,12 @@
+import type { Prisma } from "@/generated/prisma/client";
+import { DEVELOPMENT_COMPANY_ID } from "@/lib/config";
+import { prisma } from "../prisma";
+
+export type InvoiceListStatus = "Draft" | "Sent" | "Partial" | "Paid" | "Overdue" | "Cancelled";
+export type InvoiceListSort = "issued_desc" | "issued_asc" | "total_desc" | "balance_desc";
+export interface ListInvoicesInput { status?: InvoiceListStatus; search?: string; sort?: InvoiceListSort; page?: number; pageSize?: number; }
+
+export function normalizeInvoiceListInput(input: ListInvoicesInput) { const pageSize = Math.min(50, Math.max(1, input.pageSize ?? 20)); const page = Math.max(1, input.page ?? 1); return { page, pageSize, skip: (page - 1) * pageSize, status: input.status, search: input.search?.trim(), sort: input.sort ?? "issued_desc" }; }
+export function buildInvoiceListWhere(query: ReturnType<typeof normalizeInvoiceListInput>): Prisma.InvoiceWhereInput { const terms = query.search?.split(/\s+/) ?? []; return { companyId: DEVELOPMENT_COMPANY_ID, ...(query.status ? { status: query.status } : {}), ...(query.search ? { OR: [{ invoiceNumber: { equals: Number(query.search) || -1 } }, { customer: { AND: terms.map((term) => ({ OR: [{ firstName: { contains: term, mode: "insensitive" } }, { lastName: { contains: term, mode: "insensitive" } }] })) } }, { property: { address: { contains: query.search, mode: "insensitive" } } }] } : {}) }; }
+export function buildInvoiceListOrderBy(sort: InvoiceListSort): Prisma.InvoiceOrderByWithRelationInput { if (sort === "issued_asc") return { issuedDate: "asc" }; if (sort === "total_desc") return { total: "desc" }; if (sort === "balance_desc") return { balanceDue: "desc" }; return { issuedDate: "desc" }; }
+export async function listInvoices(input: ListInvoicesInput = {}) { const query = normalizeInvoiceListInput(input); const where = buildInvoiceListWhere(query); const [invoices, total] = await prisma.$transaction([prisma.invoice.findMany({ where, orderBy: buildInvoiceListOrderBy(query.sort), skip: query.skip, take: query.pageSize, select: { id: true, invoiceNumber: true, total: true, balanceDue: true, status: true, dueDate: true, issuedDate: true, createdAt: true, updatedAt: true, customer: { select: { firstName: true, lastName: true } }, property: { select: { address: true, city: true, state: true, zip: true } } } }), prisma.invoice.count({ where })]); return { invoices, total, page: query.page, pageSize: query.pageSize }; }
