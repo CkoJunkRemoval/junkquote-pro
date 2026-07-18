@@ -1,0 +1,1 @@
+import{describe,expect,it}from"vitest";import{canViewAuditLog}from"./permissions";describe("audit viewer permissions",()=>{it("allows only Owner and Admin",()=>{expect(canViewAuditLog("Owner")).toBe(true);expect(canViewAuditLog("Admin")).toBe(true);for(const role of["Manager","Office","Crew"]as const)expect(canViewAuditLog(role)).toBe(false)})});

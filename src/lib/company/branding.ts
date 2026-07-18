@@ -1,17 +1,7 @@
 import { localCompanyLogoStorage } from "@/lib/storage/companyLogoStorage";
 import { prisma } from "@/lib/prisma";
 
-export const supportedTimezones = ["America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles", "UTC"] as const;
-export const supportedCurrencies = ["USD", "CAD"] as const;
-type NullableText = string | null | undefined;
-
-export type CompanySettingsInput = {
-  legalName?: NullableText; displayName?: NullableText; email?: NullableText; phone?: NullableText; website?: NullableText;
-  addressLine1?: NullableText; addressLine2?: NullableText; city?: NullableText; state?: NullableText; postalCode?: NullableText;
-  primaryColor?: NullableText; secondaryColor?: NullableText; invoicePrefix?: NullableText; estimatePrefix?: NullableText;
-  defaultTaxRate?: number; defaultPaymentTermsDays?: number; defaultEstimateExpirationDays?: number; defaultMinimumCharge?: number;
-  timezone?: string; currencyCode?: string;
-};
+import{supportedCurrencies,supportedTimezones,type CompanySettingsInput,type NullableText}from"./settingsTypes";export{supportedCurrencies,supportedTimezones,type CompanySettingsInput}from"./settingsTypes";
 
 const text = (value: NullableText) => value?.trim() || null;
 const color = (value: NullableText, label: string) => { const result = text(value); if (result && !/^#[0-9a-fA-F]{6}$/.test(result)) throw new Error(`${label} must be a six-digit hex color.`); return result; };

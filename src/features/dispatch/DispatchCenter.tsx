@@ -137,7 +137,30 @@ export default function DispatchCenter({ initial }: { initial: Data }) {
             label="Status"
             options={columns.map((x) => ({ value: x, label: x }))}
           />
-          <Select value={filters.estimatorId} onChange={(v) => setFilters((f) => ({ ...f, estimatorId: v }))} label="Estimator" options={jobs.flatMap((job) => job.estimator ? [{ value: job.estimator.id, label: [job.estimator.firstName, job.estimator.lastName].filter(Boolean).join(" ") || job.estimator.email }] : []).filter((option,index,all) => all.findIndex((entry) => entry.value === option.value) === index)} />
+          <Select
+            value={filters.estimatorId}
+            onChange={(v) => setFilters((f) => ({ ...f, estimatorId: v }))}
+            label="Estimator"
+            options={jobs
+              .flatMap((job) =>
+                job.estimator
+                  ? [
+                      {
+                        value: job.estimator.id,
+                        label:
+                          [job.estimator.firstName, job.estimator.lastName]
+                            .filter(Boolean)
+                            .join(" ") || job.estimator.email,
+                      },
+                    ]
+                  : [],
+              )
+              .filter(
+                (option, index, all) =>
+                  all.findIndex((entry) => entry.value === option.value) ===
+                  index,
+              )}
+          />
           <Select
             value={filters.priority}
             onChange={(v) => setFilters((f) => ({ ...f, priority: v }))}
@@ -182,7 +205,17 @@ export default function DispatchCenter({ initial }: { initial: Data }) {
           >
             Clear
           </button>
-          <label className="grid gap-1 text-xs font-semibold">Date<input type="date" className="rounded border p-2 text-sm" defaultValue={new Date(initial.start).toISOString().slice(0, 10)} onChange={(event) => { window.location.href = `/dispatch?date=${event.target.value}`; }} /></label>
+          <label className="grid gap-1 text-xs font-semibold">
+            Date
+            <input
+              type="date"
+              className="rounded border p-2 text-sm"
+              defaultValue={new Date(initial.start).toISOString().slice(0, 10)}
+              onChange={(event) => {
+                window.location.href = `/dispatch?date=${event.target.value}`;
+              }}
+            />
+          </label>
         </div>
       </section>
       <div className="mt-5 grid gap-4 xl:grid-cols-5">
@@ -279,6 +312,10 @@ export default function DispatchCenter({ initial }: { initial: Data }) {
                       )}
                       {!initial.readOnly && (
                         <>
+                          <label className="sr-only" htmlFor={`dispatch-status-${job.id}`}>Move job status</label>
+                          <select id={`dispatch-status-${job.id}`} aria-label={`Move ${job.customer.firstName} ${job.customer.lastName} job`} value={job.status} onChange={(event)=>void move(job,event.target.value as (typeof columns)[number])} className="rounded border px-2 py-1">
+                            {columns.map(option=><option key={option}>{option}</option>)}
+                          </select>
                           <button
                             onClick={() =>
                               void sendDispatchMessageAction(
@@ -308,7 +345,14 @@ export default function DispatchCenter({ initial }: { initial: Data }) {
                           >
                             Schedule
                           </button>
-                          {job.status === "InProgress" && <button onClick={() => void move(job, "Completed")} className="rounded bg-green-700 px-2 py-1 text-white">Complete</button>}
+                          {job.status === "InProgress" && (
+                            <button
+                              onClick={() => void move(job, "Completed")}
+                              className="rounded bg-green-700 px-2 py-1 text-white"
+                            >
+                              Complete
+                            </button>
+                          )}
                           <select
                             aria-label="Assign crew"
                             defaultValue=""

@@ -2,7 +2,7 @@ import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 
-const root = path.resolve(process.cwd(), ".data", "private-assets", "company-logos");
+const root = path.resolve(process.env.PRIVATE_ASSET_STORAGE_ROOT ?? path.join(process.cwd(), ".data", "private-assets"), "company-logos");
 const prefix = "/api/private/assets/company-logos";
 
 function safeCompanyId(companyId: string) { if (!/^[a-zA-Z0-9_-]+$/.test(companyId)) throw new Error("Invalid company ID."); return companyId; }

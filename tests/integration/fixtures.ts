@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 
-export async function resetIntegrationDatabase() { await prisma.company.deleteMany(); }
+export async function resetIntegrationDatabase() { await prisma.auditEvent.deleteMany(); await prisma.company.deleteMany(); }
 
 async function createTenant(label: "A" | "B", invoiceNumber: number) {
   const company = await prisma.company.create({ data: { name: `Company ${label}`, displayName: `Company ${label}` } });

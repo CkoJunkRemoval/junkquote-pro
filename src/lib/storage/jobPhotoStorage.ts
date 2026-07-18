@@ -2,7 +2,7 @@ import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 
-const root = path.resolve(process.cwd(), ".data", "private-assets", "job-photos");
+const root = path.resolve(process.env.PRIVATE_ASSET_STORAGE_ROOT ?? path.join(process.cwd(), ".data", "private-assets"), "job-photos");
 const urlPrefix = "/api/private/assets/job-photos";
 const extensions: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/heic": "heic" };
 

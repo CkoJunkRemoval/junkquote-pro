@@ -3,7 +3,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { removeCompanyLogoAction, updateCompanyBrandingAction, uploadCompanyLogoAction } from "@/app/actions/company/branding";
-import { supportedCurrencies, supportedTimezones, type CompanySettingsInput } from "@/lib/company/branding";
+import { supportedCurrencies, supportedTimezones, type CompanySettingsInput } from "@/lib/company/settingsTypes";
 
 type Company = Awaited<ReturnType<typeof updateCompanyBrandingAction>>;
 type Section = "profile" | "branding" | "documents" | "regional";

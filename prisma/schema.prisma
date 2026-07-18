@@ -227,6 +227,7 @@ model Company {
   pricingOutcomes PricingOutcome[]
   servicePlans ServicePlan[]
   portalAccesses CustomerPortalAccess[]
+  auditEvents AuditEvent[]
 
   @@map("companies")
 }
@@ -282,6 +283,7 @@ model User {
   createdRefunds Refund[]
   createdServicePlans ServicePlan[]
   employee Employee?
+  auditEvents AuditEvent[]
 
   @@index([companyId])
 
@@ -694,11 +696,34 @@ model CustomerPortalAccess {
   lastLoginAt DateTime?
   tokens CustomerPortalToken[]
   sessions CustomerPortalSession[]
+  auditEvents AuditEvent[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   @@unique([companyId, email])
   @@index([companyId, customerId, status])
   @@map("customer_portal_accesses")
+}
+
+model AuditEvent {
+  id String @id @default(uuid())
+  companyId String?
+  company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  actingUserId String?
+  actingUser User? @relation(fields: [actingUserId], references: [id], onDelete: SetNull)
+  portalAccessId String?
+  portalAccess CustomerPortalAccess? @relation(fields: [portalAccessId], references: [id], onDelete: SetNull)
+  eventType String
+  entityType String?
+  entityId String?
+  requestId String?
+  metadata Json?
+  createdAt DateTime @default(now())
+
+  @@index([companyId, createdAt])
+  @@index([companyId, eventType, createdAt])
+  @@index([companyId, actingUserId, createdAt])
+  @@index([requestId])
+  @@map("audit_events")
 }
 
 model CustomerPortalToken {

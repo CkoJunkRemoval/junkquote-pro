@@ -18,6 +18,9 @@ import {
 import { requireCustomerPortalContext } from "@/lib/portal/context";
 import { PORTAL_COOKIE } from "@/lib/portal/tokens";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, ratePolicies } from "@/lib/security/rateLimit";
+import { recordAuditEvent } from "@/lib/audit/audit";
+import { currentRequestId } from "@/lib/audit/requestAudit";
 
 async function origin() {
   const h = await headers();
@@ -28,6 +31,17 @@ async function origin() {
   return `${proto}://${host}`;
 }
 export async function requestPortalMagicLinkAction(email: string) {
+  const h = await headers();
+  const identity =
+    h.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    email.trim().toLowerCase();
+  if (
+    !checkRateLimit(`portal-request:${identity}`, ratePolicies.portal).allowed
+  )
+    return {
+      message:
+        "If portal access exists for that email, a sign-in link has been sent.",
+    };
   return requestPortalMagicLink(email, await origin());
 }
 export async function enablePortalAccessAction(
@@ -40,7 +54,17 @@ export async function enablePortalAccessAction(
     "Manager",
     "Office",
   );
-  return upsertPortalAccess(context.companyId, customerId, email);
+  const result = await upsertPortalAccess(context.companyId, customerId, email);
+  await recordAuditEvent({
+    companyId: context.companyId,
+    actingUserId: context.user.id,
+    portalAccessId: result.id,
+    eventType: "portal.access_enabled",
+    entityType: "Customer",
+    entityId: customerId,
+    requestId: await currentRequestId(),
+  });
+  return result;
 }
 export async function sendPortalLinkAction(accessId: string) {
   const context = await requireCompanyRole(
@@ -57,10 +81,22 @@ export async function sendPortalLinkAction(accessId: string) {
   );
 }
 export async function revokePortalAccessAction(accessId: string) {
-  const [access] = await revokePortalAccess(
-    (await requireCompanyRole("Owner", "Admin", "Manager", "Office")).companyId,
-    accessId,
+  const context = await requireCompanyRole(
+    "Owner",
+    "Admin",
+    "Manager",
+    "Office",
   );
+  const [access] = await revokePortalAccess(context.companyId, accessId);
+  await recordAuditEvent({
+    companyId: context.companyId,
+    actingUserId: context.user.id,
+    portalAccessId: accessId,
+    eventType: "portal.access_revoked",
+    entityType: "CustomerPortalAccess",
+    entityId: accessId,
+    requestId: await currentRequestId(),
+  });
   return access;
 }
 export async function portalLogoutAction() {
@@ -68,6 +104,7 @@ export async function portalLogoutAction() {
 }
 export async function downloadPortalEstimateAction(id: string) {
   const c = await requireCustomerPortalContext();
+  if(!checkRateLimit(`portal-pdf:${c.portalAccess.id}`,ratePolicies.pdf).allowed)throw new Error("Too many PDF requests. Try again later.");
   const owned = await prisma.estimate.findFirst({
     where: { id, companyId: c.companyId, customerId: c.customerId },
     select: { id: true },
@@ -79,6 +116,7 @@ export async function downloadPortalEstimateAction(id: string) {
 }
 export async function downloadPortalInvoiceAction(id: string) {
   const c = await requireCustomerPortalContext();
+  if(!checkRateLimit(`portal-pdf:${c.portalAccess.id}`,ratePolicies.pdf).allowed)throw new Error("Too many PDF requests. Try again later.");
   const owned = await prisma.invoice.findFirst({
     where: { id, companyId: c.companyId, customerId: c.customerId },
     select: { id: true },
@@ -90,6 +128,7 @@ export async function downloadPortalInvoiceAction(id: string) {
 }
 export async function downloadPortalReceiptAction(id: string) {
   const c = await requireCustomerPortalContext();
+  if(!checkRateLimit(`portal-pdf:${c.portalAccess.id}`,ratePolicies.pdf).allowed)throw new Error("Too many PDF requests. Try again later.");
   const owned = await prisma.payment.findFirst({
     where: {
       id,

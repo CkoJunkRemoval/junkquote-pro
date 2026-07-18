@@ -4,7 +4,17 @@ export const authConfig = {
   pages: { signIn: "/sign-in" },
   callbacks: {
     authorized({ auth, request }) {
-      const internal = !request.nextUrl.pathname.startsWith("/approve") && !request.nextUrl.pathname.startsWith("/sign-in") && !request.nextUrl.pathname.startsWith("/api/auth");
+      const publicPrefixes = [
+        "/approve",
+        "/sign-in",
+        "/api/auth",
+        "/api/health",
+        "/portal",
+        "/api/private/assets",
+      ];
+      const internal = !publicPrefixes.some((prefix) =>
+        request.nextUrl.pathname.startsWith(prefix),
+      );
       return !internal || Boolean(auth?.user);
     },
   },
