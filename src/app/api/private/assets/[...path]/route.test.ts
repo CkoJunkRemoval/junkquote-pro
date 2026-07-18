@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("server-only", () => ({}));
+vi.mock("@/lib/portal/context", () => ({ getCustomerPortalContext: vi.fn().mockResolvedValue(null) }));
 const mocks = vi.hoisted(() => ({ requireTenantContext: vi.fn(), findCompany: vi.fn(), findPhoto: vi.fn(), readLogo: vi.fn(), readPhoto: vi.fn() }));
 vi.mock("@/lib/auth/tenant", () => ({ AuthorizationError: class AuthorizationError extends Error { constructor(public code: string, message: string) { super(message); } }, requireTenantContext: mocks.requireTenantContext }));
 vi.mock("@/lib/prisma", () => ({ prisma: { company: { findFirst: mocks.findCompany }, jobPhoto: { findFirst: mocks.findPhoto } } }));

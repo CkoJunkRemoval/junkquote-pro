@@ -1,5 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { createTenantFixtures, resetIntegrationDatabase } from "./fixtures";
+vi.mock("server-only", () => ({}));
+vi.mock("@/lib/portal/context", () => ({ getCustomerPortalContext: vi.fn().mockResolvedValue(null) }));
 const auth = vi.hoisted(() => ({ context: vi.fn() }));
 vi.mock("@/lib/auth/tenant", () => ({ AuthorizationError: class AuthorizationError extends Error { constructor(public code: string, message: string) { super(message); } }, requireTenantContext: auth.context }));
 vi.mock("@/lib/storage/jobPhotoStorage", () => ({ localJobPhotoStorage: { readDataUrl: vi.fn().mockResolvedValue("data:image/jpeg;base64,eA==") } }));

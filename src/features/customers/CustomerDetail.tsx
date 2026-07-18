@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { createPropertyAction } from "@/app/actions/properties/createProperty";
 import { updateCustomerAction } from "@/app/actions/customers/updateCustomer";
+import { enablePortalAccessAction, revokePortalAccessAction, sendPortalLinkAction } from "@/app/actions/portal/portal";
 import type { getCustomerDetail } from "@/lib/customers/getCustomerDetail";
 
 type CustomerDetailData = NonNullable<
@@ -116,6 +117,7 @@ export default function CustomerDetail({
       </div>
       {error && <p className="mt-4 text-red-600">{error}</p>}
       {message && <p className="mt-4 text-green-700">{message}</p>}
+      <PortalAccess customer={customer} onUpdate={(access) => setCustomer(current => ({...current, portalAccesses:[access]}))} />
       <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6">
         <h2 className="text-xl font-bold">Customer information</h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -284,6 +286,12 @@ export default function CustomerDetail({
       </section>
     </div>
   );
+}
+
+function PortalAccess({customer,onUpdate}:{customer:CustomerDetailData;onUpdate:(access:CustomerDetailData["portalAccesses"][number])=>void}) {
+  const access=customer.portalAccesses[0]; const[email,setEmail]=useState(access?.email??customer.email??""); const[busy,setBusy]=useState(false); const[status,setStatus]=useState<string|null>(null);
+  async function enable(){setBusy(true);try{const next=await enablePortalAccessAction(customer.id,email);onUpdate(next);setStatus("Portal access enabled.");}finally{setBusy(false)}}
+  return <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6"><h2 className="text-xl font-bold">Customer portal</h2><p className="mt-1 text-sm text-slate-600">Access is passwordless and can be revoked at any time.</p><div className="mt-4 flex flex-wrap gap-2"><input aria-label="Portal email" value={email} onChange={e=>setEmail(e.target.value)} className="min-w-64 rounded-lg border p-2"/><button disabled={busy||!email} onClick={()=>void enable()} className="rounded-lg bg-slate-900 px-4 py-2 text-white">{access?"Update access":"Enable access"}</button>{access?.status==="Active"&&<button disabled={busy} onClick={()=>void sendPortalLinkAction(access.id).then(()=>setStatus("Sign-in link queued."))} className="rounded-lg border px-4 py-2">Send sign-in link</button>}{access?.status==="Active"&&<button disabled={busy} onClick={()=>void revokePortalAccessAction(access.id).then(next=>{onUpdate(next);setStatus("Portal access revoked.")})} className="rounded-lg border border-red-300 px-4 py-2 text-red-700">Revoke</button>}</div>{access&&<p className="mt-3 text-sm">Status: {access.status} · Last login: {access.lastLoginAt?new Date(access.lastLoginAt).toLocaleString():"Never"}</p>}{status&&<p className="mt-2 text-sm text-green-700">{status}</p>}</section>;
 }
 
 function Input({

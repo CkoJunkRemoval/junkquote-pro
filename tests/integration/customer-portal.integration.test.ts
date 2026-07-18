@@ -1,0 +1,15 @@
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("server-only", () => ({}));
+import { prisma } from "@/lib/prisma";
+import { consumePortalMagicLink, revokePortalAccess, upsertPortalAccess } from "@/lib/portal/access";
+import { getPortalInvoice, getPortalJob, listPortalPayments } from "@/lib/portal/data";
+import { generatePortalToken, hashPortalToken } from "@/lib/portal/tokens";
+import { createTenantFixtures, resetIntegrationDatabase } from "./fixtures";
+
+describe("customer portal real database", () => {
+  beforeEach(resetIntegrationDatabase); afterAll(resetIntegrationDatabase);
+  it("isolates access and customer records across tenants", async () => { const {a,b}=await createTenantFixtures();const access=await upsertPortalAccess(a.company.id,a.customer.id,"customer@test.invalid");expect(access.customerId).toBe(a.customer.id);await expect(upsertPortalAccess(a.company.id,b.customer.id,"wrong@test.invalid")).rejects.toThrow("Customer not found");expect(await getPortalInvoice(b.company.id,b.customer.id,a.invoice.id)).toBeNull();expect(await listPortalPayments(b.company.id,b.customer.id)).toHaveLength(1); });
+  it("consumes magic links once and rejects expired links",async()=>{const{a}=await createTenantFixtures();const access=await upsertPortalAccess(a.company.id,a.customer.id,"customer@test.invalid");const raw=generatePortalToken();await prisma.customerPortalToken.create({data:{portalAccessId:access.id,tokenHash:hashPortalToken(raw),purpose:"SignIn",expiresAt:new Date(Date.now()+60_000)}});const result=await consumePortalMagicLink(raw);expect(result.rawSession).toBeTruthy();await expect(consumePortalMagicLink(raw)).rejects.toThrow();const expired=generatePortalToken();await prisma.customerPortalToken.create({data:{portalAccessId:access.id,tokenHash:hashPortalToken(expired),purpose:"SignIn",expiresAt:new Date(Date.now()-1)}});await expect(consumePortalMagicLink(expired)).rejects.toThrow("invalid or expired");});
+  it("revocation invalidates outstanding tokens and sessions",async()=>{const{a}=await createTenantFixtures();const access=await upsertPortalAccess(a.company.id,a.customer.id,"customer@test.invalid");const raw=generatePortalToken();await prisma.customerPortalToken.create({data:{portalAccessId:access.id,tokenHash:hashPortalToken(raw),purpose:"SignIn",expiresAt:new Date(Date.now()+60_000)}});await revokePortalAccess(a.company.id,access.id);await expect(consumePortalMagicLink(raw)).rejects.toThrow();expect(await prisma.customerPortalAccess.findUnique({where:{id:access.id}})).toMatchObject({status:"Revoked"});});
+  it("returns only explicitly customer-visible job photos",async()=>{const{a}=await createTenantFixtures();await prisma.jobPhoto.create({data:{companyId:a.company.id,jobId:a.job.id,category:"After",fileUrl:"/visible.jpg",fileName:"visible.jpg",mimeType:"image/jpeg",fileSize:1,sortOrder:1,customerVisible:true}});const job=await getPortalJob(a.company.id,a.customer.id,a.job.id);expect(job?.photos.map(p=>p.fileUrl)).toEqual(["/visible.jpg"]);});
+});

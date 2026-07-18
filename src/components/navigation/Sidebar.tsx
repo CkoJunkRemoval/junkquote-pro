@@ -18,7 +18,7 @@ const items = [
   { label: "Schedule", href: "/schedule", icon: CalendarDays },
   { label: "Dispatch", href: "/dispatch", icon: RadioTower },
   { label: "Pricing", href: "/pricing", icon: Tags },
-  { label: "Reports", href: "/reports", icon: BarChart3 },
+  { label: "Analytics", href: "/analytics", icon: BarChart3 },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 

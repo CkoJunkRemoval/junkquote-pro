@@ -139,6 +139,17 @@ enum ShortMonthBehavior {
   Skip
 }
 
+enum CustomerPortalAccessStatus {
+  Active
+  Revoked
+}
+
+enum CustomerPortalTokenPurpose {
+  SignIn
+  EmailVerification
+  Future
+}
+
 enum BackgroundJobStatus {
   Pending
   Running
@@ -215,6 +226,7 @@ model Company {
   createdRefunds Refund[]
   pricingOutcomes PricingOutcome[]
   servicePlans ServicePlan[]
+  portalAccesses CustomerPortalAccess[]
 
   @@map("companies")
 }
@@ -235,6 +247,7 @@ model CompanySettings {
   smartPricingUseLaborHistory Boolean @default(true)
   smartPricingUseDisposalHistory Boolean @default(true)
   smartPricingUseTravelHistory Boolean @default(false)
+  portalShowAssignedCrew Boolean @default(false)
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -311,6 +324,7 @@ model Customer {
   jobs       Job[]
   invoices   Invoice[]
   servicePlans ServicePlan[]
+  portalAccesses CustomerPortalAccess[]
 
   @@index([companyId])
   @@index([lastName])
@@ -657,6 +671,7 @@ model JobPhoto {
   mimeType     String
   fileSize     Int
   caption      String?
+  customerVisible Boolean @default(false)
   sortOrder    Int
   takenAt      DateTime?
   createdAt    DateTime         @default(now())
@@ -666,6 +681,51 @@ model JobPhoto {
   @@index([jobId, category, sortOrder])
   @@index([jobSiteId])
   @@map("job_photos")
+}
+
+model CustomerPortalAccess {
+  id String @id @default(uuid())
+  companyId String
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customerId String
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  email String
+  status CustomerPortalAccessStatus @default(Active)
+  lastLoginAt DateTime?
+  tokens CustomerPortalToken[]
+  sessions CustomerPortalSession[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([companyId, email])
+  @@index([companyId, customerId, status])
+  @@map("customer_portal_accesses")
+}
+
+model CustomerPortalToken {
+  id String @id @default(uuid())
+  portalAccessId String
+  portalAccess CustomerPortalAccess @relation(fields: [portalAccessId], references: [id], onDelete: Cascade)
+  tokenHash String @unique
+  purpose CustomerPortalTokenPurpose
+  expiresAt DateTime
+  usedAt DateTime?
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([portalAccessId, purpose, createdAt])
+  @@map("customer_portal_tokens")
+}
+
+model CustomerPortalSession {
+  id String @id @default(uuid())
+  portalAccessId String
+  portalAccess CustomerPortalAccess @relation(fields: [portalAccessId], references: [id], onDelete: Cascade)
+  tokenHash String @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  lastSeenAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  @@index([portalAccessId, expiresAt])
+  @@map("customer_portal_sessions")
 }
 
 model Employee {

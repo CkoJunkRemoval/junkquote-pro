@@ -12,6 +12,7 @@ export async function getCustomerDetail(companyId: string, customerId: string) {
       notes: true,
       createdAt: true,
       updatedAt: true,
+      portalAccesses: { orderBy: { updatedAt: "desc" }, take: 1, select: { id: true, email: true, status: true, lastLoginAt: true, createdAt: true } },
       properties: {
         orderBy: { address: "asc" },
         select: {
