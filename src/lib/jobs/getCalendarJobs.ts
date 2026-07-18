@@ -20,6 +20,7 @@ const calendarSelect = {
   customer: { select: { firstName: true, lastName: true } },
   property: { select: { address: true, city: true, state: true, zip: true } },
   estimate: { select: { pricingTotal: true } },
+  servicePlan: { select: { id: true, name: true } },
   assignments: { select: { employee: { select: { id: true, firstName: true, lastName: true } }, crew: { select: { id: true, name: true, color: true } } } },
 } satisfies Prisma.JobSelect;
 

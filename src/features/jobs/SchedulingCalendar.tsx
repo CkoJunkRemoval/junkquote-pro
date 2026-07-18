@@ -460,6 +460,7 @@ function JobCard({
         <strong>
           {job.customer.firstName} {job.customer.lastName}
         </strong>
+        {job.servicePlan && <span className="ml-2 rounded bg-violet-100 px-1.5 py-0.5 text-xs font-semibold text-violet-800">Recurring</span>}
         <span className="mt-1 block truncate">{job.property.address}</span>
         {start && (
           <span className="mt-1 block">

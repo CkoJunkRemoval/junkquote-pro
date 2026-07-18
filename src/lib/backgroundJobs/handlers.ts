@@ -8,6 +8,7 @@ import { getEstimatePdfData } from "@/lib/estimates/getEstimatePdfData";
 import { getInvoiceDetail } from "@/lib/invoices/getInvoiceDetail";
 import { getPaymentReceiptData } from "@/lib/payments/listInvoicePayments";
 import { prisma } from "@/lib/prisma";
+import { generateDueServicePlanJobs } from "@/lib/servicePlans/servicePlans";
 
 type JsonObject = Record<string, unknown>;
 const objectPayload = (job: BackgroundJob) => { if (!job.payload || Array.isArray(job.payload) || typeof job.payload !== "object") throw new Error("Invalid job payload."); return job.payload as JsonObject; };
@@ -22,5 +23,6 @@ export function createBackgroundJobHandlers(provider: CommunicationProvider = co
     async GenerateReceipt(job) { const id = stringField(objectPayload(job), "recordId"); const data = await getPaymentReceiptData(job.companyId, id); if (!data) throw new Error("Payment not found."); await renderPaymentReceiptPdf(data); },
     async ScheduledReminder(job) { const payload = objectPayload(job); await provider.send({ channel: "reminder", to: stringField(payload, "to"), subject: typeof payload.subject === "string" ? payload.subject : undefined, body: stringField(payload, "body") }, { idempotencyKey: job.idempotencyKey ?? job.id }); },
     async CleanupFiles(job) { const company = await prisma.company.findFirst({ where: { id: job.companyId, active: true }, select: { id: true } }); if (!company) throw new Error("Company not found."); },
+    async ServicePlanGeneration(job) { const payload = objectPayload(job); const through = typeof payload.through === "string" ? new Date(payload.through) : new Date(); if (Number.isNaN(through.getTime())) throw new Error("Invalid through date."); await generateDueServicePlanJobs(job.companyId, { through }); },
   };
 }

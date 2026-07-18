@@ -2,6 +2,7 @@ import { prisma } from "../prisma";
 import { canTransitionJobStatus, type JobWorkflowStatus } from "./statusWorkflow";
 import { recordCompletedJobPricing } from "@/lib/smartPricing/history";
 import { syncPricingOutcomeForJob } from "@/lib/smartPricing/outcomes";
+import { createInvoiceFromJob } from "@/lib/invoices/createInvoice";
 
 export interface UpdateJobInput {
   id: string;
@@ -46,6 +47,7 @@ export async function updateJob(companyId: string, input: UpdateJobInput) {
       where: { id: job.id },
       data: {
         status: nextStatus,
+        ...(nextStatus === "Completed" && currentStatus !== "Completed" ? { completedAt: new Date() } : {}),
         ...(input.scheduledStart !== undefined ? { scheduledStart: input.scheduledStart } : {}),
         ...(input.scheduledEnd !== undefined ? { scheduledEnd: input.scheduledEnd } : {}),
         ...(input.crewNotes !== undefined ? { crewNotes: input.crewNotes.trim() } : {}),
@@ -66,6 +68,6 @@ export async function updateJob(companyId: string, input: UpdateJobInput) {
 
     return updated;
   });
-  if (updated.status === "Completed") { await recordCompletedJobPricing(companyId, updated.id); await syncPricingOutcomeForJob(companyId, updated.id); }
+  if (updated.status === "Completed") { const recurring = await prisma.job.findFirst({ where: { id: updated.id, companyId, servicePlan: { companyId, autoCreateInvoices: true } }, select: { invoice: { select: { id: true } } } }); if (recurring && !recurring.invoice) await createInvoiceFromJob(companyId, updated.id); await recordCompletedJobPricing(companyId, updated.id); await syncPricingOutcomeForJob(companyId, updated.id); }
   return updated;
 }

@@ -53,6 +53,19 @@ enum JobStatus {
   Cancelled
 }
 
+enum DispatchProgress {
+  NotStarted
+  EnRoute
+  Arrived
+}
+
+enum JobPriority {
+  Low
+  Normal
+  High
+  Urgent
+}
+
 enum InvoiceStatus {
   Draft
   Sent
@@ -104,6 +117,26 @@ enum BackgroundJobType {
   ScheduledReminder
   WebhookDelivery
   Future
+  ServicePlanGeneration
+}
+
+enum ServicePlanStatus {
+  Draft
+  Active
+  Paused
+  Completed
+  Cancelled
+}
+
+enum RecurrenceType {
+  Weekly
+  Monthly
+  CustomInterval
+}
+
+enum ShortMonthBehavior {
+  LastDay
+  Skip
 }
 
 enum BackgroundJobStatus {
@@ -181,6 +214,7 @@ model Company {
   smartPricingDecisions SmartPricingDecision[]
   createdRefunds Refund[]
   pricingOutcomes PricingOutcome[]
+  servicePlans ServicePlan[]
 
   @@map("companies")
 }
@@ -233,6 +267,8 @@ model User {
   createdReminderSchedules ReminderSchedule[]
   smartPricingDecisions SmartPricingDecision[]
   createdRefunds Refund[]
+  createdServicePlans ServicePlan[]
+  employee Employee?
 
   @@index([companyId])
 
@@ -274,6 +310,7 @@ model Customer {
   estimates  Estimate[]
   jobs       Job[]
   invoices   Invoice[]
+  servicePlans ServicePlan[]
 
   @@index([companyId])
   @@index([lastName])
@@ -307,6 +344,7 @@ model Property {
   estimates Estimate[]
   jobs      Job[]
   invoices  Invoice[]
+  servicePlans ServicePlan[]
 
   @@index([customerId])
 
@@ -379,6 +417,11 @@ model Job {
   property        Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 
   status          JobStatus @default(Unscheduled)
+  dispatchProgress DispatchProgress @default(NotStarted)
+  priority JobPriority @default(Normal)
+  enRouteAt DateTime?
+  arrivedAt DateTime?
+  completedAt DateTime?
   scheduledStart  DateTime?
   scheduledEnd    DateTime?
   crewNotes       String    @default("")
@@ -395,6 +438,9 @@ model Job {
   assignments     JobAssignment[]
   pricingHistory PricingHistory[]
   pricingOutcome PricingOutcome?
+  servicePlanId String?
+  servicePlan ServicePlan? @relation(fields: [servicePlanId], references: [id], onDelete: SetNull)
+  servicePlanOccurrence DateTime?
 
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -403,6 +449,7 @@ model Job {
   @@index([customerId])
   @@index([propertyId])
   @@index([scheduledStart])
+  @@unique([servicePlanId, servicePlanOccurrence])
   @@map("jobs")
 }
 
@@ -625,6 +672,8 @@ model Employee {
   id         String         @id @default(uuid())
   companyId  String
   company    Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId     String?        @unique
+  user       User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
   firstName  String
   lastName   String
   email      String?
@@ -636,6 +685,7 @@ model Employee {
   notes      String?
   crewMembers CrewMember[]
   assignments JobAssignment[]
+  servicePlanAssignments ServicePlanEmployee[]
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
   @@index([companyId])
@@ -651,10 +701,63 @@ model Crew {
   active     Boolean         @default(true)
   members    CrewMember[]
   assignments JobAssignment[]
+  servicePlans ServicePlan[]
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
   @@index([companyId])
   @@map("crews")
+}
+
+model ServicePlan {
+  id String @id @default(uuid())
+  companyId String
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customerId String
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  propertyId String?
+  property Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  name String
+  description String?
+  status ServicePlanStatus @default(Draft)
+  recurrenceType RecurrenceType
+  interval Int @default(1)
+  daysOfWeek Int[]
+  dayOfMonth Int?
+  shortMonthBehavior ShortMonthBehavior @default(LastDay)
+  startDate DateTime
+  endDate DateTime?
+  preferredStartTime String?
+  preferredEndTime String?
+  defaultDurationMinutes Int?
+  assignedCrewId String?
+  assignedCrew Crew? @relation(fields: [assignedCrewId], references: [id], onDelete: SetNull)
+  employeeAssignments ServicePlanEmployee[]
+  defaultJobNotes String?
+  defaultInternalNotes String?
+  defaultPrice Float?
+  autoCreateJobs Boolean @default(false)
+  autoCreateInvoices Boolean @default(false)
+  nextRunAt DateTime?
+  lastRunAt DateTime?
+  createdByUserId String
+  createdByUser User @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
+  jobs Job[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId, status, nextRunAt])
+  @@index([companyId, customerId])
+  @@map("service_plans")
+}
+
+model ServicePlanEmployee {
+  servicePlanId String
+  servicePlan ServicePlan @relation(fields: [servicePlanId], references: [id], onDelete: Cascade)
+  employeeId String
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  @@id([servicePlanId, employeeId])
+  @@map("service_plan_employees")
 }
 
 model CrewMember {

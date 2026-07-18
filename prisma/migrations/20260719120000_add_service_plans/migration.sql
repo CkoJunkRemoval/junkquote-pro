@@ -1,0 +1,18 @@
+ALTER TYPE "BackgroundJobType" ADD VALUE 'ServicePlanGeneration';
+CREATE TYPE "ServicePlanStatus" AS ENUM ('Draft','Active','Paused','Completed','Cancelled');
+CREATE TYPE "RecurrenceType" AS ENUM ('Weekly','Monthly','CustomInterval');
+CREATE TYPE "ShortMonthBehavior" AS ENUM ('LastDay','Skip');
+CREATE TABLE "service_plans" ("id" TEXT NOT NULL,"companyId" TEXT NOT NULL,"customerId" TEXT NOT NULL,"propertyId" TEXT,"name" TEXT NOT NULL,"description" TEXT,"status" "ServicePlanStatus" NOT NULL DEFAULT 'Draft',"recurrenceType" "RecurrenceType" NOT NULL,"interval" INTEGER NOT NULL DEFAULT 1,"daysOfWeek" INTEGER[] NOT NULL,"dayOfMonth" INTEGER,"shortMonthBehavior" "ShortMonthBehavior" NOT NULL DEFAULT 'LastDay',"startDate" TIMESTAMP(3) NOT NULL,"endDate" TIMESTAMP(3),"preferredStartTime" TEXT,"preferredEndTime" TEXT,"defaultDurationMinutes" INTEGER,"assignedCrewId" TEXT,"defaultJobNotes" TEXT,"defaultInternalNotes" TEXT,"defaultPrice" DOUBLE PRECISION,"autoCreateJobs" BOOLEAN NOT NULL DEFAULT false,"autoCreateInvoices" BOOLEAN NOT NULL DEFAULT false,"nextRunAt" TIMESTAMP(3),"lastRunAt" TIMESTAMP(3),"createdByUserId" TEXT NOT NULL,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" TIMESTAMP(3) NOT NULL,CONSTRAINT "service_plans_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "service_plan_employees" ("servicePlanId" TEXT NOT NULL,"employeeId" TEXT NOT NULL,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,CONSTRAINT "service_plan_employees_pkey" PRIMARY KEY ("servicePlanId","employeeId"));
+ALTER TABLE "jobs" ADD COLUMN "servicePlanId" TEXT,ADD COLUMN "servicePlanOccurrence" TIMESTAMP(3);
+CREATE UNIQUE INDEX "jobs_servicePlanId_servicePlanOccurrence_key" ON "jobs"("servicePlanId","servicePlanOccurrence");
+CREATE INDEX "service_plans_companyId_status_nextRunAt_idx" ON "service_plans"("companyId","status","nextRunAt");
+CREATE INDEX "service_plans_companyId_customerId_idx" ON "service_plans"("companyId","customerId");
+ALTER TABLE "service_plans" ADD CONSTRAINT "service_plans_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "companies"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "service_plans" ADD CONSTRAINT "service_plans_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "customers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "service_plans" ADD CONSTRAINT "service_plans_propertyId_fkey" FOREIGN KEY ("propertyId") REFERENCES "properties"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "service_plans" ADD CONSTRAINT "service_plans_assignedCrewId_fkey" FOREIGN KEY ("assignedCrewId") REFERENCES "crews"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "service_plans" ADD CONSTRAINT "service_plans_createdByUserId_fkey" FOREIGN KEY ("createdByUserId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "service_plan_employees" ADD CONSTRAINT "service_plan_employees_servicePlanId_fkey" FOREIGN KEY ("servicePlanId") REFERENCES "service_plans"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "service_plan_employees" ADD CONSTRAINT "service_plan_employees_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "employees"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "jobs" ADD CONSTRAINT "jobs_servicePlanId_fkey" FOREIGN KEY ("servicePlanId") REFERENCES "service_plans"("id") ON DELETE SET NULL ON UPDATE CASCADE;

@@ -35,6 +35,7 @@ export async function getCustomerDetail(companyId: string, customerId: string) {
           property: { select: { address: true, city: true, state: true, zip: true } },
         },
       },
+      servicePlans: { orderBy: { updatedAt: "desc" }, select: { id: true, name: true, status: true, nextRunAt: true, jobs: { orderBy: { servicePlanOccurrence: "desc" }, take: 3, select: { id: true, status: true, servicePlanOccurrence: true } } } },
     },
   });
 }

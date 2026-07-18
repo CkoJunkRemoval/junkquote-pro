@@ -1,0 +1,5 @@
+import AppLayout from "@/components/layout/AppLayout";
+import ServicePlanForm from "@/features/servicePlans/ServicePlanForm";
+import { requireCompanyRole } from "@/lib/auth/tenant";
+import { prisma } from "@/lib/prisma";
+export default async function NewServicePlanPage() { const { companyId } = await requireCompanyRole("Owner","Admin","Manager","Office"); const [customers,properties,crews,employees]=await Promise.all([prisma.customer.findMany({where:{companyId}}),prisma.property.findMany({where:{customer:{companyId}}}),prisma.crew.findMany({where:{companyId,active:true}}),prisma.employee.findMany({where:{companyId,status:"Active"}})]); return <AppLayout><main className="mx-auto max-w-5xl p-6"><h1 className="mb-6 text-3xl font-bold">New Service Plan</h1><ServicePlanForm customers={customers.map(x=>({id:x.id,label:`${x.firstName} ${x.lastName}`}))} properties={properties.map(x=>({id:x.id,customerId:x.customerId,label:x.address}))} crews={crews.map(x=>({id:x.id,label:x.name}))} employees={employees.map(x=>({id:x.id,label:`${x.firstName} ${x.lastName}`}))}/></main></AppLayout>; }
