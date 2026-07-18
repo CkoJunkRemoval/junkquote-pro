@@ -127,6 +127,13 @@ enum ReminderType {
   OutstandingInvoice
 }
 
+enum SmartPricingDecisionType {
+  Accepted
+  PartiallyAdjusted
+  Ignored
+  Unavailable
+}
+
 model Company {
   id        String   @id @default(uuid())
   name      String
@@ -170,6 +177,10 @@ model Company {
   assignments JobAssignment[]
   backgroundJobs BackgroundJob[]
   reminderSchedules ReminderSchedule[]
+  pricingHistory PricingHistory[]
+  smartPricingDecisions SmartPricingDecision[]
+  createdRefunds Refund[]
+  pricingOutcomes PricingOutcome[]
 
   @@map("companies")
 }
@@ -184,6 +195,12 @@ model CompanySettings {
   currency      String   @default("USD")
   businessHours String?
   taxRate       Float    @default(0)
+  smartPricingEnabled Boolean @default(false)
+  smartPricingMinimumSampleSize Int @default(5)
+  smartPricingConfidenceThreshold Int @default(60)
+  smartPricingUseLaborHistory Boolean @default(true)
+  smartPricingUseDisposalHistory Boolean @default(true)
+  smartPricingUseTravelHistory Boolean @default(false)
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -214,6 +231,8 @@ model User {
   memberships  CompanyMembership[]
   createdBackgroundJobs BackgroundJob[]
   createdReminderSchedules ReminderSchedule[]
+  smartPricingDecisions SmartPricingDecision[]
+  createdRefunds Refund[]
 
   @@index([companyId])
 
@@ -269,6 +288,7 @@ model Property {
   customer       Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   nickname       String?
+  propertyType   String?
 
   address        String
   city           String
@@ -313,6 +333,8 @@ model Estimate {
   pricingDisposal Float @default(0)
   pricingDiscount Float @default(0)
   pricingTotal    Float @default(0)
+  estimatedLaborHours Float?
+  estimatedLaborCost Float?
   currentStep     Int   @default(1)
 
   sentAt                  DateTime?
@@ -328,6 +350,8 @@ model Estimate {
   jobSites   JobSite[]
   job        Job?
   invoice    Invoice?
+  pricingHistory PricingHistory[]
+  smartPricingDecision SmartPricingDecision?
 
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
@@ -360,9 +384,17 @@ model Job {
   crewNotes       String    @default("")
   customerNotes   String    @default("")
   completionNotes String    @default("")
+  actualLaborHours Float?
+  actualLaborCost Float?
+  actualDisposalCost Float?
+  actualTravelCost Float?
+  otherActualCost Float?
+  actualCostNotes String @default("")
   invoice         Invoice?
   photos          JobPhoto[]
   assignments     JobAssignment[]
+  pricingHistory PricingHistory[]
+  pricingOutcome PricingOutcome?
 
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -372,6 +404,62 @@ model Job {
   @@index([propertyId])
   @@index([scheduledStart])
   @@map("jobs")
+}
+
+model PricingHistory {
+  id String @id @default(uuid())
+  companyId String
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  estimateId String
+  estimate Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+  jobId String
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  customerId String
+  area String
+  item String
+  quantity Int
+  cubicYards Float
+  laborHours Float
+  disposalCost Float
+  dumpFees Float
+  travelDistance Float?
+  travelTime Float?
+  finalQuotedPrice Float
+  finalCollectedPrice Float
+  discount Float
+  profitEstimate Float
+  propertyType String?
+  createdAt DateTime @default(now())
+
+  @@unique([jobId, item, area])
+  @@index([companyId, item, createdAt])
+  @@index([companyId, createdAt])
+  @@map("pricing_history")
+}
+
+model SmartPricingDecision {
+  id String @id @default(uuid())
+  companyId String
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  estimateId String @unique
+  estimate Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+  recommendedPrice Float
+  confidenceScore Int
+  historicalSampleSize Int
+  manualPrice Float
+  appliedPrice Float?
+  accepted Boolean?
+  decision SmartPricingDecisionType @default(Unavailable)
+  finalQuotedAmount Float?
+  difference Float?
+  decidedAt DateTime?
+  actingUserId String?
+  actingUser User? @relation(fields: [actingUserId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId, createdAt])
+  @@map("smart_pricing_decisions")
 }
 
 model Invoice {
@@ -405,6 +493,8 @@ model Invoice {
   paidDate      DateTime?
   notes         String        @default("")
   payments      Payment[]
+  refunds       Refund[]
+  pricingOutcome PricingOutcome?
 
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
@@ -414,6 +504,49 @@ model Invoice {
   @@index([propertyId])
   @@index([status])
   @@map("invoices")
+}
+
+model PricingOutcome {
+  id String @id @default(uuid())
+  companyId String
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  estimateId String
+  jobId String @unique
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  invoiceId String? @unique
+  invoice Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  customerId String
+  quotedAmount Float
+  invoicedAmount Float?
+  collectedAmount Float
+  discountAmount Float
+  refundAmount Float
+  laborHoursEstimated Float?
+  laborHoursActual Float?
+  laborCostEstimated Float?
+  laborCostActual Float?
+  disposalCostEstimated Float?
+  disposalCostActual Float?
+  travelCostEstimated Float?
+  travelCostActual Float?
+  otherCostActual Float?
+  grossProfit Float?
+  grossMarginPercent Float?
+  estimateVarianceAmount Float?
+  estimateVariancePercent Float?
+  completenessScore Int
+  missingData Json
+  classification String
+  collectionStatus String
+  propertyType String?
+  completedAt DateTime
+  calculatedAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId, completedAt])
+  @@index([companyId, classification])
+  @@map("pricing_outcomes")
 }
 
 model Payment {
@@ -433,10 +566,33 @@ model Payment {
 
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+  refunds         Refund[]
 
   @@index([companyId])
   @@index([invoiceId])
   @@map("payments")
+}
+
+model Refund {
+  id String @id @default(uuid())
+  companyId String
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  paymentId String
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  invoiceId String
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  amount Float
+  reason String?
+  externalReference String?
+  refundedAt DateTime
+  createdByUserId String
+  createdByUser User @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId, paymentId])
+  @@index([companyId, invoiceId])
+  @@map("refunds")
 }
 
 model JobPhoto {

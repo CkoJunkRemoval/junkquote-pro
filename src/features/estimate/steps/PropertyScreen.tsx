@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Property as CustomerProperty } from "@/generated/prisma/client";
 
-import { createPropertyAction } from "@/app/actions/properties/createProperty";
+import { createPropertyAction, updatePropertyTypeAction } from "@/app/actions/properties/createProperty";
 
 import { useEstimate } from "../EstimateContext";
 import { useCustomers } from "../hooks/useCustomers";
@@ -15,6 +15,7 @@ const initialPropertyForm = {
   zip: "",
   gateCode: "",
   accessNotes: "",
+  propertyType: "",
 };
 
 export default function PropertyStep() {
@@ -78,7 +79,7 @@ export default function PropertyStep() {
       ...previousEstimate,
       property: {
         id: property.id,
-        type: previousEstimate.property.type || "house",
+        type: (property.propertyType ?? "") as typeof previousEstimate.property.type,
         address: property.address,
         city: property.city,
         state: property.state,
@@ -185,7 +186,7 @@ export default function PropertyStep() {
             ...previousEstimate,
             property: {
               id: property.id,
-              type: previousEstimate.property.type || "house",
+              type: (property.propertyType ?? "") as typeof previousEstimate.property.type,
               address: property.address,
               city: property.city,
               state: property.state,
@@ -283,6 +284,8 @@ export default function PropertyStep() {
                 disabled={savingProperty}
                 className="w-full rounded-xl border border-slate-300 p-3 disabled:bg-slate-100"
               />
+
+              <select value={propertyForm.propertyType} onChange={(event) => setPropertyForm((current) => ({ ...current, propertyType: event.target.value }))} className="w-full rounded-xl border border-slate-300 p-3" required><option value="">Property type *</option><option value="house">House</option><option value="apartment">Apartment</option><option value="condo">Condo</option><option value="commercial">Commercial</option><option value="storage">Storage</option><option value="other">Other</option></select>
 
               <div className="grid grid-cols-3 gap-4">
                 <input
@@ -410,6 +413,7 @@ export default function PropertyStep() {
           })}
         </div>
       )}
+      {selectedPropertyId && <label className="grid gap-1 text-sm font-medium">Property type<select value={estimate.property.type} onChange={(event) => { const propertyType = event.target.value as typeof estimate.property.type; setEstimate((current) => ({ ...current, property: { ...current.property, type: propertyType } })); void updatePropertyTypeAction(selectedPropertyId, propertyType || null).then(() => setProperties((current) => current.map((property) => property.id === selectedPropertyId ? { ...property, propertyType: propertyType || null } : property))); }} className="rounded-xl border p-3"><option value="">Select type</option><option value="house">House</option><option value="apartment">Apartment</option><option value="condo">Condo</option><option value="commercial">Commercial</option><option value="storage">Storage</option><option value="other">Other</option></select></label>}
     </div>
   );
 }

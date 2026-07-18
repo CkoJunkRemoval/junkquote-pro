@@ -220,6 +220,8 @@ export function EstimateProvider({
       pricingDisposal: totals.disposalFees,
       pricingDiscount: estimate.pricing.discount,
       pricingTotal: totals.total,
+      estimatedLaborHours: Number.isFinite(totals.laborHours) ? totals.laborHours : null,
+      estimatedLaborCost: Number.isFinite(totals.labor) ? totals.labor : null,
     });
   }, [estimate, estimateId, isLoadingEstimate, wizardStep]);
 

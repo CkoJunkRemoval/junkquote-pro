@@ -1,5 +1,7 @@
 import { prisma } from "../prisma";
 import { canTransitionJobStatus, type JobWorkflowStatus } from "./statusWorkflow";
+import { recordCompletedJobPricing } from "@/lib/smartPricing/history";
+import { syncPricingOutcomeForJob } from "@/lib/smartPricing/outcomes";
 
 export interface UpdateJobInput {
   id: string;
@@ -9,10 +11,17 @@ export interface UpdateJobInput {
   crewNotes?: string;
   customerNotes?: string;
   completionNotes?: string;
+  actualLaborHours?: number | null;
+  actualLaborCost?: number | null;
+  actualDisposalCost?: number | null;
+  actualTravelCost?: number | null;
+  otherActualCost?: number | null;
+  actualCostNotes?: string;
 }
 
 export async function updateJob(companyId: string, input: UpdateJobInput) {
-  return prisma.$transaction(async (tx) => {
+  for (const [label, value] of [["Actual labor hours", input.actualLaborHours], ["Actual labor cost", input.actualLaborCost], ["Actual disposal cost", input.actualDisposalCost], ["Actual travel cost", input.actualTravelCost], ["Other actual cost", input.otherActualCost]] as const) if (value !== undefined && value !== null && (!Number.isFinite(value) || value < 0)) throw new Error(`${label} cannot be negative.`);
+  const updated = await prisma.$transaction(async (tx) => {
     const job = await tx.job.findFirst({
       where: { id: input.id, companyId },
       select: { id: true, status: true, scheduledStart: true, estimateId: true, estimate: { select: { status: true } } },
@@ -42,6 +51,12 @@ export async function updateJob(companyId: string, input: UpdateJobInput) {
         ...(input.crewNotes !== undefined ? { crewNotes: input.crewNotes.trim() } : {}),
         ...(input.customerNotes !== undefined ? { customerNotes: input.customerNotes.trim() } : {}),
         ...(input.completionNotes !== undefined ? { completionNotes: input.completionNotes.trim() } : {}),
+        ...(input.actualLaborHours !== undefined ? { actualLaborHours: input.actualLaborHours } : {}),
+        ...(input.actualLaborCost !== undefined ? { actualLaborCost: input.actualLaborCost } : {}),
+        ...(input.actualDisposalCost !== undefined ? { actualDisposalCost: input.actualDisposalCost } : {}),
+        ...(input.actualTravelCost !== undefined ? { actualTravelCost: input.actualTravelCost } : {}),
+        ...(input.otherActualCost !== undefined ? { otherActualCost: input.otherActualCost } : {}),
+        ...(input.actualCostNotes !== undefined ? { actualCostNotes: input.actualCostNotes.trim() } : {}),
       },
     });
 
@@ -51,4 +66,6 @@ export async function updateJob(companyId: string, input: UpdateJobInput) {
 
     return updated;
   });
+  if (updated.status === "Completed") { await recordCompletedJobPricing(companyId, updated.id); await syncPricingOutcomeForJob(companyId, updated.id); }
+  return updated;
 }

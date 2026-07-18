@@ -4,7 +4,7 @@ export async function getJobDetail(companyId: string, jobId: string) {
   return prisma.job.findFirst({
     where: { id: jobId, companyId },
     select: {
-      id: true, estimateId: true, status: true, scheduledStart: true, scheduledEnd: true, crewNotes: true, customerNotes: true, completionNotes: true, createdAt: true, updatedAt: true,
+      id: true, estimateId: true, status: true, scheduledStart: true, scheduledEnd: true, crewNotes: true, customerNotes: true, completionNotes: true, actualLaborHours: true, actualLaborCost: true, actualDisposalCost: true, actualTravelCost: true, otherActualCost: true, actualCostNotes: true, createdAt: true, updatedAt: true,
       assignments: { include: { employee: true, crew: { include: { members: { include: { employee: true } } } } } },
       customer: { select: { firstName: true, lastName: true, phone: true, email: true } },
       property: { select: { address: true, city: true, state: true, zip: true, gateCode: true, accessNotes: true } },

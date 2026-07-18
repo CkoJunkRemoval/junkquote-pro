@@ -1,6 +1,7 @@
 import type { PaymentMethod, Prisma } from "@/generated/prisma/client";
 import { prisma } from "../prisma";
 import { deriveInvoicePaymentState } from "./paymentRecalculation";
+import { syncPricingOutcomeForInvoice } from "@/lib/smartPricing/outcomes";
 
 export interface PaymentInput { amount: number; method: PaymentMethod; referenceNumber?: string; paymentDate: Date; notes?: string; }
 export type UpdatePaymentInput = PaymentInput;
@@ -11,14 +12,15 @@ async function recalculateInvoice(tx: Prisma.TransactionClient, companyId: strin
   const invoice = await tx.invoice.findFirst({ where: { id: invoiceId, companyId }, select: { id: true, total: true, dueDate: true } });
   if (!invoice) throw new Error("Invoice not found.");
   const paymentTotal = await tx.payment.aggregate({ where: { invoiceId, companyId, invoice: { companyId } }, _sum: { amount: true } });
-  const state = deriveInvoicePaymentState(invoice.total, paymentTotal._sum.amount ?? 0, invoice.dueDate);
+  const refundTotal = await tx.refund.aggregate({ where: { invoiceId, companyId, invoice: { companyId } }, _sum: { amount: true } });
+  const state = deriveInvoicePaymentState(invoice.total, (paymentTotal._sum.amount ?? 0) - (refundTotal._sum.amount ?? 0), invoice.dueDate);
   await tx.invoice.update({ where: { id: invoice.id }, data: state });
   return state;
 }
 
 export async function recordPayment(companyId: string, invoiceId: string, input: PaymentInput) {
   validateAmount(input.amount);
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const invoice = await tx.invoice.findFirst({ where: { id: invoiceId, companyId, customer: { companyId }, estimate: { companyId } }, select: { id: true, companyId: true, total: true, status: true } });
     if (!invoice) throw new Error("Invoice not found.");
     if (invoice.status === "Cancelled") throw new Error("Cancelled invoices cannot receive payments.");
@@ -28,11 +30,13 @@ export async function recordPayment(companyId: string, invoiceId: string, input:
     const invoiceState = await recalculateInvoice(tx, companyId, invoice.id);
     return { payment, invoiceState };
   });
+  await syncPricingOutcomeForInvoice(companyId, invoiceId);
+  return result;
 }
 
 export async function updatePayment(companyId: string, paymentId: string, input: UpdatePaymentInput) {
   validateAmount(input.amount);
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const payment = await tx.payment.findFirst({ where: { id: paymentId, companyId, invoice: { companyId, customer: { companyId }, estimate: { companyId } } }, include: { invoice: { select: { id: true, total: true, status: true } } } });
     if (!payment) throw new Error("Payment not found.");
     if (payment.invoice.status === "Cancelled") throw new Error("Cancelled invoices cannot receive payments.");
@@ -42,16 +46,20 @@ export async function updatePayment(companyId: string, paymentId: string, input:
     const invoiceState = await recalculateInvoice(tx, companyId, payment.invoiceId);
     return { payment: updated, invoiceState };
   });
+  await syncPricingOutcomeForInvoice(companyId, result.payment.invoiceId);
+  return result;
 }
 
 export async function deletePayment(companyId: string, paymentId: string) {
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const payment = await tx.payment.findFirst({ where: { id: paymentId, companyId, invoice: { companyId, customer: { companyId }, estimate: { companyId } } }, select: { id: true, invoiceId: true } });
     if (!payment) throw new Error("Payment not found.");
+    const refunds = await tx.refund.count({ where: { companyId, paymentId: payment.id } });
+    if (refunds > 0) throw new Error("Payments with durable refunds cannot be deleted.");
     await tx.payment.delete({ where: { id: payment.id } });
     const invoiceState = await recalculateInvoice(tx, companyId, payment.invoiceId);
-    return { invoiceState };
+    return { invoiceState, invoiceId: payment.invoiceId };
   });
+  await syncPricingOutcomeForInvoice(companyId, result.invoiceId);
+  return { invoiceState: result.invoiceState };
 }
-
-export const refundPayment = deletePayment;

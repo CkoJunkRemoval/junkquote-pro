@@ -25,6 +25,7 @@ export interface PersistedDraftEstimate {
     zip: string;
     gateCode: string | null;
     accessNotes: string | null;
+    propertyType?: string | null;
   };
   jobSites: Array<{
     id: string;
@@ -85,7 +86,7 @@ export function hydrateDraftEstimate(savedEstimate: PersistedDraftEstimate) {
     },
     property: {
       id: savedEstimate.property.id,
-      type: "house",
+      type: (savedEstimate.property.propertyType ?? "") as Estimate["property"]["type"],
       address: savedEstimate.property.address,
       city: savedEstimate.property.city,
       state: savedEstimate.property.state,

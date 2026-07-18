@@ -1,9 +1,10 @@
 import { prisma } from "../prisma";
+import { syncPricingOutcomeForInvoice } from "@/lib/smartPricing/outcomes";
 
 export interface CreateInvoiceInput { estimateId: string; jobId?: string; }
 
 export async function createInvoice(companyId: string, input: CreateInvoiceInput) {
-  return prisma.$transaction(async (tx) => {
+  const invoice = await prisma.$transaction(async (tx) => {
     const estimate = await tx.estimate.findFirst({
       where: { id: input.estimateId, companyId, customer: { companyId }, property: { customer: { companyId } } },
       select: { id: true, companyId: true, customerId: true, propertyId: true, status: true, pricingSubtotal: true, pricingLabor: true, pricingDisposal: true, pricingDiscount: true, pricingTotal: true },
@@ -56,6 +57,8 @@ export async function createInvoice(companyId: string, input: CreateInvoiceInput
       },
     });
   });
+  if (invoice.jobId) await syncPricingOutcomeForInvoice(companyId, invoice.id);
+  return invoice;
 }
 
 export function createInvoiceFromEstimate(companyId: string, estimateId: string) { return createInvoice(companyId, { estimateId }); }

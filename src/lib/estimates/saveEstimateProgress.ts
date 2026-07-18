@@ -9,6 +9,8 @@ export interface SaveEstimateProgressInput {
   pricingDisposal: number;
   pricingDiscount: number;
   pricingTotal: number;
+  estimatedLaborHours: number | null;
+  estimatedLaborCost: number | null;
 }
 
 export async function saveEstimateProgress(companyId: string, input: SaveEstimateProgressInput) {
