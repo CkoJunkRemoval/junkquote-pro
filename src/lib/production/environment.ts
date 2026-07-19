@@ -26,7 +26,7 @@ export function validateProductionEnvironment(
       errors.push("AUTH_URL or NEXTAUTH_URL is required in production.");
     const baseUrl = requireValue("NEXT_PUBLIC_APP_URL");
     const storage = requireValue("PRIVATE_ASSET_STORAGE_DRIVER");
-    requireValue("PRIVATE_ASSET_STORAGE_ROOT");
+    if (storage === "local") requireValue("PRIVATE_ASSET_STORAGE_ROOT");
     const email = requireValue("EMAIL_PROVIDER");
     requireValue("EMAIL_FROM");
     const workers = requireValue("BACKGROUND_WORKERS_ENABLED");
@@ -43,10 +43,21 @@ export function validateProductionEnvironment(
     ] as const)
       if (value && !/^https:\/\//i.test(value))
         errors.push(`${name} must use HTTPS in production.`);
-    if (storage && !["local", "s3"].includes(storage))
-      errors.push("PRIVATE_ASSET_STORAGE_DRIVER must be local or s3.");
+    if (storage && !["local", "supabase"].includes(storage))
+      errors.push("PRIVATE_ASSET_STORAGE_DRIVER must be local or supabase.");
+    if (storage === "supabase") {
+      requireValue("SUPABASE_STORAGE_URL");
+      requireValue("SUPABASE_SERVICE_ROLE_KEY");
+      requireValue("SUPABASE_STORAGE_BUCKET");
+    }
     if (email && email === "console")
       errors.push("EMAIL_PROVIDER=console is unsafe in production.");
+    if (email && !["resend"].includes(email))
+      errors.push("EMAIL_PROVIDER must be resend in production.");
+    if (email === "resend") {
+      requireValue("RESEND_API_KEY");
+      requireValue("RESEND_WEBHOOK_SECRET");
+    }
     if (workers && !["true", "false"].includes(workers))
       errors.push("BACKGROUND_WORKERS_ENABLED must be true or false.");
     for (const name of [

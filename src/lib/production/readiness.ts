@@ -1,7 +1,6 @@
-import { access, mkdir } from "node:fs/promises";
-import path from "node:path";
 import { prisma } from "@/lib/prisma";
 import { validateProductionEnvironment } from "./environment";
+import { selectObjectStorage } from "@/lib/storage/objectStorage";
 const bounded = <T>(promise: Promise<T>, ms = 3000) =>
   Promise.race([
     promise,
@@ -9,12 +8,6 @@ const bounded = <T>(promise: Promise<T>, ms = 3000) =>
       setTimeout(() => reject(new Error("Health check timed out.")), ms),
     ),
   ]);
-export function privateAssetRoot() {
-  return path.resolve(
-    process.env.PRIVATE_ASSET_STORAGE_ROOT ??
-      path.join(process.cwd(), ".data", "private-assets"),
-  );
-}
 export async function checkReadiness() {
   const checks: Record<string, "ok" | "failed"> = {
     configuration: "ok",
@@ -35,11 +28,11 @@ export async function checkReadiness() {
       checks.schema = "failed";
     }),
     bounded(
-      (async () => {
-        const root = privateAssetRoot();
-        await mkdir(root, { recursive: true });
-        await access(root);
-      })(),
+      Promise.resolve()
+        .then(() => selectObjectStorage().healthCheck())
+        .then((ok) => {
+          if (!ok) throw new Error("Storage unavailable.");
+        }),
     ).catch(() => {
       checks.storage = "failed";
     }),

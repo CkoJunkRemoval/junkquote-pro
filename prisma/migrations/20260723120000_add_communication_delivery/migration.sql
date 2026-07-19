@@ -1,0 +1,12 @@
+CREATE TYPE "CommunicationDeliveryStatus" AS ENUM ('Pending','Sent','Delivered','Failed','Bounced','Rejected');
+CREATE TABLE "communication_deliveries" ("id" TEXT NOT NULL,"companyId" TEXT NOT NULL,"backgroundJobId" TEXT,"idempotencyKey" TEXT NOT NULL,"provider" TEXT NOT NULL,"channel" TEXT NOT NULL,"recipientHash" TEXT NOT NULL,"status" "CommunicationDeliveryStatus" NOT NULL DEFAULT 'Pending',"providerMessageId" TEXT,"requestId" TEXT,"sentAt" TIMESTAMP(3),"deliveredAt" TIMESTAMP(3),"failedAt" TIMESTAMP(3),"bouncedAt" TIMESTAMP(3),"rejectedAt" TIMESTAMP(3),"lastErrorCode" TEXT,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" TIMESTAMP(3) NOT NULL,CONSTRAINT "communication_deliveries_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "provider_webhook_events" ("id" TEXT NOT NULL,"companyId" TEXT,"provider" TEXT NOT NULL,"providerEventId" TEXT NOT NULL,"eventType" TEXT NOT NULL,"providerMessageId" TEXT,"occurredAt" TIMESTAMP(3) NOT NULL,"processedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,CONSTRAINT "provider_webhook_events_pkey" PRIMARY KEY ("id"));
+CREATE UNIQUE INDEX "communication_deliveries_backgroundJobId_key" ON "communication_deliveries"("backgroundJobId");
+CREATE UNIQUE INDEX "communication_deliveries_providerMessageId_key" ON "communication_deliveries"("providerMessageId");
+CREATE UNIQUE INDEX "communication_deliveries_companyId_idempotencyKey_key" ON "communication_deliveries"("companyId","idempotencyKey");
+CREATE INDEX "communication_deliveries_companyId_status_createdAt_idx" ON "communication_deliveries"("companyId","status","createdAt");
+CREATE UNIQUE INDEX "provider_webhook_events_providerEventId_key" ON "provider_webhook_events"("providerEventId");
+CREATE INDEX "provider_webhook_events_provider_providerMessageId_idx" ON "provider_webhook_events"("provider","providerMessageId");
+ALTER TABLE "communication_deliveries" ADD CONSTRAINT "communication_deliveries_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "companies"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "communication_deliveries" ADD CONSTRAINT "communication_deliveries_backgroundJobId_fkey" FOREIGN KEY ("backgroundJobId") REFERENCES "background_jobs"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "provider_webhook_events" ADD CONSTRAINT "provider_webhook_events_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "companies"("id") ON DELETE SET NULL ON UPDATE CASCADE;

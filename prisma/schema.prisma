@@ -165,6 +165,15 @@ enum BackgroundJobPriority {
   Critical
 }
 
+enum CommunicationDeliveryStatus {
+  Pending
+  Sent
+  Delivered
+  Failed
+  Bounced
+  Rejected
+}
+
 enum ReminderType {
   EstimateReminder
   UpcomingJob
@@ -228,6 +237,8 @@ model Company {
   servicePlans ServicePlan[]
   portalAccesses CustomerPortalAccess[]
   auditEvents AuditEvent[]
+  communicationDeliveries CommunicationDelivery[]
+  providerWebhookEvents ProviderWebhookEvent[]
 
   @@map("companies")
 }
@@ -940,11 +951,55 @@ model BackgroundJob {
   createdByUser   User?                 @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt
+  communicationDelivery CommunicationDelivery?
 
   @@unique([companyId, type, idempotencyKey])
   @@index([status, availableAt, priority, createdAt])
   @@index([companyId, status, createdAt])
   @@map("background_jobs")
+}
+
+model CommunicationDelivery {
+  id String @id @default(uuid())
+  companyId String
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  backgroundJobId String? @unique
+  backgroundJob BackgroundJob? @relation(fields: [backgroundJobId], references: [id], onDelete: SetNull)
+  idempotencyKey String
+  provider String
+  channel String
+  recipientHash String
+  status CommunicationDeliveryStatus @default(Pending)
+  providerMessageId String? @unique
+  requestId String?
+  sentAt DateTime?
+  deliveredAt DateTime?
+  failedAt DateTime?
+  bouncedAt DateTime?
+  rejectedAt DateTime?
+  lastErrorCode String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, idempotencyKey])
+  @@index([companyId, status, createdAt])
+  @@map("communication_deliveries")
+}
+
+model ProviderWebhookEvent {
+  id String @id @default(uuid())
+  companyId String?
+  company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  provider String
+  providerEventId String @unique
+  eventType String
+  providerMessageId String?
+  occurredAt DateTime
+  processedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@index([provider, providerMessageId])
+  @@map("provider_webhook_events")
 }
 
 model ReminderSchedule {

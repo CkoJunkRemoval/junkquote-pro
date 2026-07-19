@@ -8,8 +8,10 @@ const valid = {
   NEXT_PUBLIC_APP_URL: "https://app.example.com",
   PRIVATE_ASSET_STORAGE_DRIVER: "local",
   PRIVATE_ASSET_STORAGE_ROOT: "/private/assets",
-  EMAIL_PROVIDER: "smtp",
+  EMAIL_PROVIDER: "resend",
   EMAIL_FROM: "no-reply@example.com",
+  RESEND_API_KEY: "re_test_key",
+  RESEND_WEBHOOK_SECRET: "whsec_dGVzdC1zZWNyZXQ=",
   BACKGROUND_WORKERS_ENABLED: "true",
 };
 describe("production environment", () => {

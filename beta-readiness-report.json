@@ -1,0 +1,70 @@
+{
+  "timestamp": "2026-07-19T00:15:35.001Z",
+  "commit": "223f73b2d9b345c2b387f3091626c33cbdf36f10",
+  "migrationCount": 26,
+  "tests": {
+    "unit": "run by gate",
+    "integration": "run by gate"
+  },
+  "build": false,
+  "emailProvider": "blocked",
+  "storageProvider": "blocked",
+  "dependencyAdvisories": "accepted",
+  "backupVerification": "not verified",
+  "workerConfiguration": "blocked",
+  "openWarnings": [
+    {
+      "check": "production-environment",
+      "detail": "Environment validation failed:\n- DATABASE_URL is required in production.\n- AUTH_SECRET is required in production.\n- AUTH_URL or NEXTAUTH_URL is required in production.\n- NEXT_PUBLIC_APP_URL is required in production.\n- PRIVATE_ASSET_STORAGE_DRIVER is required in production.\n- EMAIL_PROVIDER is required in production.\n- EMAIL_FROM is required in production.\n- BACKGROUND_WORKERS_ENABLED is required in production."
+    },
+    {
+      "check": "email-provider",
+      "detail": "Unsupported email provider configuration."
+    },
+    {
+      "check": "storage-provider",
+      "detail": "Local private storage is disabled in production."
+    },
+    {
+      "check": "worker-configuration",
+      "detail": "BACKGROUND_WORKERS_ENABLED=true is required."
+    },
+    {
+      "check": "readiness",
+      "detail": "DATABASE_URL is not set"
+    },
+    {
+      "check": "backup-verification",
+      "detail": "BETA_BACKUP_VERIFIED_AT is required after a restore/backup verification."
+    },
+    {
+      "check": "prisma-client",
+      "detail": "Skipped because the production preflight failed."
+    },
+    {
+      "check": "migration-state",
+      "detail": "Skipped because the production preflight failed."
+    },
+    {
+      "check": "typescript",
+      "detail": "Skipped because the production preflight failed."
+    },
+    {
+      "check": "eslint",
+      "detail": "Skipped because the production preflight failed."
+    },
+    {
+      "check": "unit-tests",
+      "detail": "Skipped because the production preflight failed."
+    },
+    {
+      "check": "integration-tests",
+      "detail": "Skipped because the production preflight failed."
+    },
+    {
+      "check": "production-build",
+      "detail": "Skipped because the production preflight failed."
+    }
+  ],
+  "gate": "FAIL"
+}
