@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build",
+    "vercel-build": "node scripts/vercel-build.mjs",
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",
@@ -17,6 +18,7 @@
     "test:db:reset": "node scripts/test-db-reset.mjs",
     "test:db:prepare": "node scripts/test-db-prepare.mjs",
     "test:db:generate": "prisma generate",
+    "verify:vercel-build": "node scripts/verify-vercel-build.mjs",
     "assets:migrate": "tsx scripts/migrate-private-assets.ts",
     "assets:verify": "tsx scripts/verify-asset-backup.ts",
     "worker:once": "tsx scripts/worker-once.ts",
