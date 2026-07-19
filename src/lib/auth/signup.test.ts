@@ -22,6 +22,7 @@ describe("self-service signup", () => {
     vi.clearAllMocks();
     mocks.hash.mockResolvedValue("bcrypt-hash");
     vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
   });
   afterEach(() => {
     vi.unstubAllEnvs();
@@ -141,6 +142,7 @@ describe("self-service signup", () => {
       expect.objectContaining({
         operation: "create_company_owner",
         email: "owner@example.com",
+        stage: "transaction-start",
         error: expect.objectContaining({
           name: "Error",
           code: "P1001",

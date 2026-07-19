@@ -32,6 +32,10 @@ export async function signUpAction(
     ?.trim();
   const clientKey = forwarded || requestHeaders.get("x-real-ip") || "unknown";
   const normalizedEmail = input.email.trim().toLowerCase();
+  console.log("[signup] action invoked", {
+    operation: "self_service_signup",
+    email: normalizedEmail,
+  });
   if (
     !checkRateLimit(`staff-sign-up:ip:${clientKey}`, ratePolicies.signUp)
       .allowed ||
@@ -39,17 +43,49 @@ export async function signUpAction(
       `staff-sign-up:email:${normalizedEmail}`,
       ratePolicies.signUp,
     ).allowed
-  )
+  ) {
+    console.error("[signup] rate-limited", {
+      operation: "self_service_signup",
+      email: normalizedEmail,
+    });
     return {
       error: "Too many account creation attempts. Please try again later.",
     };
+  }
   try {
     await createCompanyOwner(input);
   } catch (error) {
-    if (error instanceof AppError) return { error: error.message };
+    if (error instanceof AppError) {
+      const branch =
+        error.code === "VALIDATION_FAILED"
+          ? "validation"
+          : error.code === "CONFLICT"
+            ? "duplicate-email-result"
+            : error.code === "DATABASE_FAILED"
+              ? "transaction-failed-result"
+              : "application-error";
+      console.error(`[signup] ${branch}`, {
+        operation: "self_service_signup",
+        email: normalizedEmail,
+        code: error.code,
+      });
+      return { error: error.message };
+    }
+    console.error("[signup] unexpected-action-failure", {
+      operation: "self_service_signup",
+      email: normalizedEmail,
+      error:
+        error instanceof Error
+          ? { name: error.name }
+          : { type: typeof error },
+    });
     return {
       error: "Account creation could not be completed. Please try again.",
     };
   }
+  console.log("[signup] redirecting after success", {
+    operation: "self_service_signup",
+    email: normalizedEmail,
+  });
   redirect("/sign-in?created=1");
 }

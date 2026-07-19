@@ -41,10 +41,15 @@ function safeErrorValue(value: unknown, depth = 0): unknown {
   return value;
 }
 
-function logSignupFailure(error: unknown, normalizedEmail: string) {
+function logSignupFailure(
+  error: unknown,
+  normalizedEmail: string,
+  stage: string,
+) {
   const candidate = error as { code?: unknown; meta?: unknown };
   console.error("[signup] account creation failed", {
     operation: "create_company_owner",
+    stage,
     email: normalizedEmail,
     error: error instanceof Error
       ? {
@@ -107,9 +112,12 @@ export function validateSignupInput(input: SignupInput): NormalizedSignupInput {
 
 export async function createCompanyOwner(input: SignupInput) {
   const value = validateSignupInput(input);
-  const passwordHash = await bcrypt.hash(value.password, 12);
+  let stage = "password-hash";
   try {
-    return await prisma.$transaction(async (tx) => {
+    const passwordHash = await bcrypt.hash(value.password, 12);
+    stage = "transaction-start";
+    const result = await prisma.$transaction(async (tx) => {
+      stage = "company-create";
       const company = await tx.company.create({
         data: {
           name: value.companyName,
@@ -119,6 +127,7 @@ export async function createCompanyOwner(input: SignupInput) {
           active: true,
         },
       });
+      stage = "user-create";
       const user = await tx.user.create({
         data: {
           companyId: company.id,
@@ -130,6 +139,7 @@ export async function createCompanyOwner(input: SignupInput) {
           active: true,
         },
       });
+      stage = "membership-create";
       const membership = await tx.companyMembership.create({
         data: {
           companyId: company.id,
@@ -138,6 +148,7 @@ export async function createCompanyOwner(input: SignupInput) {
           status: "Active",
         },
       });
+      stage = "audit-create";
       await tx.auditEvent.create({
         data: {
           companyId: company.id,
@@ -153,16 +164,26 @@ export async function createCompanyOwner(input: SignupInput) {
         membershipId: membership.id,
       };
     });
+    console.log("[signup] transaction committed", {
+      operation: "create_company_owner",
+      email: value.email,
+    });
+    return result;
   } catch (error) {
-    logSignupFailure(error, value.email);
+    logSignupFailure(error, value.email, stage);
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
-    )
+    ) {
+      console.error("[signup] duplicate-email", {
+        operation: "create_company_owner",
+        email: value.email,
+      });
       throw new AppError(
         "CONFLICT",
         "An account cannot be created with those details.",
       );
+    }
     if (error instanceof AppError) throw error;
     throw new AppError(
       "DATABASE_FAILED",
