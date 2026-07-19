@@ -5,6 +5,58 @@ import { AppError } from "@/lib/errors/appError";
 
 export const signupPasswordMinimum = 12;
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const sensitiveKey = /password|hash|secret|token|cookie|authorization|database.?url|api.?key/i;
+
+function redactErrorText(value: string) {
+  let redacted = value
+    .replace(/([a-z][a-z0-9+.-]*:\/\/)[^\s/@]+:[^\s/@]+@/gi, "$1[REDACTED]@")
+    .replace(/(bearer\s+)[^\s,;]+/gi, "$1[REDACTED]")
+    .replace(/((?:password|secret|token|api[_-]?key)\s*[=:]\s*)[^\s,;]+/gi, "$1[REDACTED]");
+  for (const key of [
+    "DATABASE_URL",
+    "DATABASE_URL_TEST",
+    "AUTH_SECRET",
+    "NEXTAUTH_SECRET",
+    "RESEND_API_KEY",
+    "RESEND_WEBHOOK_SECRET",
+    "SUPABASE_SERVICE_ROLE_KEY",
+  ]) {
+    const secret = process.env[key];
+    if (secret && secret.length >= 4) redacted = redacted.replaceAll(secret, "[REDACTED]");
+  }
+  return redacted;
+}
+
+function safeErrorValue(value: unknown, depth = 0): unknown {
+  if (depth > 4) return "[TRUNCATED]";
+  if (typeof value === "string") return redactErrorText(value);
+  if (Array.isArray(value)) return value.slice(0, 50).map((item) => safeErrorValue(item, depth + 1));
+  if (value && typeof value === "object")
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [
+        key,
+        sensitiveKey.test(key) ? "[REDACTED]" : safeErrorValue(item, depth + 1),
+      ]),
+    );
+  return value;
+}
+
+function logSignupFailure(error: unknown, normalizedEmail: string) {
+  const candidate = error as { code?: unknown; meta?: unknown };
+  console.error("[signup] account creation failed", {
+    operation: "create_company_owner",
+    email: normalizedEmail,
+    error: error instanceof Error
+      ? {
+          name: error.name,
+          message: redactErrorText(error.message),
+          stack: error.stack ? redactErrorText(error.stack) : undefined,
+          code: safeErrorValue(candidate.code),
+          meta: safeErrorValue(candidate.meta),
+        }
+      : { type: typeof error, value: safeErrorValue(error) },
+  });
+}
 
 export type SignupInput = {
   companyName: string;
@@ -102,6 +154,7 @@ export async function createCompanyOwner(input: SignupInput) {
       };
     });
   } catch (error) {
+    logSignupFailure(error, value.email);
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"

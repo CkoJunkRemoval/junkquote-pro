@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ transaction: vi.fn(), hash: vi.fn() }));
 vi.mock("@/lib/prisma", () => ({
@@ -21,6 +21,11 @@ describe("self-service signup", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.hash.mockResolvedValue("bcrypt-hash");
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
   });
 
   it("normalizes and validates signup fields", () => {
@@ -113,5 +118,39 @@ describe("self-service signup", () => {
       code: "DATABASE_FAILED",
     });
     expect(persisted).toEqual([]);
+  });
+
+  it("logs safe original error details while returning the generic database error", async () => {
+    vi.stubEnv(
+      "DATABASE_URL",
+      "postgresql://private-user:private-password@db.test/signup",
+    );
+    const original = Object.assign(
+      new Error(`connection failed at ${process.env.DATABASE_URL} password=plaintext-secret`),
+      { code: "P1001", meta: { target: ["email"], passwordHash: "bcrypt-secret" } },
+    );
+    mocks.transaction.mockRejectedValue(original);
+
+    await expect(createCompanyOwner(valid)).rejects.toMatchObject({
+      code: "DATABASE_FAILED",
+      message: "Account creation could not be completed. Please try again.",
+    });
+
+    expect(console.error).toHaveBeenCalledWith(
+      "[signup] account creation failed",
+      expect.objectContaining({
+        operation: "create_company_owner",
+        email: "owner@example.com",
+        error: expect.objectContaining({
+          name: "Error",
+          code: "P1001",
+          meta: { target: ["email"], passwordHash: "[REDACTED]" },
+        }),
+      }),
+    );
+    const logged = JSON.stringify(vi.mocked(console.error).mock.calls);
+    expect(logged).not.toContain("private-password");
+    expect(logged).not.toContain("plaintext-secret");
+    expect(logged).not.toContain("bcrypt-secret");
   });
 });
