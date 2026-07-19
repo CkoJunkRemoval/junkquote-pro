@@ -7,6 +7,7 @@ export const authConfig = {
       const publicPrefixes = [
         "/approve",
         "/sign-in",
+        "/sign-up",
         "/api/auth",
         "/api/health",
         "/portal",

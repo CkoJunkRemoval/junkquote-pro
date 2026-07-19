@@ -1,8 +1,15 @@
 "use client";
 import { useState } from "react";
 import { signIn } from "next-auth/react";
+import Link from "next/link";
 
-export default function SignInForm({ callbackUrl }: { callbackUrl: string }) {
+export default function SignInForm({
+  callbackUrl,
+  accountCreated = false,
+}: {
+  callbackUrl: string;
+  accountCreated?: boolean;
+}) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -30,6 +37,14 @@ export default function SignInForm({ callbackUrl }: { callbackUrl: string }) {
       >
         <p className="text-sm font-semibold text-blue-700">JunkQuote Pro</p>
         <h1 className="mt-2 text-2xl font-bold">Sign in</h1>
+        {accountCreated && (
+          <p
+            role="status"
+            className="mt-4 rounded bg-green-50 p-3 text-sm text-green-800"
+          >
+            Your company account is ready. Sign in to continue.
+          </p>
+        )}
         {error && (
           <p
             id="sign-in-error"
@@ -73,6 +88,15 @@ export default function SignInForm({ callbackUrl }: { callbackUrl: string }) {
         >
           {loading ? "Signing in..." : "Sign in"}
         </button>
+        <p className="mt-5 text-center text-sm text-slate-600">
+          New to JunkQuote Pro?{" "}
+          <Link
+            className="font-semibold text-blue-700 underline"
+            href="/sign-up"
+          >
+            Create account
+          </Link>
+        </p>
       </form>
     </main>
   );

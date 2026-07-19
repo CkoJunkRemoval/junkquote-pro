@@ -28,6 +28,7 @@ export function clearRateLimits() {
 }
 export const ratePolicies = {
   signIn: { limit: 10, windowMs: 15 * 60_000 },
+  signUp: { limit: 5, windowMs: 60 * 60_000 },
   portal: { limit: 5, windowMs: 60 * 60_000 },
   publicApproval: { limit: 30, windowMs: 15 * 60_000 },
   pdf: { limit: 20, windowMs: 60_000 },
