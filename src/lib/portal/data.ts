@@ -45,7 +45,7 @@ export async function getPortalDashboard(
         companyId,
         customerId,
         balanceDue: { gt: 0 },
-        status: { not: "Cancelled" },
+        status: { notIn: ["Cancelled", "Void"] },
       },
       orderBy: { dueDate: "asc" },
       take: 10,
@@ -260,7 +260,7 @@ export async function getPortalInvoice(
   customerId: string,
   id: string,
 ) {
-  return prisma.invoice.findFirst({
+  const invoice = await prisma.invoice.findFirst({
     where: { id, companyId, customerId },
     include: {
       property: true,
@@ -270,6 +270,8 @@ export async function getPortalInvoice(
       },
     },
   });
+  if (invoice?.status === "Sent") await prisma.invoice.update({ where: { id: invoice.id }, data: { status: "Viewed", viewedAt: new Date() } });
+  return invoice ? { ...invoice, status: invoice.status === "Sent" ? "Viewed" as const : invoice.status } : null;
 }
 export async function listPortalPayments(
   companyId: string,

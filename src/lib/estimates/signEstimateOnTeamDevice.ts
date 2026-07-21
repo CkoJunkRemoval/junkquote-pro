@@ -1,7 +1,9 @@
 import { prisma } from "../prisma";
 import { validateSignature } from "./signatureValidation";
+import { requireSubscriptionAccess } from "@/lib/billing/entitlements";
 
 export async function signEstimateOnTeamDevice(companyId: string, estimateId: string, signerName: string, signatureData: string) {
+  await requireSubscriptionAccess(companyId);
   validateSignature(signerName, signatureData);
   const result = await prisma.estimate.updateMany({
     where: { id: estimateId, companyId, status: { in: ["Ready", "Sent"] }, signatureData: null },

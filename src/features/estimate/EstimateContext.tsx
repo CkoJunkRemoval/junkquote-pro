@@ -207,7 +207,7 @@ export function EstimateProvider({
   }, [estimateId]);
 
   const saveDraftProgress = useCallback(async () => {
-    if (!estimateId || isLoadingEstimate || estimate.status !== EstimateStatus.Draft) {
+    if (!estimateId || isLoadingEstimate || estimate.status === EstimateStatus.Approved) {
       return;
     }
 

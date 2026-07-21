@@ -1,0 +1,1 @@
+import Link from"next/link";export default function Page(){return <main className="mx-auto max-w-xl p-10 text-center"><h1 className="text-3xl font-bold">Checkout canceled</h1><p className="mt-3">No billing changes were made.</p><Link href="/pricing" className="mt-6 inline-block rounded border px-5 py-3">Return to plans</Link></main>}

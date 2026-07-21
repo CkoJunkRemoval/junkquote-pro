@@ -3,6 +3,7 @@ import { canTransitionJobStatus, type JobWorkflowStatus } from "./statusWorkflow
 import { recordCompletedJobPricing } from "@/lib/smartPricing/history";
 import { syncPricingOutcomeForJob } from "@/lib/smartPricing/outcomes";
 import { createInvoiceFromJob } from "@/lib/invoices/createInvoice";
+import type { DispatchProgress } from "@/generated/prisma/client";
 
 export interface UpdateJobInput {
   id: string;
@@ -11,6 +12,7 @@ export interface UpdateJobInput {
   scheduledEnd?: Date | null;
   crewNotes?: string;
   customerNotes?: string;
+  truck?: string | null;
   completionNotes?: string;
   actualLaborHours?: number | null;
   actualLaborCost?: number | null;
@@ -18,20 +20,22 @@ export interface UpdateJobInput {
   actualTravelCost?: number | null;
   otherActualCost?: number | null;
   actualCostNotes?: string;
+  finalInvoiceAmount?: number | null;
+  dispatchProgress?: DispatchProgress;
 }
 
 export async function updateJob(companyId: string, input: UpdateJobInput) {
-  for (const [label, value] of [["Actual labor hours", input.actualLaborHours], ["Actual labor cost", input.actualLaborCost], ["Actual disposal cost", input.actualDisposalCost], ["Actual travel cost", input.actualTravelCost], ["Other actual cost", input.otherActualCost]] as const) if (value !== undefined && value !== null && (!Number.isFinite(value) || value < 0)) throw new Error(`${label} cannot be negative.`);
+  for (const [label, value] of [["Actual labor hours", input.actualLaborHours], ["Actual labor cost", input.actualLaborCost], ["Actual disposal cost", input.actualDisposalCost], ["Actual travel cost", input.actualTravelCost], ["Other actual cost", input.otherActualCost], ["Final invoice amount", input.finalInvoiceAmount]] as const) if (value !== undefined && value !== null && (!Number.isFinite(value) || value < 0)) throw new Error(`${label} cannot be negative.`);
   const updated = await prisma.$transaction(async (tx) => {
     const job = await tx.job.findFirst({
       where: { id: input.id, companyId },
-      select: { id: true, status: true, scheduledStart: true, estimateId: true, estimate: { select: { status: true } } },
+      select: { id: true, status: true, dispatchProgress: true, scheduledStart: true, estimateId: true, estimate: { select: { status: true } } },
     });
 
     if (!job) throw new Error("Job not found.");
     const currentStatus = job.status as JobWorkflowStatus;
     const scheduledStart = input.scheduledStart === undefined ? job.scheduledStart : input.scheduledStart;
-    const nextStatus = input.status ?? (scheduledStart && currentStatus === "Unscheduled" ? "Scheduled" : currentStatus);
+    const nextStatus = input.status ?? (input.dispatchProgress && currentStatus === "Scheduled" ? "InProgress" : scheduledStart && currentStatus === "Unscheduled" ? "Scheduled" : currentStatus);
 
     if (!canTransitionJobStatus(currentStatus, nextStatus)) {
       throw new Error(`Invalid job status transition: ${currentStatus} to ${nextStatus}.`);
@@ -52,6 +56,7 @@ export async function updateJob(companyId: string, input: UpdateJobInput) {
         ...(input.scheduledEnd !== undefined ? { scheduledEnd: input.scheduledEnd } : {}),
         ...(input.crewNotes !== undefined ? { crewNotes: input.crewNotes.trim() } : {}),
         ...(input.customerNotes !== undefined ? { customerNotes: input.customerNotes.trim() } : {}),
+        ...(input.truck !== undefined ? { truck: input.truck?.trim() || null } : {}),
         ...(input.completionNotes !== undefined ? { completionNotes: input.completionNotes.trim() } : {}),
         ...(input.actualLaborHours !== undefined ? { actualLaborHours: input.actualLaborHours } : {}),
         ...(input.actualLaborCost !== undefined ? { actualLaborCost: input.actualLaborCost } : {}),
@@ -59,10 +64,14 @@ export async function updateJob(companyId: string, input: UpdateJobInput) {
         ...(input.actualTravelCost !== undefined ? { actualTravelCost: input.actualTravelCost } : {}),
         ...(input.otherActualCost !== undefined ? { otherActualCost: input.otherActualCost } : {}),
         ...(input.actualCostNotes !== undefined ? { actualCostNotes: input.actualCostNotes.trim() } : {}),
+        ...(input.finalInvoiceAmount !== undefined ? { finalInvoiceAmount: input.finalInvoiceAmount } : {}),
+        ...(input.dispatchProgress !== undefined ? { dispatchProgress: input.dispatchProgress, ...(input.dispatchProgress === "EnRoute" ? { enRouteAt: new Date() } : input.dispatchProgress === "Arrived" ? { arrivedAt: new Date() } : {}) } : {}),
       },
     });
 
-    if (scheduledStart && job.estimate.status === "Approved") {
+    if (nextStatus === "Completed" && job.estimate.status !== "Completed") {
+      await tx.estimate.update({ where: { id: job.estimateId }, data: { status: "Completed" } });
+    } else if (scheduledStart && job.estimate.status === "Approved") {
       await tx.estimate.update({ where: { id: job.estimateId }, data: { status: "Scheduled" } });
     }
 

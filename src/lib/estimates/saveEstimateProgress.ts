@@ -1,5 +1,6 @@
 
 import { prisma } from "../prisma";
+import { ESTIMATE_LOCKED_MESSAGE, isEstimateLocked } from "./isEstimateLocked";
 
 export interface SaveEstimateProgressInput {
   estimateId: string;
@@ -15,16 +16,11 @@ export interface SaveEstimateProgressInput {
 
 export async function saveEstimateProgress(companyId: string, input: SaveEstimateProgressInput) {
   const { estimateId, ...data } = input;
-  const result = await prisma.estimate.updateMany({
-    where: {
-      id: estimateId,
-      companyId,
-      status: "Draft",
-    },
-    data,
+  const estimate = await prisma.estimate.findFirst({
+    where: { id: estimateId, companyId },
+    select: { id: true, status: true, signedAt: true },
   });
-
-  if (result.count !== 1) {
-    throw new Error("Draft estimate not found.");
-  }
+  if (!estimate) throw new Error("Estimate not found.");
+  if (isEstimateLocked(estimate)) throw new Error(ESTIMATE_LOCKED_MESSAGE);
+  await prisma.estimate.update({ where: { id: estimate.id }, data });
 }

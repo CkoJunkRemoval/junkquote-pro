@@ -4,7 +4,8 @@ export async function getDraftEstimates(companyId: string) {
   return prisma.estimate.findMany({
     where: {
       companyId,
-      status: "Draft",
+      status: { not: "Approved" },
+      signedAt: null,
     },
     include: {
       customer: true,

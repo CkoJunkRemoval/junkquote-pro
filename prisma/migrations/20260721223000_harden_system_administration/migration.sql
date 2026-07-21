@@ -1,0 +1,16 @@
+ALTER TABLE "admin_impersonations" ADD COLUMN "targetUserId" TEXT, ADD COLUMN "ipHash" TEXT, ADD COLUMN "userAgent" TEXT, ADD COLUMN "expiresAt" TIMESTAMP(3);
+UPDATE "admin_impersonations" SET "targetUserId"="adminUserId", "expiresAt"="startedAt" + INTERVAL '30 minutes' WHERE "targetUserId" IS NULL;
+ALTER TABLE "admin_impersonations" ALTER COLUMN "targetUserId" SET NOT NULL, ALTER COLUMN "expiresAt" SET NOT NULL;
+ALTER TABLE "admin_impersonations" DROP CONSTRAINT "admin_impersonations_companyId_fkey";
+ALTER TABLE "admin_impersonations" ALTER COLUMN "companyId" DROP NOT NULL;
+ALTER TABLE "admin_impersonations" ADD CONSTRAINT "admin_impersonations_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "companies"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "admin_impersonations" ADD CONSTRAINT "admin_impersonations_adminUserId_fkey" FOREIGN KEY ("adminUserId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "admin_impersonations" ADD CONSTRAINT "admin_impersonations_targetUserId_fkey" FOREIGN KEY ("targetUserId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+CREATE INDEX "admin_impersonations_adminUserId_endedAt_expiresAt_idx" ON "admin_impersonations"("adminUserId","endedAt","expiresAt");
+CREATE TABLE "admin_password_reset_tokens" ("id" TEXT NOT NULL,"userId" TEXT NOT NULL,"tokenHash" TEXT NOT NULL,"expiresAt" TIMESTAMP(3) NOT NULL,"usedAt" TIMESTAMP(3),"createdByAdminId" TEXT NOT NULL,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,CONSTRAINT "admin_password_reset_tokens_pkey" PRIMARY KEY ("id"),CONSTRAINT "admin_password_reset_tokens_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE);
+ALTER TABLE "admin_password_reset_tokens" ADD CONSTRAINT "admin_password_reset_tokens_createdByAdminId_fkey" FOREIGN KEY ("createdByAdminId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+CREATE UNIQUE INDEX "admin_password_reset_tokens_tokenHash_key" ON "admin_password_reset_tokens"("tokenHash");
+CREATE INDEX "admin_password_reset_tokens_userId_expiresAt_idx" ON "admin_password_reset_tokens"("userId","expiresAt");
+CREATE INDEX "feature_flags_companyId_key_enabled_idx" ON "feature_flags"("companyId","key","enabled");
+CREATE INDEX "feature_flags_plan_key_enabled_idx" ON "feature_flags"("plan","key","enabled");
+CREATE INDEX "feature_flags_environment_key_enabled_idx" ON "feature_flags"("environment","key","enabled");

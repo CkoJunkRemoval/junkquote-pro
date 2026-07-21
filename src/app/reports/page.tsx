@@ -1,2 +1,1 @@
-import PlaceholderPage from "@/components/layout/PlaceholderPage";
-export default function ReportsPage() { return <PlaceholderPage title="Reports" description="Reporting tools will be available here." />; }
+import{redirect}from"next/navigation";export default function ReportsPage(){redirect("/operations")}

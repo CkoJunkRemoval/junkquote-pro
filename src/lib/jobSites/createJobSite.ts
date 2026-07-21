@@ -1,4 +1,5 @@
 import { prisma } from "../prisma";
+import { ESTIMATE_LOCKED_MESSAGE, isEstimateLocked } from "../estimates/isEstimateLocked";
 
 export interface CreateJobSiteInput {
   estimateId: string;
@@ -10,7 +11,10 @@ export interface CreateJobSiteInput {
   sortOrder: number;
 }
 
-export async function createJobSite(input: CreateJobSiteInput) {
+export async function createJobSite(companyId: string, input: CreateJobSiteInput) {
+  const estimate = await prisma.estimate.findFirst({ where: { id: input.estimateId, companyId }, select: { status: true, signedAt: true } });
+  if (!estimate) throw new Error("Estimate not found.");
+  if (isEstimateLocked(estimate)) throw new Error(ESTIMATE_LOCKED_MESSAGE);
   return prisma.jobSite.create({
     data: {
       estimateId: input.estimateId,

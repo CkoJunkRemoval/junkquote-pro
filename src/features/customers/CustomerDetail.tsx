@@ -284,6 +284,7 @@ export default function CustomerDetail({
           )}
         </div>
       </section>
+      <section className="mt-6 grid gap-6 lg:grid-cols-2"><div className="rounded-2xl border bg-white p-6"><h2 className="text-xl font-bold">Job history</h2><div className="mt-4 space-y-3">{customer.jobs.map(job=><Link href={`/jobs/${job.id}`} key={job.id} className="block rounded-xl border p-4"><strong>{job.jobNumber ?? "Job"}</strong><span className="float-right">{job.status}</span><p className="text-sm text-slate-600">{job.property.address} · {job.scheduledStart ? new Date(job.scheduledStart).toLocaleDateString() : "Unscheduled"}</p></Link>)}{!customer.jobs.length&&<p className="text-slate-500">No jobs.</p>}</div></div><div className="rounded-2xl border bg-white p-6"><h2 className="text-xl font-bold">Invoices & payments</h2><div className="mt-4 space-y-3">{customer.invoices.map(invoice=><Link href={`/invoices/${invoice.id}`} key={invoice.id} className="block rounded-xl border p-4"><strong>{invoice.displayNumber ?? "Invoice"}</strong><span className="float-right">{invoice.status}</span><p className="text-sm">{formatCurrency(invoice.total)} · Balance {formatCurrency(invoice.balanceDue)}</p>{invoice.payments.map(payment=><p key={payment.id} className="text-xs text-slate-600">{new Date(payment.paymentDate).toLocaleDateString()} · {payment.method} · {formatCurrency(payment.amount)}</p>)}</Link>)}{!customer.invoices.length&&<p className="text-slate-500">No invoices.</p>}</div></div></section>
     </div>
   );
 }

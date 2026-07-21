@@ -1,0 +1,2 @@
+import{describe,it,expect}from"vitest";import{calculateProfitability,percentage}from"./calculations";
+describe("operations calculations",()=>{it("calculates complete job profitability",()=>expect(calculateProfitability({revenue:1000,laborCost:200,fuelEstimate:50,disposalCost:100,dumpFees:25,processingFees:25})).toMatchObject({costs:400,netProfit:600,profitMargin:60}));it("handles empty KPI denominators",()=>expect(percentage(4,0)).toBe(0));});

@@ -1,4 +1,5 @@
 import { prisma } from "../prisma";
+import { randomUUID } from "node:crypto";
 
 export async function createJobFromEstimate(companyId: string, estimateId: string) {
   return prisma.$transaction(async (tx) => {
@@ -19,6 +20,7 @@ export async function createJobFromEstimate(companyId: string, estimateId: strin
         estimateId: estimate.id,
         customerId: estimate.customerId,
         propertyId: estimate.propertyId,
+        jobNumber: `JOB-${randomUUID().slice(0, 8).toUpperCase()}`,
       },
     });
   });

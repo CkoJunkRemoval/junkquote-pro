@@ -21,6 +21,9 @@ import { deleteJobPhoto, listJobPhotos, updateJobPhoto } from "@/lib/jobPhotos/j
 import { getCompanyBranding, updateCompanyBranding } from "@/lib/company/branding";
 import { resolveActiveMembership } from "@/lib/auth/tenant";
 import { getSignedPublicEstimatePdf } from "@/lib/estimates/getSignedPublicEstimatePdf";
+import { createEstimateRevision } from "@/lib/estimates/createEstimateRevision";
+import { getEstimateRevisionHistory } from "@/lib/estimates/getEstimateRevisionHistory";
+import { scheduleApprovedEstimate } from "@/lib/jobs/scheduleApprovedEstimate";
 
 describe("real database tenant isolation", () => {
   beforeEach(resetIntegrationDatabase);
@@ -28,6 +31,43 @@ describe("real database tenant isolation", () => {
 
   it("isolates customer reads and updates", async () => { const { a, b } = await createTenantFixtures(); expect(await getCustomerDetail(a.company.id, b.customer.id)).toBeNull(); await expect(updateCustomer(a.company.id, { id: b.customer.id, firstName: "X", lastName: "Y", phone: "1" })).rejects.toThrow("Customer not found"); });
   it("isolates estimate reads, updates, deletes, and customer/property pairing", async () => { const { a, b } = await createTenantFixtures(); expect(await getEstimate(a.company.id, b.estimate.id)).toBeNull(); await expect(updateEstimateStatus(a.company.id, b.estimate.id, "Sent")).rejects.toThrow(); await expect(deleteEstimate(a.company.id, b.estimate.id)).rejects.toThrow(); await expect(createEstimate(a.company.id, { customerId: a.customer.id, propertyId: b.property.id })).rejects.toThrow("Customer or property not found"); });
+  it("deletes sent estimates with dependent sites and blocks approved estimates", async () => {
+    const { a } = await createTenantFixtures();
+    const sent = await prisma.estimate.create({ data: { companyId: a.company.id, customerId: a.customer.id, propertyId: a.property.id, status: "Sent", approvalToken: "sent-delete-token", approvalTokenExpiresAt: new Date(Date.now() + 60_000), jobSites: { create: { name: "Garage", sortOrder: 0, items: { create: { itemId: "item-1", name: "Chair", category: "Furniture", quantity: 1, sortOrder: 0 } } } } } });
+    await deleteEstimate(a.company.id, sent.id);
+    expect(await prisma.estimate.findUnique({ where: { id: sent.id } })).toBeNull();
+    await expect(deleteEstimate(a.company.id, a.estimate.id)).rejects.toThrow("approved and is read-only");
+  });
+  it("creates immutable, independently approvable estimate revisions with copied content", async () => {
+    const { a } = await createTenantFixtures();
+    const site = await prisma.jobSite.create({ data: { estimateId: a.estimate.id, name: "Garage", status: "completed", customerNotes: "Customer note", crewNotes: "Crew note", internalNotes: "Internal note", sortOrder: 0, items: { create: { itemId: "chair", name: "Chair", category: "Furniture", quantity: 2, notes: "Item note", priceOverride: 45, sortOrder: 0 } } } });
+    await prisma.jobPhoto.update({ where: { id: a.photo.id }, data: { jobSiteId: site.id, caption: "Evidence" } });
+    const originalBefore = await prisma.estimate.findUniqueOrThrow({ where: { id: a.estimate.id } });
+    const first = await createEstimateRevision(a.company.id, a.estimate.id);
+    const copied = await prisma.estimate.findUniqueOrThrow({ where: { id: first.id }, include: { jobSites: { include: { items: true } }, revisionPhotos: true } });
+    expect(copied).toMatchObject({ status: "Draft", revisionRootId: a.estimate.id, revisionNumber: 1, customerId: a.customer.id, propertyId: a.property.id, pricingTotal: originalBefore.pricingTotal });
+    expect(copied.jobSites[0]).toMatchObject({ name: "Garage", customerNotes: "Customer note", crewNotes: "Crew note", internalNotes: "Internal note", items: [expect.objectContaining({ name: "Chair", notes: "Item note", priceOverride: 45 })] });
+    expect(copied.revisionPhotos[0]).toMatchObject({ caption: "Evidence", jobSiteId: copied.jobSites[0].id });
+    expect(await prisma.estimate.findUniqueOrThrow({ where: { id: a.estimate.id } })).toEqual(originalBefore);
+    await prisma.estimate.update({ where: { id: first.id }, data: { status: "Approved", signedAt: new Date(), signerName: "Customer", signatureData: "data:image/png;base64,eA==", signatureMethod: "PublicLink" } });
+    const second = await createEstimateRevision(a.company.id, first.id);
+    expect(second).toMatchObject({ revisionNumber: 2, revisionRootId: a.estimate.id, status: "Draft" });
+    expect((await getEstimateRevisionHistory(a.company.id, second.id))?.revisions.map((row) => row.revisionNumber)).toEqual([0, 1, 2]);
+  });
+  it("schedules and completes an approved estimate with operational fields", async () => {
+    const { a } = await createTenantFixtures();
+    const estimate = await prisma.estimate.create({ data: { companyId: a.company.id, customerId: a.customer.id, propertyId: a.property.id, status: "Approved", pricingTotal: 300 } });
+    const start = new Date(Date.now() + 3_600_000); const end = new Date(start.getTime() + 7_200_000);
+    const job = await scheduleApprovedEstimate(a.company.id, { estimateId: estimate.id, scheduledStart: start.toISOString(), scheduledEnd: end.toISOString(), crewId: a.crew.id, truck: "Truck 7", notes: "Use side gate" });
+    expect(await prisma.job.findUniqueOrThrow({ where: { id: job.id }, include: { assignments: true } })).toMatchObject({ jobNumber: expect.stringMatching(/^JOB-/), status: "Scheduled", truck: "Truck 7", crewNotes: "Use side gate", assignments: [expect.objectContaining({ crewId: a.crew.id })] });
+    await updateJob(a.company.id, { id: job.id, dispatchProgress: "EnRoute" });
+    await updateJob(a.company.id, { id: job.id, dispatchProgress: "Arrived" });
+    await updateJob(a.company.id, { id: job.id, dispatchProgress: "Loading" });
+    await prisma.jobPhoto.createMany({ data: [{ companyId: a.company.id, jobId: job.id, category: "Before", fileUrl: "/before.jpg", fileName: "before.jpg", mimeType: "image/jpeg", fileSize: 1, sortOrder: 0 }, { companyId: a.company.id, jobId: job.id, category: "After", fileUrl: "/after.jpg", fileName: "after.jpg", mimeType: "image/jpeg", fileSize: 1, sortOrder: 1 }] });
+    await updateJob(a.company.id, { id: job.id, status: "Completed", completionNotes: "Done", actualLaborHours: 2.5, actualDisposalCost: 80, finalInvoiceAmount: 325 });
+    expect(await prisma.job.findUniqueOrThrow({ where: { id: job.id } })).toMatchObject({ status: "Completed", dispatchProgress: "Loading", completionNotes: "Done", actualLaborHours: 2.5, actualDisposalCost: 80, finalInvoiceAmount: 325 });
+    expect((await prisma.estimate.findUniqueOrThrow({ where: { id: estimate.id } })).status).toBe("Completed");
+  });
   it("isolates jobs and conversion from estimates", async () => { const { a, b } = await createTenantFixtures(); expect(await getJobDetail(a.company.id, b.job.id)).toBeNull(); await expect(updateJob(a.company.id, { id: b.job.id, crewNotes: "cross tenant" })).rejects.toThrow("Job not found"); await expect(createJobFromEstimate(a.company.id, b.estimate.id)).rejects.toThrow("Estimate not found"); });
   it("isolates invoices, payment recording, and refunds", async () => { const { a, b } = await createTenantFixtures(); expect(await getInvoiceDetail(a.company.id, b.invoice.id)).toBeNull(); await expect(recordPayment(a.company.id, b.invoice.id, { amount: 5, method: "Cash", paymentDate: new Date() })).rejects.toThrow("Invoice not found"); await expect(recordRefund(a.company.id, b.payment.id, { amount: 5, refundedAt: new Date(), createdByUserId: a.user.id })).rejects.toThrow("Payment not found"); });
   it("isolates employees, crews, and assignments", async () => { const { a, b } = await createTenantFixtures(); expect(await getEmployee(a.company.id, b.employee.id)).toBeNull(); expect(await getCrew(a.company.id, b.crew.id)).toBeNull(); await expect(updateEmployee(a.company.id, b.employee.id, { firstName: "X", lastName: "Y", role: "CrewMember" })).rejects.toThrow("Employee not found"); await expect(updateCrew(a.company.id, b.crew.id, { name: "X" })).rejects.toThrow("Crew not found"); await expect(assignEmployeeToJob(a.company.id, a.job.id, b.employee.id)).rejects.toThrow("not found"); });

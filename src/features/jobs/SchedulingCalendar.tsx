@@ -47,14 +47,16 @@ function toDateTimeInput(value: Date) {
   const offset = value.getTimezoneOffset() * 60_000;
   return new Date(value.getTime() - offset).toISOString().slice(0, 16);
 }
-function statusLabel(status: string) {
-  return status === "InProgress" ? "In Progress" : status;
+function statusLabel(status: string, progress?: string) {
+  if (status === "Cancelled") return "Canceled";
+  if (status === "InProgress") return progress === "EnRoute" ? "En Route" : progress === "Arrived" ? "On Site" : progress === "Loading" ? "Loading" : "In Progress";
+  return status;
 }
-function statusClass(status: string) {
+function statusClass(status: string, progress?: string) {
   return status === "Scheduled"
     ? "border-blue-300 bg-blue-50 text-blue-950"
     : status === "InProgress"
-      ? "border-amber-300 bg-amber-50 text-amber-950"
+      ? progress === "Loading" ? "border-violet-300 bg-violet-50 text-violet-950" : progress === "Arrived" ? "border-orange-300 bg-orange-50 text-orange-950" : "border-amber-300 bg-amber-50 text-amber-950"
       : status === "Completed"
         ? "border-green-300 bg-green-50 text-green-950"
         : "border-slate-300 bg-slate-100 text-slate-700";
@@ -454,7 +456,7 @@ function JobCard({
         event.dataTransfer.setData("application/job-id", job.id)
       }
       style={{ borderLeftWidth: job.assignments.find((assignment) => assignment.crew?.color)?.crew?.color ? 4 : undefined, borderLeftColor: job.assignments.find((assignment) => assignment.crew?.color)?.crew?.color ?? undefined }}
-      className={`cursor-grab rounded-lg border p-2 text-left text-xs shadow-sm ${statusClass(job.status)}`}
+      className={`cursor-grab rounded-lg border p-2 text-left text-xs shadow-sm ${statusClass(job.status, job.dispatchProgress)}`}
     >
       <button type="button" onClick={onOpen} className="block w-full text-left">
         <strong>
@@ -474,7 +476,7 @@ function JobCard({
           </span>
         )}
         <span className="mt-1 block">
-          {statusLabel(job.status)} ·{" "}
+          {statusLabel(job.status, job.dispatchProgress)} ·{" "}
           {new Intl.NumberFormat("en-US", {
             style: "currency",
             currency: "USD",

@@ -4,9 +4,11 @@ import {
   createEstimateItem,
   type CreateEstimateItemInput,
 } from "@/lib/estimateItems/createEstimateItem";
+import { requireCompanyRole } from "@/lib/auth/tenant";
 
 export async function createEstimateItemAction(
   input: CreateEstimateItemInput
 ) {
-  return createEstimateItem(input);
+  const { companyId } = await requireCompanyRole("Owner", "Admin", "Manager", "Office");
+  return createEstimateItem(companyId, input);
 }

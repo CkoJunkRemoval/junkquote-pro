@@ -6,7 +6,7 @@ import type { MembershipRole, MembershipStatus } from "@/generated/prisma/client
 
 export type TenantContext = {
   user: { id: string; email: string; firstName: string | null; lastName: string | null };
-  membership: { id: string; role: MembershipRole; status: MembershipStatus };
+  membership: { id: string; role: MembershipRole; status: MembershipStatus; billingAdmin: boolean };
   company: { id: string; name: string };
   companyId: string;
   role: MembershipRole;
@@ -21,13 +21,15 @@ const resolveTenantContext = cache(async (): Promise<TenantContext | null> => {
     where: { userId: session.user.id, status: "Active", company: { active: true } },
     orderBy: { createdAt: "asc" },
     select: {
-      id: true, role: true, status: true, companyId: true,
+      id: true, role: true, status: true, billingAdmin: true, companyId: true,
       company: { select: { id: true, name: true } },
-      user: { select: { id: true, email: true, firstName: true, lastName: true } },
+      user: { select: { id: true, email: true, firstName: true, lastName: true, sessionVersion: true } },
     },
   });
   if (!membership) throw new AuthorizationError("NO_ACTIVE_MEMBERSHIP", "An active company membership is required.");
-  return { user: membership.user, membership: { id: membership.id, role: membership.role, status: membership.status }, company: membership.company, companyId: membership.companyId, role: membership.role };
+  const tokenVersion=(session as typeof session & {sessionVersion?:number}).sessionVersion;
+  if(typeof tokenVersion==="number"&&tokenVersion!==membership.user.sessionVersion)throw new AuthorizationError("UNAUTHENTICATED","This session has been revoked. Sign in again.");
+  return { user: membership.user, membership: { id: membership.id, role: membership.role, status: membership.status, billingAdmin: membership.billingAdmin }, company: membership.company, companyId: membership.companyId, role: membership.role };
 });
 
 export function getTenantContext() { return resolveTenantContext(); }

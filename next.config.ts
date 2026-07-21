@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { productionContentSecurityPolicy } from "./security-policy";
 
 const nextConfig: NextConfig = {
   productionBrowserSourceMaps: false,
@@ -6,8 +7,7 @@ const nextConfig: NextConfig = {
     const security = [
       {
         key: "Content-Security-Policy",
-        value:
-          "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+        value: process.env.CONTENT_SECURITY_POLICY ?? productionContentSecurityPolicy,
       },
       { key: "X-Frame-Options", value: "DENY" },
       { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },

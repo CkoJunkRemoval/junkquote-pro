@@ -1,0 +1,14 @@
+export const productionContentSecurityPolicy = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "frame-ancestors 'none'",
+  "form-action 'self'",
+  "object-src 'none'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data:",
+  "style-src 'self' 'unsafe-inline'",
+  "script-src 'self' 'unsafe-inline' https://js.stripe.com",
+  "connect-src 'self' https://api.stripe.com https://*.supabase.co https://*.vercel-insights.com",
+  "frame-src https://js.stripe.com https://hooks.stripe.com",
+  "upgrade-insecure-requests",
+].join("; ");

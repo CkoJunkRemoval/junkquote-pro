@@ -22,12 +22,18 @@ export async function getInvoiceDetail(companyId: string, invoiceId: string) {
       dueDate: true,
       issuedDate: true,
       paidDate: true,
+      sentAt: true,
+      viewedAt: true,
+      voidedAt: true,
+      lastSentTo: true,
       notes: true,
       createdAt: true,
       updatedAt: true,
       company: { select: { name: true, displayName: true, logoUrl: true, primaryColor: true, secondaryColor: true } },
       customer: { select: { firstName: true, lastName: true, phone: true, email: true } },
       property: { select: { address: true, city: true, state: true, zip: true } },
+      job: { select: { scheduledStart: true, actualLaborHours: true, actualDisposalCost: true, completionNotes: true } },
+      lineItems: { orderBy: { sortOrder: "asc" }, select: { id: true, description: true, kind: true, quantity: true, unitPrice: true, amount: true, sortOrder: true } },
       estimate: {
         select: {
           id: true,

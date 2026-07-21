@@ -6,8 +6,10 @@ import {
 } from "@/lib/invoices/createInvoice";
 import { recordAuditEvent } from "@/lib/audit/audit";
 import { currentRequestId } from "@/lib/audit/requestAudit";
+import { requireFeature } from "@/lib/billing/entitlements";
 export async function createInvoiceAction(input: CreateInvoiceInput) {
   const c = await requireOperationalTenant();
+  await requireFeature(c.companyId,"invoicing");
   const result = await createInvoice(c.companyId, input);
   await recordAuditEvent({
     companyId: c.companyId,

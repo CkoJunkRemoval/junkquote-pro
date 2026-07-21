@@ -1,13 +1,14 @@
 import { prisma } from "../prisma";
 import { getPublicApprovalError, type PublicApprovalStatus } from "./publicEstimateApproval";
 import { validateSignature } from "./signatureValidation";
+import { requireSubscriptionAccess } from "@/lib/billing/entitlements";
 
 export type PublicEstimateResponse = "approve" | "decline";
 
 export async function respondToEstimateApproval(token: string, response: PublicEstimateResponse, signerName?: string, signatureData?: string) {
   const estimate = await prisma.estimate.findUnique({
     where: { approvalToken: token },
-    select: { status: true, approvalTokenExpiresAt: true },
+    select: { companyId: true, status: true, approvalTokenExpiresAt: true },
   });
   const error = getPublicApprovalError(
     estimate?.status as PublicApprovalStatus | undefined ?? null,
@@ -17,6 +18,7 @@ export async function respondToEstimateApproval(token: string, response: PublicE
   if (error) {
     throw new Error(error);
   }
+  await requireSubscriptionAccess(estimate!.companyId);
 
   const nextStatus = response === "approve" ? "Approved" : "Declined";
   if (response === "approve") validateSignature(signerName ?? "", signatureData ?? "");

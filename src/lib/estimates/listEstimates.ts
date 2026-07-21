@@ -60,7 +60,7 @@ export async function listEstimates(companyId: string, input: ListEstimatesInput
   const where = buildEstimateListWhere(companyId, query);
   const orderBy = buildEstimateListOrderBy(query.sort);
   const [estimates, total] = await prisma.$transaction([
-    prisma.estimate.findMany({ where, orderBy, skip: query.skip, take: query.pageSize, select: { id: true, status: true, pricingTotal: true, createdAt: true, updatedAt: true, customer: { select: { firstName: true, lastName: true } }, property: { select: { address: true, city: true, state: true, zip: true } } } }),
+    prisma.estimate.findMany({ where, orderBy, skip: query.skip, take: query.pageSize, select: { id: true, status: true, signedAt: true, pricingTotal: true, createdAt: true, updatedAt: true, customer: { select: { firstName: true, lastName: true } }, property: { select: { address: true, city: true, state: true, zip: true } } } }),
     prisma.estimate.count({ where }),
   ]);
   return { estimates, total, page: query.page, pageSize: query.pageSize };

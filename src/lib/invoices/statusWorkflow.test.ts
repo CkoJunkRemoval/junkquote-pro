@@ -5,6 +5,8 @@ describe("invoice status workflow", () => {
   it("allows supported invoice transitions", () => {
     expect(canTransitionInvoiceStatus("Draft", "Sent")).toBe(true);
     expect(canTransitionInvoiceStatus("Sent", "Partial")).toBe(true);
+    expect(canTransitionInvoiceStatus("Sent", "Viewed")).toBe(true);
+    expect(canTransitionInvoiceStatus("Viewed", "Void")).toBe(true);
     expect(canTransitionInvoiceStatus("Partial", "Paid")).toBe(true);
   });
 

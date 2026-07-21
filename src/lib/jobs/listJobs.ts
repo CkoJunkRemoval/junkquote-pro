@@ -38,7 +38,7 @@ export async function listJobs(companyId: string, input: ListJobsInput = {}) {
   if (query.crewId && !await prisma.crew.findFirst({ where: { id: query.crewId, companyId }, select: { id: true } })) throw new Error("Crew not found.");
   const where = buildJobListWhere(companyId, query);
   const [jobs, total] = await prisma.$transaction([
-    prisma.job.findMany({ where, orderBy: buildJobListOrderBy(query.sort), skip: query.skip, take: query.pageSize, select: { id: true, estimateId: true, status: true, scheduledStart: true, scheduledEnd: true, updatedAt: true, customer: { select: { firstName: true, lastName: true } }, property: { select: { address: true, city: true, state: true, zip: true } }, estimate: { select: { pricingTotal: true } }, assignments: { select: { employee: { select: { firstName: true, lastName: true } }, crew: { select: { name: true, color: true } } } } } }),
+    prisma.job.findMany({ where, orderBy: buildJobListOrderBy(query.sort), skip: query.skip, take: query.pageSize, select: { id: true, jobNumber: true, estimateId: true, status: true, dispatchProgress: true, truck: true, scheduledStart: true, scheduledEnd: true, updatedAt: true, customer: { select: { firstName: true, lastName: true } }, property: { select: { address: true, city: true, state: true, zip: true } }, estimate: { select: { pricingTotal: true } }, assignments: { select: { employee: { select: { firstName: true, lastName: true } }, crew: { select: { name: true, color: true } } } } } }),
     prisma.job.count({ where }),
   ]);
   return { jobs, total, page: query.page, pageSize: query.pageSize };

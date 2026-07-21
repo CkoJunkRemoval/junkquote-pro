@@ -7,7 +7,8 @@ export async function updateInvoiceStatus(companyId: string, invoiceId: string, 
   if (!invoice) throw new Error("Invoice not found.");
   const current = invoice.status as InvoiceWorkflowStatus;
   if (!canTransitionInvoiceStatus(current, nextStatus)) throw new Error(`Invalid invoice status transition: ${current} to ${nextStatus}.`);
-  const updated = await prisma.invoice.update({ where: { id: invoice.id }, data: { status: nextStatus, ...(nextStatus === "Paid" ? { paidDate: new Date(), balanceDue: 0 } : {}) } });
+  const now = new Date();
+  const updated = await prisma.invoice.update({ where: { id: invoice.id }, data: { status: nextStatus, ...(nextStatus === "Sent" ? { sentAt: now } : {}), ...(nextStatus === "Viewed" ? { viewedAt: now } : {}), ...(nextStatus === "Void" ? { voidedAt: now } : {}), ...(nextStatus === "Paid" ? { paidDate: now, balanceDue: 0 } : {}) } });
   await syncPricingOutcomeForInvoice(companyId, invoice.id);
   return updated;
 }

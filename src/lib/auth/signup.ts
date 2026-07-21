@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors/appError";
+import { billingConfig } from "@/lib/billing/config";
 
 export const signupPasswordMinimum = 12;
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -148,6 +149,12 @@ export async function createCompanyOwner(input: SignupInput) {
           status: "Active",
         },
       });
+      stage = "subscription-create";
+      const trialStart = new Date();
+      const trialEnd = new Date(trialStart);
+      trialEnd.setDate(trialEnd.getDate() + billingConfig.trialDays);
+      await tx.companySubscription.create({ data: { companyId: company.id, plan: "Professional", status: "Trialing", trialStart, trialEnd } });
+      await tx.subscriptionHistory.create({ data: { companyId: company.id, plan: "Professional", status: "Trialing", source: "signup" } });
       stage = "audit-create";
       await tx.auditEvent.create({
         data: {

@@ -1,9 +1,13 @@
 import { notFound } from "next/navigation";
 import AppLayout from "@/components/layout/AppLayout";
-import CreateJobButton from "@/features/jobs/CreateJobButton";
+import ScheduleJobButton from "@/features/jobs/ScheduleJobButton";
 import CreateInvoiceButton from "@/features/invoices/CreateInvoiceButton";
 import { getEstimateManagementDetail } from "@/lib/estimates/getEstimateManagementDetail";
 import { requireCompanyRole } from "@/lib/auth/tenant";
+import Link from "next/link";
+import { isEstimateLocked } from "@/lib/estimates/isEstimateLocked";
+import { getEstimateRevisionHistory } from "@/lib/estimates/getEstimateRevisionHistory";
+import CreateRevisionButton from "@/features/estimate/CreateRevisionButton";
 
 export default async function EstimateDetailPage({
   params,
@@ -12,14 +16,19 @@ export default async function EstimateDetailPage({
 }) {
   const { id } = await params;
   const { companyId } = await requireCompanyRole("Owner", "Admin", "Manager", "Office");
-  const estimate = await getEstimateManagementDetail(companyId, id);
+  const [estimate, history] = await Promise.all([
+    getEstimateManagementDetail(companyId, id),
+    getEstimateRevisionHistory(companyId, id),
+  ]);
 
   if (!estimate) notFound();
+  const locked = isEstimateLocked(estimate);
 
   return (
     <AppLayout>
       <main className="mx-auto max-w-5xl p-6 sm:p-10">
-        <p className="text-sm font-semibold text-blue-700">Read-only estimate</p>
+        <p className="text-sm font-semibold text-blue-700">{locked ? "Read-only approved estimate" : "Editable estimate"}</p>
+        <p className="mt-1 text-sm text-slate-500">{estimate.displayNumber ?? "Estimate"} · {estimate.revisionNumber === 0 ? "Original" : `Revision ${estimate.revisionNumber}`}</p>
         <h1 className="mt-1 text-3xl font-bold">
           {estimate.customer.firstName} {estimate.customer.lastName}
         </h1>
@@ -35,7 +44,8 @@ export default async function EstimateDetailPage({
         </div>
         {estimate.pricingDiscount !== 0 && <p className="mt-4 text-slate-600">Discount: {formatCurrency(estimate.pricingDiscount)}</p>}
         <p className="mt-3 text-sm text-slate-500">Last updated {estimate.updatedAt.toLocaleString()}</p>
-        {estimate.status === "Approved" && <div className="mt-6 flex flex-wrap gap-3"><CreateJobButton estimateId={id} /><CreateInvoiceButton estimateId={id} /></div>}
+        <div className="mt-6 flex flex-wrap gap-3">{!locked && <Link href={`/estimates?estimateId=${id}`} className="rounded-xl bg-blue-700 px-5 py-3 font-semibold text-white">Edit estimate</Link>}{estimate.status === "Approved" && <><CreateRevisionButton estimateId={id} /><ScheduleJobButton estimateId={id} /><CreateInvoiceButton estimateId={id} /></>}</div>
+        {history && <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-5"><h2 className="text-xl font-bold">Revision history</h2><div className="mt-4 space-y-2">{history.revisions.map((revision, index) => { const current = revision.id === history.currentId; const latest = index === history.revisions.length - 1; return <Link key={revision.id} href={`/estimates/${revision.id}`} className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3 ${current ? "border-blue-500 bg-blue-50" : "border-slate-200"}`}><span><strong>{revision.revisionNumber === 0 ? "Original" : `Revision ${revision.revisionNumber}`}</strong><span className="ml-2 text-sm text-slate-500">{revision.displayNumber}</span></span><span className="flex items-center gap-2"><span className="rounded-full bg-slate-100 px-2 py-1 text-xs">{revision.status}</span>{current && <span className="text-xs font-semibold text-blue-700">Current</span>}{latest && <span className="text-xs font-semibold text-slate-600">Latest</span>}</span></Link>; })}</div></section>}
         <section className="mt-8 space-y-4">
           <h2 className="text-xl font-bold">Job sites</h2>
           {estimate.jobSites.map((jobSite) => (

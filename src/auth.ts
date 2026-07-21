@@ -37,12 +37,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           if(user)await recordAuditEvent({companyId:user.companyId,actingUserId:user.id,eventType:"authorization.failed",entityType:"User",entityId:user.id,metadata:{operation:"staff_sign_in"}}).catch(()=>undefined);
           return null;
         }
+        await prisma.user.update({where:{id:user.id},data:{lastLogin:new Date()}});
+        await recordAuditEvent({companyId:user.companyId,actingUserId:user.id,eventType:"authentication.login_succeeded",entityType:"User",entityId:user.id}).catch(()=>undefined);
         return {
           id: user.id,
           email: user.email,
           name:
             [user.firstName, user.lastName].filter(Boolean).join(" ") ||
             user.email,
+          sessionVersion: user.sessionVersion,
         };
       },
     }),
@@ -50,12 +53,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     ...authConfig.callbacks,
     jwt({ token, user }) {
-      if (user) token.userId = user.id;
+      if (user) { token.userId = user.id; token.sessionVersion = (user as typeof user & {sessionVersion:number}).sessionVersion; }
       return token;
     },
     session({ session, token }) {
-      if (session.user && typeof token.userId === "string")
-        session.user.id = token.userId;
+      if (session.user && typeof token.userId === "string") { session.user.id = token.userId; (session as typeof session & {sessionVersion?:number}).sessionVersion = typeof token.sessionVersion === "number" ? token.sessionVersion : undefined; }
       return session;
     },
   },

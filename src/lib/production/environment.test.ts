@@ -13,6 +13,13 @@ const valid = {
   RESEND_API_KEY: "re_test_key",
   RESEND_WEBHOOK_SECRET: "whsec_dGVzdC1zZWNyZXQ=",
   BACKGROUND_WORKERS_ENABLED: "true",
+  STRIPE_SECRET_KEY: "sk_test_example",
+  STRIPE_WEBHOOK_SECRET: "whsec_example",
+  STRIPE_PRICE_STARTER: "price_starter",
+  STRIPE_PRICE_PROFESSIONAL: "price_professional",
+  STRIPE_PRICE_BUSINESS: "price_business",
+  PLATFORM_ADMIN_EMAIL: "platform-admin@example.com",
+  CONTENT_SECURITY_POLICY: "default-src 'self'; frame-ancestors 'none'",
 };
 describe("production environment", () => {
   it("accepts complete safe production configuration", () =>

@@ -17,7 +17,7 @@ function localInput(value: Date | null) {
   return value ? new Date(value).toISOString().slice(0, 16) : "";
 }
 function labelStatus(status: string) {
-  return status === "InProgress" ? "In Progress" : status;
+  return status === "InProgress" ? "In Progress" : status === "Cancelled" ? "Canceled" : status;
 }
 
 export default function JobDetail({
@@ -35,6 +35,7 @@ export default function JobDetail({
   const [crewNotes, setCrewNotes] = useState(job.crewNotes);
   const [customerNotes, setCustomerNotes] = useState(job.customerNotes);
   const [completionNotes, setCompletionNotes] = useState(job.completionNotes);
+  const [truck, setTruck] = useState(job.truck ?? "");
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -43,9 +44,9 @@ export default function JobDetail({
     if (nextStatus === "Completed") {
       const photos = await listJobPhotosAction(job.id);
       if (
-        !photos.some((photo) => photo.category === "After") &&
+        (!photos.some((photo) => photo.category === "Before") || !photos.some((photo) => photo.category === "After")) &&
         !window.confirm(
-          "No After photos are attached. Complete this job anyway?",
+          "Before and After photos are recommended. Complete this job anyway?",
         )
       )
         return;
@@ -61,6 +62,7 @@ export default function JobDetail({
         scheduledEnd: scheduledEnd ? new Date(scheduledEnd) : null,
         crewNotes,
         customerNotes,
+        truck,
         completionNotes,
       });
       setJob((current) => ({
@@ -86,6 +88,13 @@ export default function JobDetail({
     }
   }
 
+  async function setPhase(dispatchProgress: "EnRoute" | "Arrived" | "Loading") {
+    setIsSaving(true); setError(null);
+    try { const updated = await updateJobAction({ id: job.id, dispatchProgress }); setJob((current) => ({ ...current, ...updated })); setMessage(`Job marked ${dispatchProgress === "Arrived" ? "On Site" : dispatchProgress === "EnRoute" ? "En Route" : "Loading"}.`); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to update job status."); }
+    finally { setIsSaving(false); }
+  }
+
   const availableTransitions =
     jobStatusTransitions[job.status as JobWorkflowStatus];
   return (
@@ -94,6 +103,7 @@ export default function JobDetail({
         Back to Jobs
       </Link>
       <div className="mt-3">
+        <p className="text-sm font-semibold text-blue-700">{job.jobNumber ?? `Job ${job.id.slice(0, 8)}`}</p>
         <h1 className="text-3xl font-bold">
           {job.customer.firstName} {job.customer.lastName}
         </h1>
@@ -105,6 +115,7 @@ export default function JobDetail({
           {job.customer.phone}
           {job.customer.email ? ` · ${job.customer.email}` : ""}
         </p>
+        <a target="_blank" rel="noreferrer" href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${job.property.address}, ${job.property.city}, ${job.property.state} ${job.property.zip}`)}`} className="mt-2 inline-block text-sm font-semibold text-blue-700">Open in Maps</a>
       </div>
       {error && <p className="mt-4 text-red-600">{error}</p>}
       {message && <p className="mt-4 text-green-700">{message}</p>}
@@ -117,6 +128,7 @@ export default function JobDetail({
             onChange={setScheduledStart}
             type="datetime-local"
           />
+          <Field label="Truck" value={truck} onChange={setTruck} type="text" />
           <Field
             label="Scheduled end"
             value={scheduledEnd}
@@ -144,10 +156,13 @@ export default function JobDetail({
               Mark {labelStatus(status)}
             </button>
           ))}
+          {(job.status === "Scheduled" || job.status === "InProgress") && <><button type="button" disabled={isSaving} onClick={() => void setPhase("EnRoute")} className="rounded-lg border px-4 py-2 font-semibold">En Route</button><button type="button" disabled={isSaving} onClick={() => void setPhase("Arrived")} className="rounded-lg border px-4 py-2 font-semibold">On Site</button><button type="button" disabled={isSaving} onClick={() => void setPhase("Loading")} className="rounded-lg border px-4 py-2 font-semibold">Loading</button></>}
         </div>
         <p className="mt-4 text-sm text-slate-600">
           Current status: <strong>{labelStatus(job.status)}</strong>
+          {job.status === "InProgress" && <> · <strong>{job.dispatchProgress === "Arrived" ? "On Site" : job.dispatchProgress === "EnRoute" ? "En Route" : job.dispatchProgress}</strong></>}
         </p>
+        <p className="mt-2 text-sm text-slate-600">Crew: {job.assignments.map((assignment) => assignment.crew?.name || `${assignment.employee?.firstName ?? ""} ${assignment.employee?.lastName ?? ""}`.trim()).filter(Boolean).join(", ") || "Unassigned"} · Truck: {job.truck || "Unassigned"}</p>
       </section>
       {job.status === "Completed" && <ActualCosts jobId={job.id} initial={job} />}
       {job.status === "Completed" && (

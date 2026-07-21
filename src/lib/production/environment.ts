@@ -6,6 +6,7 @@ const unsafeValues = new Set([
   "dev-secret",
   "test-secret",
 ]);
+import { validateContentSecurityPolicy } from "@/lib/security/adminSecurity";
 export type RuntimeEnvironment = Record<string, string | undefined>;
 export function validateProductionEnvironment(
   env: RuntimeEnvironment = process.env,
@@ -30,6 +31,15 @@ export function validateProductionEnvironment(
     const email = requireValue("EMAIL_PROVIDER");
     requireValue("EMAIL_FROM");
     const workers = requireValue("BACKGROUND_WORKERS_ENABLED");
+    requireValue("STRIPE_SECRET_KEY");
+    requireValue("STRIPE_WEBHOOK_SECRET");
+    requireValue("STRIPE_PRICE_STARTER");
+    requireValue("STRIPE_PRICE_PROFESSIONAL");
+    requireValue("STRIPE_PRICE_BUSINESS");
+    requireValue("PLATFORM_ADMIN_EMAIL");
+    const csp = requireValue("CONTENT_SECURITY_POLICY");
+    const cspResult = validateContentSecurityPolicy(csp);
+    if (!cspResult.valid) errors.push(...cspResult.errors);
     if (
       secret &&
       (secret.length < 32 || unsafeValues.has(secret.toLowerCase()))

@@ -1,11 +1,13 @@
-export type InvoiceWorkflowStatus = "Draft" | "Sent" | "Partial" | "Paid" | "Overdue" | "Cancelled";
+export type InvoiceWorkflowStatus = "Draft" | "Sent" | "Viewed" | "Partial" | "Paid" | "Overdue" | "Void" | "Cancelled";
 
 export const invoiceStatusTransitions: Record<InvoiceWorkflowStatus, InvoiceWorkflowStatus[]> = {
-  Draft: ["Sent", "Cancelled"],
-  Sent: ["Partial", "Paid", "Overdue", "Cancelled"],
-  Partial: ["Paid", "Overdue", "Cancelled"],
+  Draft: ["Sent", "Void"],
+  Sent: ["Viewed", "Partial", "Paid", "Overdue", "Void"],
+  Viewed: ["Partial", "Paid", "Overdue", "Void"],
+  Partial: ["Paid", "Overdue", "Void"],
   Paid: [],
-  Overdue: ["Partial", "Paid", "Cancelled"],
+  Overdue: ["Partial", "Paid", "Void"],
+  Void: [],
   Cancelled: [],
 };
 

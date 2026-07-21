@@ -5,10 +5,13 @@ export async function getEstimateManagementDetail(companyId: string, estimateId:
     where: {
       id: estimateId,
       companyId,
-      status: { not: "Draft" },
     },
     select: {
+      id: true,
+      displayNumber: true,
+      revisionNumber: true,
       status: true,
+      signedAt: true,
       pricingSubtotal: true,
       pricingLabor: true,
       pricingDisposal: true,
@@ -30,6 +33,7 @@ export async function getEstimateManagementDetail(companyId: string, estimateId:
           },
         },
       },
+      revisionPhotos: { select: { id: true } },
     },
   });
 }

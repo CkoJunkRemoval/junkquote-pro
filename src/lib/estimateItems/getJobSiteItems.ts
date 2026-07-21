@@ -1,8 +1,8 @@
 import { prisma } from "../prisma";
 
-export async function getJobSiteItems(jobSiteId: string) {
+export async function getJobSiteItems(companyId: string, jobSiteId: string) {
   return prisma.estimateItem.findMany({
-    where: { jobSiteId },
+    where: { jobSiteId, jobSite: { estimate: { companyId } } },
     orderBy: { sortOrder: "asc" },
   });
 }

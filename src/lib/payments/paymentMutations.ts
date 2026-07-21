@@ -24,6 +24,7 @@ export async function recordPayment(companyId: string, invoiceId: string, input:
     const invoice = await tx.invoice.findFirst({ where: { id: invoiceId, companyId, customer: { companyId }, estimate: { companyId } }, select: { id: true, companyId: true, total: true, status: true } });
     if (!invoice) throw new Error("Invoice not found.");
     if (invoice.status === "Cancelled") throw new Error("Cancelled invoices cannot receive payments.");
+    if (invoice.status === "Void") throw new Error("Void invoices cannot receive payments.");
     const existing = await tx.payment.aggregate({ where: { invoiceId: invoice.id, companyId, invoice: { companyId } }, _sum: { amount: true } });
     if ((existing._sum.amount ?? 0) + input.amount > invoice.total + 0.00001) throw new Error("Payment cannot exceed the invoice total.");
     const payment = await tx.payment.create({ data: { companyId, invoiceId: invoice.id, amount: input.amount, method: input.method, referenceNumber: input.referenceNumber?.trim() || null, paymentDate: input.paymentDate, notes: input.notes?.trim() || "" } });
@@ -40,6 +41,7 @@ export async function updatePayment(companyId: string, paymentId: string, input:
     const payment = await tx.payment.findFirst({ where: { id: paymentId, companyId, invoice: { companyId, customer: { companyId }, estimate: { companyId } } }, include: { invoice: { select: { id: true, total: true, status: true } } } });
     if (!payment) throw new Error("Payment not found.");
     if (payment.invoice.status === "Cancelled") throw new Error("Cancelled invoices cannot receive payments.");
+    if (payment.invoice.status === "Void") throw new Error("Void invoices cannot receive payments.");
     const otherPayments = await tx.payment.aggregate({ where: { invoiceId: payment.invoiceId, companyId, invoice: { companyId }, id: { not: payment.id } }, _sum: { amount: true } });
     if ((otherPayments._sum.amount ?? 0) + input.amount > payment.invoice.total + 0.00001) throw new Error("Payment cannot exceed the invoice total.");
     const updated = await tx.payment.update({ where: { id: payment.id }, data: { amount: input.amount, method: input.method, referenceNumber: input.referenceNumber?.trim() || null, paymentDate: input.paymentDate, notes: input.notes?.trim() || "" } });

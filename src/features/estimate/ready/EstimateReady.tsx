@@ -14,7 +14,7 @@ import {
 import type { EstimateDeliveryMethod } from "@/lib/estimates/prepareEstimateDelivery";
 import { signEstimateOnTeamDeviceAction } from "@/app/actions/estimates/signEstimateOnTeamDevice";
 import SignaturePad from "@/components/estimate/SignaturePad";
-import CreateJobButton from "@/features/jobs/CreateJobButton";
+import ScheduleJobButton from "@/features/jobs/ScheduleJobButton";
 import CreateInvoiceButton from "@/features/invoices/CreateInvoiceButton";
 
 import { useEstimate } from "../EstimateContext";
@@ -173,7 +173,7 @@ export default function EstimateReady() {
             <div className="rounded-xl border border-slate-200 p-6">
               <h2 className="text-xl font-bold">Job</h2>
               <p className="mt-1 text-slate-500">Create a job from this approved estimate.</p>
-              <div className="mt-4 flex flex-wrap gap-3"><CreateJobButton estimateId={estimateId} /><CreateInvoiceButton estimateId={estimateId} /></div>
+              <div className="mt-4 flex flex-wrap gap-3"><ScheduleJobButton estimateId={estimateId} /><CreateInvoiceButton estimateId={estimateId} /></div>
             </div>
           )}
 

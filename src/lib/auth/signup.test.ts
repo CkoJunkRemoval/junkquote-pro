@@ -65,6 +65,8 @@ describe("self-service signup", () => {
       companyMembership: {
         create: vi.fn().mockResolvedValue({ id: "membership-1" }),
       },
+      companySubscription: { create: vi.fn().mockResolvedValue({ id: "subscription-1" }) },
+      subscriptionHistory: { create: vi.fn().mockResolvedValue({ id: "history-1" }) },
       auditEvent: { create: vi.fn().mockResolvedValue({ id: "audit-1" }) },
     };
     mocks.transaction.mockImplementation(async (callback) => callback(tx));

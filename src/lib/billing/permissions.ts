@@ -1,0 +1,1 @@
+import type{MembershipRole}from"@/generated/prisma/client";export function canManageBilling(role:MembershipRole,billingAdmin:boolean){return role==="Owner"||billingAdmin}export function assertCanManageBilling(role:MembershipRole,billingAdmin:boolean){if(!canManageBilling(role,billingAdmin))throw new Error("Only company owners or billing administrators can manage billing.")}

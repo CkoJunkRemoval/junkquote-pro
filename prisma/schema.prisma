@@ -57,6 +57,7 @@ enum DispatchProgress {
   NotStarted
   EnRoute
   Arrived
+  Loading
 }
 
 enum JobPriority {
@@ -69,9 +70,11 @@ enum JobPriority {
 enum InvoiceStatus {
   Draft
   Sent
+  Viewed
   Partial
   Paid
   Overdue
+  Void
   Cancelled
 }
 
@@ -188,129 +191,148 @@ enum SmartPricingDecisionType {
 }
 
 model Company {
-  id        String   @id @default(uuid())
-  name      String
-  legalName String   @default("JunkQuote Pro")
-  displayName String @default("JunkQuote Pro")
-  phone     String?
-  email     String?
-  website   String?
-  addressLine1 String?
-  addressLine2 String?
-  city String?
-  state String?
-  postalCode String?
-  logoUrl String?
-  primaryColor String?
-  secondaryColor String?
-  invoicePrefix String @default("INV")
-  estimatePrefix String @default("EST")
-  defaultTaxRate Float @default(0)
-  defaultPaymentTermsDays Int @default(30)
-  defaultEstimateExpirationDays Int @default(30)
-  defaultMinimumCharge Float @default(0)
-  timezone String @default("America/New_York")
-  currencyCode String @default("USD")
-  active    Boolean  @default(true)
+  id                            String  @id @default(uuid())
+  name                          String
+  legalName                     String  @default("JunkQuote Pro")
+  displayName                   String  @default("JunkQuote Pro")
+  phone                         String?
+  email                         String?
+  website                       String?
+  addressLine1                  String?
+  addressLine2                  String?
+  city                          String?
+  state                         String?
+  postalCode                    String?
+  logoUrl                       String?
+  primaryColor                  String?
+  secondaryColor                String?
+  invoicePrefix                 String  @default("INV")
+  estimatePrefix                String  @default("EST")
+  defaultTaxRate                Float   @default(0)
+  defaultPaymentTermsDays       Int     @default(30)
+  defaultEstimateExpirationDays Int     @default(30)
+  defaultMinimumCharge          Float   @default(0)
+  timezone                      String  @default("America/New_York")
+  currencyCode                  String  @default("USD")
+  active                        Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  settings  CompanySettings?
-  users     User[]
-  memberships CompanyMembership[]
-  customers Customer[]
-  estimates Estimate[]
-  jobs      Job[]
-  invoices  Invoice[]
-  payments  Payment[]
-  jobPhotos JobPhoto[]
-  employees Employee[]
-  crews     Crew[]
-  assignments JobAssignment[]
-  backgroundJobs BackgroundJob[]
-  reminderSchedules ReminderSchedule[]
-  pricingHistory PricingHistory[]
-  smartPricingDecisions SmartPricingDecision[]
-  createdRefunds Refund[]
-  pricingOutcomes PricingOutcome[]
-  servicePlans ServicePlan[]
-  portalAccesses CustomerPortalAccess[]
-  auditEvents AuditEvent[]
+  settings                CompanySettings?
+  users                   User[]
+  memberships             CompanyMembership[]
+  customers               Customer[]
+  estimates               Estimate[]
+  jobs                    Job[]
+  invoices                Invoice[]
+  payments                Payment[]
+  jobPhotos               JobPhoto[]
+  employees               Employee[]
+  crews                   Crew[]
+  assignments             JobAssignment[]
+  backgroundJobs          BackgroundJob[]
+  reminderSchedules       ReminderSchedule[]
+  pricingHistory          PricingHistory[]
+  smartPricingDecisions   SmartPricingDecision[]
+  createdRefunds          Refund[]
+  pricingOutcomes         PricingOutcome[]
+  servicePlans            ServicePlan[]
+  portalAccesses          CustomerPortalAccess[]
+  auditEvents             AuditEvent[]
   communicationDeliveries CommunicationDelivery[]
-  providerWebhookEvents ProviderWebhookEvent[]
+  providerWebhookEvents   ProviderWebhookEvent[]
+  fleetAssets             FleetAsset[]
+  maintenanceRecords      FleetMaintenance[]
+  disposalRecords         DisposalRecord[]
+  timeEntries             EmployeeTimeEntry[]
+  subscription            CompanySubscription?
+  subscriptionHistory     SubscriptionHistory[]
+  stripeWebhookEvents     StripeWebhookEvent[]
+  featureFlags            FeatureFlag[]
+  systemErrors            SystemErrorEvent[]
+  notifications           SystemNotification[]
+  usageMetrics            CompanyUsageDaily[]
+  impersonations          AdminImpersonation[]
 
   @@map("companies")
 }
 
 model CompanySettings {
-  id            String   @id @default(uuid())
+  id String @id @default(uuid())
 
-  companyId     String   @unique
-  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId String  @unique
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
-  timezone      String   @default("America/New_York")
-  currency      String   @default("USD")
-  businessHours String?
-  taxRate       Float    @default(0)
-  smartPricingEnabled Boolean @default(false)
-  smartPricingMinimumSampleSize Int @default(5)
-  smartPricingConfidenceThreshold Int @default(60)
-  smartPricingUseLaborHistory Boolean @default(true)
-  smartPricingUseDisposalHistory Boolean @default(true)
-  smartPricingUseTravelHistory Boolean @default(false)
-  portalShowAssignedCrew Boolean @default(false)
+  timezone                        String  @default("America/New_York")
+  currency                        String  @default("USD")
+  businessHours                   String?
+  taxRate                         Float   @default(0)
+  smartPricingEnabled             Boolean @default(false)
+  smartPricingMinimumSampleSize   Int     @default(5)
+  smartPricingConfidenceThreshold Int     @default(60)
+  smartPricingUseLaborHistory     Boolean @default(true)
+  smartPricingUseDisposalHistory  Boolean @default(true)
+  smartPricingUseTravelHistory    Boolean @default(false)
+  portalShowAssignedCrew          Boolean @default(false)
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("company_settings")
 }
 
 model User {
-  id           String   @id @default(uuid())
+  id String @id @default(uuid())
 
-  companyId    String
-  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
-  firstName    String?
-  lastName     String?
+  firstName String?
+  lastName  String?
 
-  email        String   @unique
+  email        String @unique
   passwordHash String
 
-  role         UserRole
+  role UserRole
 
-  active       Boolean  @default(true)
-  lastLogin    DateTime?
+  active                     Boolean                   @default(true)
+  lastLogin                  DateTime?
+  platformAdmin              Boolean                   @default(false)
+  sessionVersion             Int                       @default(0)
+  devices                    UserDevice[]
+  adminPasswordResetTokens   AdminPasswordResetToken[]
+  administeredImpersonations AdminImpersonation[]      @relation("AdminImpersonationAdministrator")
+  targetedImpersonations     AdminImpersonation[]      @relation("AdminImpersonationTarget")
+  createdAdminResetTokens    AdminPasswordResetToken[] @relation("AdminPasswordResetCreator")
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  memberships  CompanyMembership[]
-  createdBackgroundJobs BackgroundJob[]
+  memberships              CompanyMembership[]
+  createdBackgroundJobs    BackgroundJob[]
   createdReminderSchedules ReminderSchedule[]
-  smartPricingDecisions SmartPricingDecision[]
-  createdRefunds Refund[]
-  createdServicePlans ServicePlan[]
-  employee Employee?
-  auditEvents AuditEvent[]
+  smartPricingDecisions    SmartPricingDecision[]
+  createdRefunds           Refund[]
+  createdServicePlans      ServicePlan[]
+  employee                 Employee?
+  auditEvents              AuditEvent[]
 
   @@index([companyId])
-
   @@map("users")
 }
 
 model CompanyMembership {
-  id        String           @id @default(uuid())
-  userId    String
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  companyId String
-  company   Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  role      MembershipRole   @default(Owner)
-  status    MembershipStatus @default(Active)
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
+  id           String           @id @default(uuid())
+  userId       String
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyId    String
+  company      Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  role         MembershipRole   @default(Owner)
+  status       MembershipStatus @default(Active)
+  billingAdmin Boolean          @default(false)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
 
   @@unique([userId, companyId])
   @@index([companyId, status])
@@ -318,192 +340,269 @@ model CompanyMembership {
 }
 
 model Customer {
-  id         String   @id @default(uuid())
+  id String @id @default(uuid())
 
-  companyId  String
-  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
-  firstName  String
-  lastName   String
-  phone      String
-  email      String?
-  notes      String?
+  firstName String
+  lastName  String
+  phone     String
+  email     String?
+  notes     String?
 
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  properties Property[]
-  estimates  Estimate[]
-  jobs       Job[]
-  invoices   Invoice[]
-  servicePlans ServicePlan[]
+  properties     Property[]
+  estimates      Estimate[]
+  jobs           Job[]
+  invoices       Invoice[]
+  servicePlans   ServicePlan[]
   portalAccesses CustomerPortalAccess[]
 
   @@index([companyId])
   @@index([lastName])
-
   @@map("customers")
 }
 
 model Property {
-  id             String   @id @default(uuid())
+  id String @id @default(uuid())
 
-  customerId     String
-  customer       Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
-  nickname       String?
-  propertyType   String?
+  nickname     String?
+  propertyType String?
 
-  address        String
-  city           String
-  state          String
-  zip            String
+  address String
+  city    String
+  state   String
+  zip     String
 
-  gateCode       String?
-  accessNotes    String?
-  parkingNotes   String?
-  dangerousPets  String?
-  hoaNotes       String?
+  gateCode      String?
+  accessNotes   String?
+  parkingNotes  String?
+  dangerousPets String?
+  hoaNotes      String?
 
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  estimates Estimate[]
-  jobs      Job[]
-  invoices  Invoice[]
+  estimates    Estimate[]
+  jobs         Job[]
+  invoices     Invoice[]
   servicePlans ServicePlan[]
 
   @@index([customerId])
-
   @@map("properties")
 }
 
 model Estimate {
-  id         String         @id @default(uuid())
-  displayNumber String?     @unique
+  id            String  @id @default(uuid())
+  displayNumber String? @unique
 
-  companyId  String
-  company    Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   customerId String
-  customer   Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   propertyId String
-  property   Property       @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 
-  status     EstimateStatus @default(Draft)
+  status EstimateStatus @default(Draft)
 
-  pricingSubtotal Float @default(0)
-  pricingLabor    Float @default(0)
-  pricingDisposal Float @default(0)
-  pricingDiscount Float @default(0)
-  pricingTotal    Float @default(0)
+  pricingSubtotal     Float  @default(0)
+  pricingLabor        Float  @default(0)
+  pricingDisposal     Float  @default(0)
+  pricingDiscount     Float  @default(0)
+  pricingTotal        Float  @default(0)
   estimatedLaborHours Float?
-  estimatedLaborCost Float?
-  currentStep     Int   @default(1)
+  estimatedLaborCost  Float?
+  currentStep         Int    @default(1)
 
-  sentAt                  DateTime?
-  sentByEmailAt           DateTime?
-  sentBySmsAt             DateTime?
-  approvalToken           String?   @unique
-  approvalTokenExpiresAt  DateTime?
-  signatureData           String?
-  signedAt                DateTime?
-  signerName              String?
-  signatureMethod         SignatureMethod?
+  sentAt                 DateTime?
+  sentByEmailAt          DateTime?
+  sentBySmsAt            DateTime?
+  approvalToken          String?          @unique
+  approvalTokenExpiresAt DateTime?
+  signatureData          String?
+  signedAt               DateTime?
+  signerName             String?
+  signatureMethod        SignatureMethod?
 
-  jobSites   JobSite[]
-  job        Job?
-  invoice    Invoice?
-  pricingHistory PricingHistory[]
+  revisionNumber Int        @default(0)
+  revisionRootId String?
+  revisionRoot   Estimate?  @relation("EstimateRevisions", fields: [revisionRootId], references: [id], onDelete: Restrict)
+  revisions      Estimate[] @relation("EstimateRevisions")
+
+  jobSites             JobSite[]
+  revisionPhotos       EstimatePhoto[]
+  job                  Job?
+  invoice              Invoice?
+  pricingHistory       PricingHistory[]
   smartPricingDecision SmartPricingDecision?
 
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
+  @@unique([revisionRootId, revisionNumber])
   @@index([companyId])
   @@index([customerId])
   @@index([propertyId])
-
+  @@index([revisionRootId])
   @@map("estimates")
 }
 
+enum FleetAssetType {
+  Truck
+  Trailer
+  Equipment
+}
+
+enum FleetAssetStatus {
+  Active
+  Maintenance
+  OutOfService
+  Retired
+}
+
+enum DisposalCategory {
+  Landfill
+  Donation
+  Recycling
+  ScrapMetal
+  HazardousWaste
+}
+
+enum TimeEntryType {
+  Work
+  PTO
+}
+
+enum SubscriptionPlan {
+  Starter
+  Professional
+  Business
+}
+
+enum SubscriptionStatus {
+  Trialing
+  Active
+  PastDue
+  Unpaid
+  Canceled
+  Incomplete
+  Paused
+}
+
+model EstimatePhoto {
+  id              String           @id @default(uuid())
+  estimateId      String
+  estimate        Estimate         @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+  jobSiteId       String?
+  jobSite         JobSite?         @relation(fields: [jobSiteId], references: [id], onDelete: SetNull)
+  category        JobPhotoCategory @default(Other)
+  fileUrl         String
+  thumbnailUrl    String?
+  fileName        String
+  mimeType        String
+  fileSize        Int
+  caption         String?
+  customerVisible Boolean          @default(false)
+  sortOrder       Int
+  takenAt         DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([estimateId, category, sortOrder])
+  @@index([jobSiteId])
+  @@map("estimate_photos")
+}
+
 model Job {
-  id              String    @id @default(uuid())
+  id        String  @id @default(uuid())
+  jobNumber String? @unique
 
-  companyId       String
-  company         Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
-  estimateId      String    @unique
-  estimate        Estimate  @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+  estimateId String   @unique
+  estimate   Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
 
-  customerId      String
-  customer        Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
-  propertyId      String
-  property        Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 
-  status          JobStatus @default(Unscheduled)
-  dispatchProgress DispatchProgress @default(NotStarted)
-  priority JobPriority @default(Normal)
-  enRouteAt DateTime?
-  arrivedAt DateTime?
-  completedAt DateTime?
-  scheduledStart  DateTime?
-  scheduledEnd    DateTime?
-  crewNotes       String    @default("")
-  customerNotes   String    @default("")
-  completionNotes String    @default("")
-  actualLaborHours Float?
-  actualLaborCost Float?
-  actualDisposalCost Float?
-  actualTravelCost Float?
-  otherActualCost Float?
-  actualCostNotes String @default("")
-  invoice         Invoice?
-  photos          JobPhoto[]
-  assignments     JobAssignment[]
-  pricingHistory PricingHistory[]
-  pricingOutcome PricingOutcome?
-  servicePlanId String?
-  servicePlan ServicePlan? @relation(fields: [servicePlanId], references: [id], onDelete: SetNull)
+  status                JobStatus        @default(Unscheduled)
+  dispatchProgress      DispatchProgress @default(NotStarted)
+  priority              JobPriority      @default(Normal)
+  enRouteAt             DateTime?
+  arrivedAt             DateTime?
+  completedAt           DateTime?
+  scheduledStart        DateTime?
+  scheduledEnd          DateTime?
+  truck                 String?
+  crewNotes             String           @default("")
+  customerNotes         String           @default("")
+  completionNotes       String           @default("")
+  actualLaborHours      Float?
+  actualLaborCost       Float?
+  actualDisposalCost    Float?
+  actualTravelCost      Float?
+  otherActualCost       Float?
+  actualCostNotes       String           @default("")
+  finalInvoiceAmount    Float?
+  assignedFleetAssetId  String?
+  assignedFleetAsset    FleetAsset?      @relation(fields: [assignedFleetAssetId], references: [id], onDelete: SetNull)
+  disposalRecords       DisposalRecord[]
+  invoice               Invoice?
+  photos                JobPhoto[]
+  assignments           JobAssignment[]
+  pricingHistory        PricingHistory[]
+  pricingOutcome        PricingOutcome?
+  servicePlanId         String?
+  servicePlan           ServicePlan?     @relation(fields: [servicePlanId], references: [id], onDelete: SetNull)
   servicePlanOccurrence DateTime?
 
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
+  @@unique([servicePlanId, servicePlanOccurrence])
   @@index([companyId])
   @@index([customerId])
   @@index([propertyId])
   @@index([scheduledStart])
-  @@unique([servicePlanId, servicePlanOccurrence])
   @@map("jobs")
 }
 
 model PricingHistory {
-  id String @id @default(uuid())
-  companyId String
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  estimateId String
-  estimate Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
-  jobId String
-  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  customerId String
-  area String
-  item String
-  quantity Int
-  cubicYards Float
-  laborHours Float
-  disposalCost Float
-  dumpFees Float
-  travelDistance Float?
-  travelTime Float?
-  finalQuotedPrice Float
+  id                  String   @id @default(uuid())
+  companyId           String
+  company             Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  estimateId          String
+  estimate            Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+  jobId               String
+  job                 Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  customerId          String
+  area                String
+  item                String
+  quantity            Int
+  cubicYards          Float
+  laborHours          Float
+  disposalCost        Float
+  dumpFees            Float
+  travelDistance      Float?
+  travelTime          Float?
+  finalQuotedPrice    Float
   finalCollectedPrice Float
-  discount Float
-  profitEstimate Float
-  propertyType String?
-  createdAt DateTime @default(now())
+  discount            Float
+  profitEstimate      Float
+  propertyType        String?
+  createdAt           DateTime @default(now())
 
   @@unique([jobId, item, area])
   @@index([companyId, item, createdAt])
@@ -512,66 +611,71 @@ model PricingHistory {
 }
 
 model SmartPricingDecision {
-  id String @id @default(uuid())
-  companyId String
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  estimateId String @unique
-  estimate Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
-  recommendedPrice Float
-  confidenceScore Int
+  id                   String                   @id @default(uuid())
+  companyId            String
+  company              Company                  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  estimateId           String                   @unique
+  estimate             Estimate                 @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+  recommendedPrice     Float
+  confidenceScore      Int
   historicalSampleSize Int
-  manualPrice Float
-  appliedPrice Float?
-  accepted Boolean?
-  decision SmartPricingDecisionType @default(Unavailable)
-  finalQuotedAmount Float?
-  difference Float?
-  decidedAt DateTime?
-  actingUserId String?
-  actingUser User? @relation(fields: [actingUserId], references: [id], onDelete: SetNull)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  manualPrice          Float
+  appliedPrice         Float?
+  accepted             Boolean?
+  decision             SmartPricingDecisionType @default(Unavailable)
+  finalQuotedAmount    Float?
+  difference           Float?
+  decidedAt            DateTime?
+  actingUserId         String?
+  actingUser           User?                    @relation(fields: [actingUserId], references: [id], onDelete: SetNull)
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
 
   @@index([companyId, createdAt])
   @@map("smart_pricing_decisions")
 }
 
 model Invoice {
-  id            String        @id @default(uuid())
+  id String @id @default(uuid())
 
-  companyId     String
-  company       Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
-  customerId    String
-  customer      Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
-  propertyId    String
-  property      Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 
-  jobId         String?       @unique
-  job           Job?          @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  jobId String? @unique
+  job   Job?    @relation(fields: [jobId], references: [id], onDelete: SetNull)
 
-  estimateId    String        @unique
-  estimate      Estimate      @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+  estimateId String   @unique
+  estimate   Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
 
-  invoiceNumber Int           @unique
-  displayNumber String?       @unique
-  subtotal      Float
-  tax           Float         @default(0)
-  discounts     Float         @default(0)
-  total         Float
-  balanceDue    Float
-  status        InvoiceStatus @default(Draft)
-  dueDate       DateTime?
-  issuedDate    DateTime?
-  paidDate      DateTime?
-  notes         String        @default("")
-  payments      Payment[]
-  refunds       Refund[]
+  invoiceNumber  Int               @unique
+  displayNumber  String?           @unique
+  subtotal       Float
+  tax            Float             @default(0)
+  discounts      Float             @default(0)
+  total          Float
+  balanceDue     Float
+  status         InvoiceStatus     @default(Draft)
+  dueDate        DateTime?
+  issuedDate     DateTime?
+  paidDate       DateTime?
+  sentAt         DateTime?
+  viewedAt       DateTime?
+  voidedAt       DateTime?
+  lastSentTo     String?
+  notes          String            @default("")
+  lineItems      InvoiceLineItem[]
+  payments       Payment[]
+  refunds        Refund[]
   pricingOutcome PricingOutcome?
 
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([companyId])
   @@index([customerId])
@@ -580,43 +684,60 @@ model Invoice {
   @@map("invoices")
 }
 
+model InvoiceLineItem {
+  id          String   @id @default(uuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  kind        String   @default("Service")
+  quantity    Float    @default(1)
+  unitPrice   Float
+  amount      Float
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([invoiceId, sortOrder])
+  @@map("invoice_line_items")
+}
+
 model PricingOutcome {
-  id String @id @default(uuid())
-  companyId String
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  estimateId String
-  jobId String @unique
-  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  invoiceId String? @unique
-  invoice Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
-  customerId String
-  quotedAmount Float
-  invoicedAmount Float?
-  collectedAmount Float
-  discountAmount Float
-  refundAmount Float
-  laborHoursEstimated Float?
-  laborHoursActual Float?
-  laborCostEstimated Float?
-  laborCostActual Float?
-  disposalCostEstimated Float?
-  disposalCostActual Float?
-  travelCostEstimated Float?
-  travelCostActual Float?
-  otherCostActual Float?
-  grossProfit Float?
-  grossMarginPercent Float?
-  estimateVarianceAmount Float?
+  id                      String   @id @default(uuid())
+  companyId               String
+  company                 Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  estimateId              String
+  jobId                   String   @unique
+  job                     Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  invoiceId               String?  @unique
+  invoice                 Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  customerId              String
+  quotedAmount            Float
+  invoicedAmount          Float?
+  collectedAmount         Float
+  discountAmount          Float
+  refundAmount            Float
+  laborHoursEstimated     Float?
+  laborHoursActual        Float?
+  laborCostEstimated      Float?
+  laborCostActual         Float?
+  disposalCostEstimated   Float?
+  disposalCostActual      Float?
+  travelCostEstimated     Float?
+  travelCostActual        Float?
+  otherCostActual         Float?
+  grossProfit             Float?
+  grossMarginPercent      Float?
+  estimateVarianceAmount  Float?
   estimateVariancePercent Float?
-  completenessScore Int
-  missingData Json
-  classification String
-  collectionStatus String
-  propertyType String?
-  completedAt DateTime
-  calculatedAt DateTime
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  completenessScore       Int
+  missingData             Json
+  classification          String
+  collectionStatus        String
+  propertyType            String?
+  completedAt             DateTime
+  calculatedAt            DateTime
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 
   @@index([companyId, completedAt])
   @@index([companyId, classification])
@@ -624,13 +745,13 @@ model PricingOutcome {
 }
 
 model Payment {
-  id              String        @id @default(uuid())
+  id String @id @default(uuid())
 
-  companyId       String
-  company         Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
-  invoiceId       String
-  invoice         Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   amount          Float
   method          PaymentMethod
@@ -638,9 +759,9 @@ model Payment {
   paymentDate     DateTime
   notes           String        @default("")
 
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  refunds         Refund[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  refunds   Refund[]
 
   @@index([companyId])
   @@index([invoiceId])
@@ -648,21 +769,21 @@ model Payment {
 }
 
 model Refund {
-  id String @id @default(uuid())
-  companyId String
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  paymentId String
-  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
-  invoiceId String
-  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
-  amount Float
-  reason String?
+  id                String   @id @default(uuid())
+  companyId         String
+  company           Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  paymentId         String
+  payment           Payment  @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  invoiceId         String
+  invoice           Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  amount            Float
+  reason            String?
   externalReference String?
-  refundedAt DateTime
-  createdByUserId String
-  createdByUser User @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  refundedAt        DateTime
+  createdByUserId   String
+  createdByUser     User     @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   @@index([companyId, paymentId])
   @@index([companyId, invoiceId])
@@ -670,25 +791,25 @@ model Refund {
 }
 
 model JobPhoto {
-  id           String           @id @default(uuid())
-  companyId    String
-  company      Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  jobId        String
-  job          Job              @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  jobSiteId    String?
-  jobSite      JobSite?         @relation(fields: [jobSiteId], references: [id], onDelete: SetNull)
-  category     JobPhotoCategory @default(Other)
-  fileUrl      String
-  thumbnailUrl String?
-  fileName     String
-  mimeType     String
-  fileSize     Int
-  caption      String?
-  customerVisible Boolean @default(false)
-  sortOrder    Int
-  takenAt      DateTime?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  id              String           @id @default(uuid())
+  companyId       String
+  company         Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  jobId           String
+  job             Job              @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  jobSiteId       String?
+  jobSite         JobSite?         @relation(fields: [jobSiteId], references: [id], onDelete: SetNull)
+  category        JobPhotoCategory @default(Other)
+  fileUrl         String
+  thumbnailUrl    String?
+  fileName        String
+  mimeType        String
+  fileSize        Int
+  caption         String?
+  customerVisible Boolean          @default(false)
+  sortOrder       Int
+  takenAt         DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
   @@index([companyId])
   @@index([jobId, category, sortOrder])
@@ -697,38 +818,39 @@ model JobPhoto {
 }
 
 model CustomerPortalAccess {
-  id String @id @default(uuid())
-  companyId String
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  customerId String
-  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  email String
-  status CustomerPortalAccessStatus @default(Active)
+  id          String                     @id @default(uuid())
+  companyId   String
+  company     Company                    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customerId  String
+  customer    Customer                   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  email       String
+  status      CustomerPortalAccessStatus @default(Active)
   lastLoginAt DateTime?
-  tokens CustomerPortalToken[]
-  sessions CustomerPortalSession[]
+  tokens      CustomerPortalToken[]
+  sessions    CustomerPortalSession[]
   auditEvents AuditEvent[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime                   @default(now())
+  updatedAt   DateTime                   @updatedAt
+
   @@unique([companyId, email])
   @@index([companyId, customerId, status])
   @@map("customer_portal_accesses")
 }
 
 model AuditEvent {
-  id String @id @default(uuid())
-  companyId String?
-  company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  actingUserId String?
-  actingUser User? @relation(fields: [actingUserId], references: [id], onDelete: SetNull)
+  id             String                @id @default(uuid())
+  companyId      String?
+  company        Company?              @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  actingUserId   String?
+  actingUser     User?                 @relation(fields: [actingUserId], references: [id], onDelete: SetNull)
   portalAccessId String?
-  portalAccess CustomerPortalAccess? @relation(fields: [portalAccessId], references: [id], onDelete: SetNull)
-  eventType String
-  entityType String?
-  entityId String?
-  requestId String?
-  metadata Json?
-  createdAt DateTime @default(now())
+  portalAccess   CustomerPortalAccess? @relation(fields: [portalAccessId], references: [id], onDelete: SetNull)
+  eventType      String
+  entityType     String?
+  entityId       String?
+  requestId      String?
+  metadata       Json?
+  createdAt      DateTime              @default(now())
 
   @@index([companyId, createdAt])
   @@index([companyId, eventType, createdAt])
@@ -738,108 +860,372 @@ model AuditEvent {
 }
 
 model CustomerPortalToken {
-  id String @id @default(uuid())
+  id             String                     @id @default(uuid())
   portalAccessId String
-  portalAccess CustomerPortalAccess @relation(fields: [portalAccessId], references: [id], onDelete: Cascade)
-  tokenHash String @unique
-  purpose CustomerPortalTokenPurpose
-  expiresAt DateTime
-  usedAt DateTime?
-  revokedAt DateTime?
-  createdAt DateTime @default(now())
+  portalAccess   CustomerPortalAccess       @relation(fields: [portalAccessId], references: [id], onDelete: Cascade)
+  tokenHash      String                     @unique
+  purpose        CustomerPortalTokenPurpose
+  expiresAt      DateTime
+  usedAt         DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime                   @default(now())
+
   @@index([portalAccessId, purpose, createdAt])
   @@map("customer_portal_tokens")
 }
 
 model CustomerPortalSession {
-  id String @id @default(uuid())
+  id             String               @id @default(uuid())
   portalAccessId String
-  portalAccess CustomerPortalAccess @relation(fields: [portalAccessId], references: [id], onDelete: Cascade)
-  tokenHash String @unique
-  expiresAt DateTime
-  revokedAt DateTime?
-  lastSeenAt DateTime @default(now())
-  createdAt DateTime @default(now())
+  portalAccess   CustomerPortalAccess @relation(fields: [portalAccessId], references: [id], onDelete: Cascade)
+  tokenHash      String               @unique
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  lastSeenAt     DateTime             @default(now())
+  createdAt      DateTime             @default(now())
+
   @@index([portalAccessId, expiresAt])
   @@map("customer_portal_sessions")
 }
 
 model Employee {
-  id         String         @id @default(uuid())
-  companyId  String
-  company    Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  userId     String?        @unique
-  user       User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
-  firstName  String
-  lastName   String
-  email      String?
-  phone      String?
-  role       EmployeeRole
-  status     EmployeeStatus @default(Active)
-  hourlyRate Float?
-  color      String?
-  notes      String?
-  crewMembers CrewMember[]
-  assignments JobAssignment[]
+  id                     String                @id @default(uuid())
+  companyId              String
+  company                Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId                 String?               @unique
+  user                   User?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
+  firstName              String
+  lastName               String
+  email                  String?
+  phone                  String?
+  role                   EmployeeRole
+  status                 EmployeeStatus        @default(Active)
+  hourlyRate             Float?
+  color                  String?
+  notes                  String?
+  availability           String?
+  certifications         String[]
+  assignedTruckId        String?
+  assignedTruck          FleetAsset?           @relation(fields: [assignedTruckId], references: [id], onDelete: SetNull)
+  timeEntries            EmployeeTimeEntry[]
+  crewMembers            CrewMember[]
+  assignments            JobAssignment[]
   servicePlanAssignments ServicePlanEmployee[]
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @updatedAt
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+
   @@index([companyId])
   @@map("employees")
 }
 
-model Crew {
-  id         String          @id @default(uuid())
+model FleetAsset {
+  id                    String             @id @default(uuid())
+  companyId             String
+  company               Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  type                  FleetAssetType
+  name                  String
+  status                FleetAssetStatus   @default(Active)
+  vin                   String?
+  licensePlate          String?
+  insuranceExpiresAt    DateTime?
+  registrationExpiresAt DateTime?
+  odometer              Int?
+  oilChangeDueAt        Int?
+  tireServiceDueAt      Int?
+  notes                 String             @default("")
+  employees             Employee[]
+  jobs                  Job[]
+  maintenance           FleetMaintenance[]
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  @@index([companyId, status])
+  @@map("fleet_assets")
+}
+
+model FleetMaintenance {
+  id             String     @id @default(uuid())
+  companyId      String
+  company        Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  assetId        String
+  asset          FleetAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  serviceType    String
+  servicedAt     DateTime
+  mileage        Int?
+  cost           Float      @default(0)
+  nextDueAt      DateTime?
+  nextDueMileage Int?
+  notes          String     @default("")
+  createdAt      DateTime   @default(now())
+
+  @@index([companyId, nextDueAt])
+  @@map("fleet_maintenance")
+}
+
+model DisposalRecord {
+  id         String           @id @default(uuid())
   companyId  String
-  company    Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  name       String
-  color      String?
-  active     Boolean         @default(true)
-  members    CrewMember[]
-  assignments JobAssignment[]
+  company    Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  jobId      String
+  job        Job              @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  category   DisposalCategory
+  facility   String
+  cost       Float            @default(0)
+  weight     Float?
+  receiptUrl String?
+  notes      String           @default("")
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@index([companyId, jobId])
+  @@map("disposal_records")
+}
+
+model EmployeeTimeEntry {
+  id         String        @id @default(uuid())
+  companyId  String
+  company    Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId String
+  employee   Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  type       TimeEntryType @default(Work)
+  clockIn    DateTime
+  clockOut   DateTime?
+  notes      String        @default("")
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@index([companyId, employeeId, clockIn])
+  @@map("employee_time_entries")
+}
+
+model CompanySubscription {
+  id                   String             @id @default(uuid())
+  companyId            String             @unique
+  company              Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  stripeCustomerId     String?            @unique
+  stripeSubscriptionId String?            @unique
+  plan                 SubscriptionPlan   @default(Starter)
+  status               SubscriptionStatus @default(Trialing)
+  trialStart           DateTime?
+  trialEnd             DateTime?
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  canceledAt           DateTime?
+  gracePeriodEnd       DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@index([status, trialEnd])
+  @@map("company_subscriptions")
+}
+
+model SubscriptionHistory {
+  id                   String             @id @default(uuid())
+  companyId            String
+  company              Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  plan                 SubscriptionPlan
+  status               SubscriptionStatus
+  stripeSubscriptionId String?
+  source               String
+  effectiveAt          DateTime           @default(now())
+  metadata             Json?
+
+  @@index([companyId, effectiveAt])
+  @@map("subscription_history")
+}
+
+model StripeWebhookEvent {
+  id            String   @id @default(uuid())
+  companyId     String?
+  company       Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  stripeEventId String   @unique
+  type          String
+  processedAt   DateTime @default(now())
+
+  @@index([companyId, processedAt])
+  @@map("stripe_webhook_events")
+}
+
+model FeatureFlag {
+  id             String            @id @default(uuid())
+  key            String
+  description    String            @default("")
+  enabled        Boolean           @default(false)
+  companyId      String?
+  company        Company?          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  plan           SubscriptionPlan?
+  environment    String?
+  rolloutPercent Int               @default(100)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@unique([key, companyId, plan, environment])
+  @@index([key, enabled])
+  @@index([companyId, key, enabled])
+  @@index([plan, key, enabled])
+  @@index([environment, key, enabled])
+  @@map("feature_flags")
+}
+
+model SystemErrorEvent {
+  id          String    @id @default(uuid())
+  companyId   String?
+  company     Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  source      String
+  severity    String
+  message     String
+  fingerprint String?
+  requestId   String?
+  path        String?
+  durationMs  Int?
+  metadata    Json?
+  resolvedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([createdAt, severity])
+  @@index([companyId, createdAt])
+  @@map("system_error_events")
+}
+
+model SystemNotification {
+  id        String    @id @default(uuid())
+  companyId String
+  company   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId    String?
+  channel   String
+  title     String
+  body      String
+  status    String    @default("Pending")
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([companyId, userId, status, createdAt])
+  @@map("system_notifications")
+}
+
+model CompanyUsageDaily {
+  id           String   @id @default(uuid())
+  companyId    String
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  date         DateTime
+  activeUsers  Int      @default(0)
+  storageBytes BigInt   @default(0)
+  apiRequests  Int      @default(0)
+  estimates    Int      @default(0)
+  jobs         Int      @default(0)
+  pdfs         Int      @default(0)
+  emails       Int      @default(0)
+
+  @@unique([companyId, date])
+  @@index([date])
+  @@map("company_usage_daily")
+}
+
+model UserDevice {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceHash  String
+  ipHash      String?
+  userAgent   String?
+  firstSeenAt DateTime  @default(now())
+  lastSeenAt  DateTime  @default(now())
+  revokedAt   DateTime?
+
+  @@unique([userId, deviceHash])
+  @@index([lastSeenAt])
+  @@map("user_devices")
+}
+
+model AdminImpersonation {
+  id            String    @id @default(uuid())
+  companyId     String?
+  company       Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  adminUserId   String
+  administrator User      @relation("AdminImpersonationAdministrator", fields: [adminUserId], references: [id], onDelete: Restrict)
+  targetUserId  String
+  targetUser    User      @relation("AdminImpersonationTarget", fields: [targetUserId], references: [id], onDelete: Restrict)
+  reason        String
+  ipHash        String?
+  userAgent     String?
+  startedAt     DateTime  @default(now())
+  expiresAt     DateTime
+  endedAt       DateTime?
+
+  @@index([companyId, startedAt])
+  @@index([adminUserId, endedAt, expiresAt])
+  @@map("admin_impersonations")
+}
+
+model AdminPasswordResetToken {
+  id               String    @id @default(uuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash        String    @unique
+  expiresAt        DateTime
+  usedAt           DateTime?
+  createdByAdminId String
+  createdByAdmin   User      @relation("AdminPasswordResetCreator", fields: [createdByAdminId], references: [id], onDelete: Restrict)
+  createdAt        DateTime  @default(now())
+
+  @@index([userId, expiresAt])
+  @@map("admin_password_reset_tokens")
+}
+
+model Crew {
+  id           String          @id @default(uuid())
+  companyId    String
+  company      Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name         String
+  color        String?
+  active       Boolean         @default(true)
+  members      CrewMember[]
+  assignments  JobAssignment[]
   servicePlans ServicePlan[]
-  createdAt  DateTime        @default(now())
-  updatedAt  DateTime        @updatedAt
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
   @@index([companyId])
   @@map("crews")
 }
 
 model ServicePlan {
-  id String @id @default(uuid())
-  companyId String
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  customerId String
-  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  propertyId String?
-  property Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
-  name String
-  description String?
-  status ServicePlanStatus @default(Draft)
-  recurrenceType RecurrenceType
-  interval Int @default(1)
-  daysOfWeek Int[]
-  dayOfMonth Int?
-  shortMonthBehavior ShortMonthBehavior @default(LastDay)
-  startDate DateTime
-  endDate DateTime?
-  preferredStartTime String?
-  preferredEndTime String?
+  id                     String                @id @default(uuid())
+  companyId              String
+  company                Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customerId             String
+  customer               Customer              @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  propertyId             String?
+  property               Property?             @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  name                   String
+  description            String?
+  status                 ServicePlanStatus     @default(Draft)
+  recurrenceType         RecurrenceType
+  interval               Int                   @default(1)
+  daysOfWeek             Int[]
+  dayOfMonth             Int?
+  shortMonthBehavior     ShortMonthBehavior    @default(LastDay)
+  startDate              DateTime
+  endDate                DateTime?
+  preferredStartTime     String?
+  preferredEndTime       String?
   defaultDurationMinutes Int?
-  assignedCrewId String?
-  assignedCrew Crew? @relation(fields: [assignedCrewId], references: [id], onDelete: SetNull)
-  employeeAssignments ServicePlanEmployee[]
-  defaultJobNotes String?
-  defaultInternalNotes String?
-  defaultPrice Float?
-  autoCreateJobs Boolean @default(false)
-  autoCreateInvoices Boolean @default(false)
-  nextRunAt DateTime?
-  lastRunAt DateTime?
-  createdByUserId String
-  createdByUser User @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
-  jobs Job[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  assignedCrewId         String?
+  assignedCrew           Crew?                 @relation(fields: [assignedCrewId], references: [id], onDelete: SetNull)
+  employeeAssignments    ServicePlanEmployee[]
+  defaultJobNotes        String?
+  defaultInternalNotes   String?
+  defaultPrice           Float?
+  autoCreateJobs         Boolean               @default(false)
+  autoCreateInvoices     Boolean               @default(false)
+  nextRunAt              DateTime?
+  lastRunAt              DateTime?
+  createdByUserId        String
+  createdByUser          User                  @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
+  jobs                   Job[]
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
 
   @@index([companyId, status, nextRunAt])
   @@index([companyId, customerId])
@@ -848,10 +1234,11 @@ model ServicePlan {
 
 model ServicePlanEmployee {
   servicePlanId String
-  servicePlan ServicePlan @relation(fields: [servicePlanId], references: [id], onDelete: Cascade)
-  employeeId String
-  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+  servicePlan   ServicePlan @relation(fields: [servicePlanId], references: [id], onDelete: Cascade)
+  employeeId    String
+  employee      Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+
   @@id([servicePlanId, employeeId])
   @@map("service_plan_employees")
 }
@@ -863,6 +1250,7 @@ model CrewMember {
   employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   isLead     Boolean  @default(false)
   createdAt  DateTime @default(now())
+
   @@id([crewId, employeeId])
   @@map("crew_members")
 }
@@ -881,6 +1269,7 @@ model JobAssignment {
   notes      String?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
+
   @@unique([jobId, employeeId])
   @@unique([jobId, crewId])
   @@index([companyId])
@@ -888,44 +1277,45 @@ model JobAssignment {
 }
 
 model JobSite {
-  id            String   @id @default(uuid())
+  id String @id @default(uuid())
 
-  estimateId    String
-  estimate      Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+  estimateId String
+  estimate   Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
 
   name          String
-  status        String   @default("not-started")
-  customerNotes String   @default("")
-  crewNotes     String   @default("")
-  internalNotes String   @default("")
+  status        String @default("not-started")
+  customerNotes String @default("")
+  crewNotes     String @default("")
+  internalNotes String @default("")
   sortOrder     Int
 
-  items         EstimateItem[]
-  photos        JobPhoto[]
+  items          EstimateItem[]
+  photos         JobPhoto[]
+  revisionPhotos EstimatePhoto[]
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([estimateId])
   @@map("job_sites")
 }
 
 model EstimateItem {
-  id            String   @id @default(uuid())
+  id String @id @default(uuid())
 
-  jobSiteId     String
-  jobSite       JobSite  @relation(fields: [jobSiteId], references: [id], onDelete: Cascade)
+  jobSiteId String
+  jobSite   JobSite @relation(fields: [jobSiteId], references: [id], onDelete: Cascade)
 
   itemId        String
   name          String
   category      String
-  quantity      Int      @default(1)
-  notes         String   @default("")
+  quantity      Int    @default(1)
+  notes         String @default("")
   priceOverride Float?
   sortOrder     Int
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([jobSiteId, itemId])
   @@index([jobSiteId])
@@ -933,24 +1323,24 @@ model EstimateItem {
 }
 
 model BackgroundJob {
-  id              String                @id @default(uuid())
-  companyId       String
-  company         Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  type            BackgroundJobType
-  status          BackgroundJobStatus   @default(Pending)
-  priority        BackgroundJobPriority @default(Normal)
-  payload         Json
-  idempotencyKey  String?
-  attempts        Int                   @default(0)
-  maxAttempts     Int                   @default(3)
-  lastError       String?
-  availableAt     DateTime              @default(now())
-  startedAt       DateTime?
-  completedAt     DateTime?
-  createdByUserId String?
-  createdByUser   User?                 @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
+  id                    String                 @id @default(uuid())
+  companyId             String
+  company               Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  type                  BackgroundJobType
+  status                BackgroundJobStatus    @default(Pending)
+  priority              BackgroundJobPriority  @default(Normal)
+  payload               Json
+  idempotencyKey        String?
+  attempts              Int                    @default(0)
+  maxAttempts           Int                    @default(3)
+  lastError             String?
+  availableAt           DateTime               @default(now())
+  startedAt             DateTime?
+  completedAt           DateTime?
+  createdByUserId       String?
+  createdByUser         User?                  @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
   communicationDelivery CommunicationDelivery?
 
   @@unique([companyId, type, idempotencyKey])
@@ -960,26 +1350,26 @@ model BackgroundJob {
 }
 
 model CommunicationDelivery {
-  id String @id @default(uuid())
-  companyId String
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  backgroundJobId String? @unique
-  backgroundJob BackgroundJob? @relation(fields: [backgroundJobId], references: [id], onDelete: SetNull)
-  idempotencyKey String
-  provider String
-  channel String
-  recipientHash String
-  status CommunicationDeliveryStatus @default(Pending)
-  providerMessageId String? @unique
-  requestId String?
-  sentAt DateTime?
-  deliveredAt DateTime?
-  failedAt DateTime?
-  bouncedAt DateTime?
-  rejectedAt DateTime?
-  lastErrorCode String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                String                      @id @default(uuid())
+  companyId         String
+  company           Company                     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  backgroundJobId   String?                     @unique
+  backgroundJob     BackgroundJob?              @relation(fields: [backgroundJobId], references: [id], onDelete: SetNull)
+  idempotencyKey    String
+  provider          String
+  channel           String
+  recipientHash     String
+  status            CommunicationDeliveryStatus @default(Pending)
+  providerMessageId String?                     @unique
+  requestId         String?
+  sentAt            DateTime?
+  deliveredAt       DateTime?
+  failedAt          DateTime?
+  bouncedAt         DateTime?
+  rejectedAt        DateTime?
+  lastErrorCode     String?
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
 
   @@unique([companyId, idempotencyKey])
   @@index([companyId, status, createdAt])
@@ -987,16 +1377,16 @@ model CommunicationDelivery {
 }
 
 model ProviderWebhookEvent {
-  id String @id @default(uuid())
-  companyId String?
-  company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  provider String
-  providerEventId String @unique
-  eventType String
+  id                String   @id @default(uuid())
+  companyId         String?
+  company           Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  provider          String
+  providerEventId   String   @unique
+  eventType         String
   providerMessageId String?
-  occurredAt DateTime
-  processedAt DateTime @default(now())
-  createdAt DateTime @default(now())
+  occurredAt        DateTime
+  processedAt       DateTime @default(now())
+  createdAt         DateTime @default(now())
 
   @@index([provider, providerMessageId])
   @@map("provider_webhook_events")

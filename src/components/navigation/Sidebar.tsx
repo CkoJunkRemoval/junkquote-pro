@@ -9,6 +9,7 @@ import { BarChart3, BriefcaseBusiness, CalendarDays, ChevronLeft, FileText, Layo
 
 const items = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Operations", href: "/operations", icon: RadioTower },
   { label: "Estimates", href: "/estimates", icon: FileText },
   { label: "Invoices", href: "/invoices", icon: FileText },
   { label: "Customers", href: "/customers", icon: Users },
@@ -20,6 +21,7 @@ const items = [
   { label: "Pricing", href: "/pricing", icon: Tags },
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
   { label: "Settings", href: "/settings", icon: Settings },
+  { label: "Billing", href: "/settings/billing", icon: FileText },
 ];
 
 export default function Sidebar({ collapsed, mobileOpen, onClose, onToggle }: { collapsed: boolean; mobileOpen: boolean; onClose: () => void; onToggle: () => void }) {
