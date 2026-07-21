@@ -36,7 +36,7 @@ export default function Sidebar({ collapsed, mobileOpen, onClose, onToggle }: { 
       <div className="flex h-20 items-center justify-between border-b border-slate-800 px-5">
         <Link href="/dashboard" onClick={onClose} className="flex min-w-0 items-center gap-3">
           {company?.logoUrl ? <Image src={company.logoUrl} alt="Company logo" width={36} height={36} className="h-9 w-9 shrink-0 rounded-lg bg-white object-contain" /> : <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-blue-600 font-bold">JQ</span>}
-          {!collapsed && <span className="min-w-0"><span className="block text-lg font-bold">JunkQuote Pro</span><span className="block truncate text-xs text-slate-400">{company?.displayName ?? "Your company"}</span></span>}
+          {!collapsed && <span className="min-w-0"><span className="block truncate text-lg font-bold">{company?.displayName ?? "Your company"}</span><span className="block truncate text-xs text-slate-400">Business workspace</span></span>}
         </Link>
         <button onClick={onClose} className="lg:hidden"><X size={20} /></button>
       </div>

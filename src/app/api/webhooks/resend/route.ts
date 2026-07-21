@@ -6,6 +6,7 @@ import {
 } from "@/lib/communications/resendWebhook";
 import { applyDeliveryWebhook } from "@/lib/communications/delivery";
 import { checkRateLimit } from "@/lib/security/rateLimit";
+import { withDistributedLock } from "@/lib/distributed/locks";
 export const runtime = "nodejs";
 const maxBytes = 256 * 1024;
 export async function POST(request: Request) {
@@ -14,13 +15,12 @@ export async function POST(request: Request) {
     const identity =
       request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
       "anonymous";
-    if (
-      !checkRateLimit(`resend-webhook:${identity}`, {
+    const rateLimit = await checkRateLimit(`resend-webhook:${identity}`, {
         limit: 120,
         windowMs: 60_000,
-      }).allowed
-    )
-      throw new AppError("RATE_LIMITED", "Too many webhook requests.");
+      });
+    if (!rateLimit.allowed)
+      throw new AppError("RATE_LIMITED", "Too many webhook requests.", { retryAfterSeconds: rateLimit.retryAfterSeconds });
     const length = Number(request.headers.get("content-length") ?? 0);
     if (length > maxBytes)
       throw new AppError("VALIDATION_FAILED", "Webhook payload is too large.");
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
       secret,
     );
     const event = parseResendDeliveryEvent(body);
-    const result = await applyDeliveryWebhook({ providerEventId, ...event });
+    const result = await withDistributedLock("resend-webhook", providerEventId, 5 * 60_000, () => applyDeliveryWebhook({ providerEventId, ...event }));
     return Response.json(
       { received: true, duplicate: result.duplicate, requestId },
       { headers: { "x-request-id": requestId } },

@@ -155,6 +155,7 @@ export async function createCompanyOwner(input: SignupInput) {
       trialEnd.setDate(trialEnd.getDate() + billingConfig.trialDays);
       await tx.companySubscription.create({ data: { companyId: company.id, plan: "Professional", status: "Trialing", trialStart, trialEnd } });
       await tx.subscriptionHistory.create({ data: { companyId: company.id, plan: "Professional", status: "Trialing", source: "signup" } });
+      await tx.companyOnboarding.create({ data: { companyId: company.id } });
       stage = "audit-create";
       await tx.auditEvent.create({
         data: {

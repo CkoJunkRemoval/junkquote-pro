@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
+import { withDistributedLock } from "@/lib/distributed/locks";
 
 const sensitiveKey = /password|secret|token|cookie|authorization|api.?key|database.?url/i;
 export function redactTelemetry(value: unknown, depth = 0): unknown {
@@ -29,5 +30,5 @@ export async function captureSystemError(input: { companyId?: string; source: "s
 export async function purgeExpiredSystemTelemetry(retentionDays = 90) {
   if (!Number.isInteger(retentionDays) || retentionDays < 30) throw new Error("Telemetry retention must be at least 30 days.");
   const before = new Date(Date.now() - retentionDays * 86_400_000);
-  return prisma.systemErrorEvent.deleteMany({ where: { createdAt: { lt: before } } });
+  return withDistributedLock("telemetry-cleanup", "global", 10 * 60_000, () => prisma.systemErrorEvent.deleteMany({ where: { createdAt: { lt: before } } }));
 }

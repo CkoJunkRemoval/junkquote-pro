@@ -37,12 +37,11 @@ export async function signUpAction(
     email: normalizedEmail,
   });
   if (
-    !checkRateLimit(`staff-sign-up:ip:${clientKey}`, ratePolicies.signUp)
-      .allowed ||
-    !checkRateLimit(
+    !(await checkRateLimit(`staff-sign-up:ip:${clientKey}`, ratePolicies.signUp)).allowed ||
+    !(await checkRateLimit(
       `staff-sign-up:email:${normalizedEmail}`,
       ratePolicies.signUp,
-    ).allowed
+    )).allowed
   ) {
     console.error("[signup] rate-limited", {
       operation: "self_service_signup",

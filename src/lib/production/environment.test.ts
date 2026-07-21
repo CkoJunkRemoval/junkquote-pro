@@ -20,6 +20,8 @@ const valid = {
   STRIPE_PRICE_BUSINESS: "price_business",
   PLATFORM_ADMIN_EMAIL: "platform-admin@example.com",
   CONTENT_SECURITY_POLICY: "default-src 'self'; frame-ancestors 'none'",
+  KV_REST_API_URL: "https://redis.example.com",
+  KV_REST_API_TOKEN: "test-token",
 };
 describe("production environment", () => {
   it("accepts complete safe production configuration", () =>

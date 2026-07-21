@@ -101,6 +101,7 @@ enum JobPhotoCategory {
 enum EmployeeRole {
   Owner
   Manager
+  Estimator
   CrewLead
   CrewMember
   Office
@@ -254,6 +255,8 @@ model Company {
   notifications           SystemNotification[]
   usageMetrics            CompanyUsageDaily[]
   impersonations          AdminImpersonation[]
+  onboarding              CompanyOnboarding?
+  serviceAreaRules        ServiceAreaRule[]
 
   @@map("companies")
 }
@@ -275,11 +278,60 @@ model CompanySettings {
   smartPricingUseDisposalHistory  Boolean @default(true)
   smartPricingUseTravelHistory    Boolean @default(false)
   portalShowAssignedCrew          Boolean @default(false)
+  serviceRadiusMiles              Float   @default(25)
+  defaultLaborRate                Float   @default(0)
+  defaultDumpFee                  Float   @default(0)
+  heavyItemSurcharge              Float   @default(0)
+  appliancePrice                  Float   @default(0)
+  yardDebrisPrice                 Float   @default(0)
+  constructionDebrisPrice         Float   @default(0)
+  approvalExpirationDays          Int     @default(30)
+  dateFormat                      String  @default("MM/DD/YYYY")
+  communicationSenderName         String?
+  communicationReplyTo            String?
+  estimateEmailTemplate           String?
+  invoiceEmailTemplate            String?
+  approvalEmailTemplate           String?
+  pdfBrandingEnabled              Boolean @default(true)
+  portalBrandingEnabled           Boolean @default(true)
+  itemLibraryDefaults             Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("company_settings")
+}
+
+model CompanyOnboarding {
+  id                String    @id @default(uuid())
+  companyId         String    @unique
+  company           Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  currentStep       Int       @default(1)
+  completedSections String[]  @default([])
+  skippedAt         DateTime?
+  completedAt       DateTime?
+  dismissedAt       DateTime?
+  demoDataIds       Json?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@map("company_onboarding")
+}
+
+model ServiceAreaRule {
+  id             String   @id @default(uuid())
+  companyId      String
+  company        Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  kind           String
+  value          String
+  travelZone     String?
+  distanceCharge Float    @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([companyId, kind, value])
+  @@index([companyId, travelZone])
+  @@map("service_area_rules")
 }
 
 model User {
@@ -905,6 +957,8 @@ model Employee {
   notes                  String?
   availability           String?
   certifications         String[]
+  invitationStatus       String                @default("NotInvited")
+  invitationSentAt       DateTime?
   assignedTruckId        String?
   assignedTruck          FleetAsset?           @relation(fields: [assignedTruckId], references: [id], onDelete: SetNull)
   timeEntries            EmployeeTimeEntry[]

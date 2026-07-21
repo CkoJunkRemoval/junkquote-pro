@@ -19,4 +19,6 @@ Feature-flag precedence is deterministic: company override, subscription plan, e
 
 System error metadata is redacted before persistence and should be retained for 90 days unless legal requirements specify otherwise. Audit records are not included in this telemetry purge policy.
 
+Authentication failures are counted centrally by normalized email and source IP. Temporary lockouts progress at five, seven, and ten failed attempts and reset after successful authentication. Customer-facing responses never disclose whether an email exists; audit events are created only inside the protected tenant audit stream.
+
 The production CSP permits Stripe frames/API, configured Supabase storage, and Vercel Insights. Inline scripts/styles remain temporarily allowed for Next.js runtime compatibility; replacing them with request nonces is a documented remaining hardening item. Add external sources only after security review.

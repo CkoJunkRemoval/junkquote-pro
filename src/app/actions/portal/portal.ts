@@ -36,7 +36,7 @@ export async function requestPortalMagicLinkAction(email: string) {
     h.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     email.trim().toLowerCase();
   if (
-    !checkRateLimit(`portal-request:${identity}`, ratePolicies.portal).allowed
+    !(await checkRateLimit(`portal-request:${identity}`, ratePolicies.portal)).allowed
   )
     return {
       message:
@@ -104,7 +104,7 @@ export async function portalLogoutAction() {
 }
 export async function downloadPortalEstimateAction(id: string) {
   const c = await requireCustomerPortalContext();
-  if(!checkRateLimit(`portal-pdf:${c.portalAccess.id}`,ratePolicies.pdf).allowed)throw new Error("Too many PDF requests. Try again later.");
+  if(!(await checkRateLimit(`portal-pdf:${c.portalAccess.id}`,ratePolicies.pdf)).allowed)throw new Error("Too many PDF requests. Try again later.");
   const owned = await prisma.estimate.findFirst({
     where: { id, companyId: c.companyId, customerId: c.customerId },
     select: { id: true },
@@ -116,7 +116,7 @@ export async function downloadPortalEstimateAction(id: string) {
 }
 export async function downloadPortalInvoiceAction(id: string) {
   const c = await requireCustomerPortalContext();
-  if(!checkRateLimit(`portal-pdf:${c.portalAccess.id}`,ratePolicies.pdf).allowed)throw new Error("Too many PDF requests. Try again later.");
+  if(!(await checkRateLimit(`portal-pdf:${c.portalAccess.id}`,ratePolicies.pdf)).allowed)throw new Error("Too many PDF requests. Try again later.");
   const owned = await prisma.invoice.findFirst({
     where: { id, companyId: c.companyId, customerId: c.customerId },
     select: { id: true },
@@ -128,7 +128,7 @@ export async function downloadPortalInvoiceAction(id: string) {
 }
 export async function downloadPortalReceiptAction(id: string) {
   const c = await requireCustomerPortalContext();
-  if(!checkRateLimit(`portal-pdf:${c.portalAccess.id}`,ratePolicies.pdf).allowed)throw new Error("Too many PDF requests. Try again later.");
+  if(!(await checkRateLimit(`portal-pdf:${c.portalAccess.id}`,ratePolicies.pdf)).allowed)throw new Error("Too many PDF requests. Try again later.");
   const owned = await prisma.payment.findFirst({
     where: {
       id,

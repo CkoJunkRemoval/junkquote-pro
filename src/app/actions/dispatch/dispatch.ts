@@ -83,10 +83,10 @@ export async function assignDispatchEmployeeAction(
 export async function sendDispatchMessageAction(jobId: string, body: string) {
   const context = await operational();
   if (
-    !checkRateLimit(
+    !(await checkRateLimit(
       `communication:${context.companyId}:${context.user.id}`,
       ratePolicies.communication,
-    ).allowed
+    )).allowed
   )
     throw new AppError("RATE_LIMITED", "Too many communication requests.");
   const job = await (

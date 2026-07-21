@@ -19,10 +19,10 @@ export async function sendEmailDiagnosticAction(to: string) {
       "Enter a valid diagnostic email address.",
     );
   if (
-    !checkRateLimit(`email-diagnostic:${c.companyId}:${c.user.id}`, {
+    !(await checkRateLimit(`email-diagnostic:${c.companyId}:${c.user.id}`, {
       limit: 3,
       windowMs: 60 * 60_000,
-    }).allowed
+    })).allowed
   )
     throw new AppError("RATE_LIMITED", "Too many diagnostic requests.");
   const requestId = await currentRequestId();

@@ -25,10 +25,10 @@ export async function GET(request: Request) {
   try {
     const c = await requireCompanyRole("Owner", "Admin", "Manager", "Office");
     if (
-      !checkRateLimit(
+      !(await checkRateLimit(
         `analytics-export:${c.companyId}:${c.user.id}`,
         ratePolicies.export,
-      ).allowed
+      )).allowed
     )
       throw new AppError(
         "RATE_LIMITED",

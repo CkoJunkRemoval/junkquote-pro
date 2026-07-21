@@ -1,9 +1,14 @@
 import { prisma } from "@/lib/prisma";
+import { retryTransientCleanup } from "./cleanup";
 
 export async function resetIntegrationDatabase() {
-  await prisma.providerWebhookEvent.deleteMany();
-  await prisma.auditEvent.deleteMany();
-  await prisma.company.deleteMany();
+  await retryTransientCleanup(async () => {
+    await prisma.$transaction([
+      prisma.providerWebhookEvent.deleteMany(),
+      prisma.auditEvent.deleteMany(),
+      prisma.company.deleteMany(),
+    ]);
+  });
 }
 
 async function createTenant(label: "A" | "B", invoiceNumber: number) {

@@ -1,5 +1,8 @@
 import PublicEstimateApproval from "@/features/estimate/public/PublicEstimateApproval";
 import { getPublicEstimateByApprovalToken } from "@/lib/estimates/getPublicEstimateByApprovalToken";
+import { headers } from "next/headers";
+import { createHash } from "node:crypto";
+import { checkRateLimit, ratePolicies } from "@/lib/security/rateLimit";
 
 export default async function ApprovalPage({
   params,
@@ -7,6 +10,11 @@ export default async function ApprovalPage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
+  const requestHeaders = await headers();
+  const ip = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const tokenIdentity = createHash("sha256").update(token).digest("hex");
+  if (!(await checkRateLimit(`public-estimate:ip:${ip}`, ratePolicies.publicEstimate)).allowed || !(await checkRateLimit(`public-estimate:token:${tokenIdentity}`, ratePolicies.publicEstimate)).allowed)
+    return <main className="mx-auto max-w-2xl px-6 py-16"><p>Too many requests. Try again later.</p></main>;
   let estimate = null;
   let errorMessage: string | null = null;
 

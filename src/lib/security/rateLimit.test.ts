@@ -1,22 +1,21 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { checkRateLimit, clearRateLimits } from "./rateLimit";
-describe("rate limiter", () => {
-  beforeEach(clearRateLimits);
-  it("allows only the configured count within a window", () => {
-    expect(checkRateLimit("a", { limit: 2, windowMs: 1000 }, 0).allowed).toBe(
-      true,
-    );
-    expect(checkRateLimit("a", { limit: 2, windowMs: 1000 }, 1).allowed).toBe(
-      true,
-    );
-    expect(checkRateLimit("a", { limit: 2, windowMs: 1000 }, 2).allowed).toBe(
-      false,
-    );
+import { DevelopmentMemoryStore, setCoordinationStoreForTests } from "@/lib/distributed/store";
+import { checkRateLimit } from "./rateLimit";
+
+describe("distributed rate limiter", () => {
+  beforeEach(() => setCoordinationStoreForTests(new DevelopmentMemoryStore()));
+  it("atomically limits concurrent increments", async () => {
+    const results = await Promise.all(Array.from({ length: 5 }, () => checkRateLimit("same", { limit: 2, windowMs: 1000 })));
+    expect(results.filter((result) => result.allowed)).toHaveLength(2);
   });
-  it("resets after the window", () => {
-    checkRateLimit("a", { limit: 1, windowMs: 10 }, 0);
-    expect(checkRateLimit("a", { limit: 1, windowMs: 10 }, 11).allowed).toBe(
-      true,
-    );
+  it("separates tenant and IP keys", async () => {
+    expect((await checkRateLimit("tenant:a:ip:1", { limit: 1, windowMs: 1000 })).allowed).toBe(true);
+    expect((await checkRateLimit("tenant:b:ip:1", { limit: 1, windowMs: 1000 })).allowed).toBe(true);
+    expect((await checkRateLimit("tenant:a:ip:2", { limit: 1, windowMs: 1000 })).allowed).toBe(true);
+    expect((await checkRateLimit("tenant:a:ip:1", { limit: 1, windowMs: 1000 })).allowed).toBe(false);
+  });
+  it("fails closed on a store outage", async () => {
+    setCoordinationStoreForTests({ incrementWindow: async () => { throw new Error("down"); } } as never);
+    expect(await checkRateLimit("key", { limit: 1, windowMs: 1000 })).toMatchObject({ allowed: false, degraded: true });
   });
 });

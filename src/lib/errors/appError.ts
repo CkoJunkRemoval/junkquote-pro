@@ -42,8 +42,9 @@ export function safeErrorResponse(error: unknown, requestId: string) {
     error instanceof AppError
       ? error
       : new AppError("INTERNAL_ERROR", "Something went wrong.");
+  const retryAfter = app.code === "RATE_LIMITED" && typeof app.details?.retryAfterSeconds === "number" ? String(Math.max(1, Math.ceil(app.details.retryAfterSeconds))) : undefined;
   return Response.json(
     { error: { code: app.code, message: app.message }, requestId },
-    { status: app.status, headers: { "x-request-id": requestId } },
+    { status: app.status, headers: { "x-request-id": requestId, ...(retryAfter ? { "Retry-After": retryAfter } : {}) } },
   );
 }

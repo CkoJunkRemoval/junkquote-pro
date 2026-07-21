@@ -31,8 +31,7 @@ export async function GET(
     _request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     "anonymous";
   if (
-    !checkRateLimit(`private-asset:${identity}`, ratePolicies.privateAsset)
-      .allowed
+    !(await checkRateLimit(`private-asset:${identity}`, ratePolicies.privateAsset)).allowed
   )
     return new Response("Too many requests", {
       status: 429,

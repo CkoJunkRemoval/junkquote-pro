@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { validateProductionEnvironment } from "./environment";
 import { selectObjectStorage } from "@/lib/storage/objectStorage";
+import { coordinationStore } from "@/lib/distributed/store";
 const bounded = <T>(promise: Promise<T>, ms = 3000) =>
   Promise.race([
     promise,
@@ -14,6 +15,7 @@ export async function checkReadiness() {
     database: "ok",
     schema: "ok",
     storage: "ok",
+    redis: "ok",
   };
   try {
     validateProductionEnvironment();
@@ -36,6 +38,7 @@ export async function checkReadiness() {
     ).catch(() => {
       checks.storage = "failed";
     }),
+    bounded(coordinationStore().health().then((health) => { if (!health.ok || (process.env.NODE_ENV === "production" && health.mode !== "redis")) throw new Error("Redis unavailable."); })).catch(() => { checks.redis = "failed"; }),
   ]);
   return { ready: Object.values(checks).every((x) => x === "ok"), checks };
 }

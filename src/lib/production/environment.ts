@@ -38,6 +38,10 @@ export function validateProductionEnvironment(
     requireValue("STRIPE_PRICE_BUSINESS");
     requireValue("PLATFORM_ADMIN_EMAIL");
     const csp = requireValue("CONTENT_SECURITY_POLICY");
+    const redisUrl = env.KV_REST_API_URL?.trim() || env.UPSTASH_REDIS_REST_URL?.trim();
+    const redisToken = env.KV_REST_API_TOKEN?.trim() || env.UPSTASH_REDIS_REST_TOKEN?.trim();
+    if (!redisUrl || !redisToken) errors.push("KV_REST_API_URL and KV_REST_API_TOKEN (or UPSTASH equivalents) are required in production.");
+    if (redisUrl && !redisUrl.startsWith("https://")) errors.push("Distributed Redis must use HTTPS/TLS.");
     const cspResult = validateContentSecurityPolicy(csp);
     if (!cspResult.valid) errors.push(...cspResult.errors);
     if (

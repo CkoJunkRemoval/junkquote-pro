@@ -13,7 +13,10 @@ function createPrismaClient() {
   }
 
   return new PrismaClient({
-    adapter: new PrismaPg({ connectionString }),
+    adapter: new PrismaPg({
+      connectionString,
+      ...(process.env.NODE_ENV === "test" ? { max: 2 } : {}),
+    }),
   });
 }
 

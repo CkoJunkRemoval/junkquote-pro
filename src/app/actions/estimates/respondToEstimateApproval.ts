@@ -19,7 +19,7 @@ export async function respondToEstimateApprovalAction(
 ) {
   const identity = createHash("sha256").update(token).digest("hex");
   if (
-    !checkRateLimit(`approval:${identity}`, ratePolicies.publicApproval).allowed
+    !(await checkRateLimit(`approval:${identity}`, ratePolicies.publicApproval)).allowed
   )
     throw new AppError("RATE_LIMITED", "Too many approval attempts.");
   const estimate = await prisma.estimate.findUnique({
