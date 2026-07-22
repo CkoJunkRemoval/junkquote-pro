@@ -1,0 +1,4 @@
+import {describe,expect,it,vi} from "vitest";
+const mocks=vi.hoisted(()=>({groupBy:vi.fn(),count:vi.fn()}));vi.mock("@/lib/prisma",()=>({prisma:{estimate:{groupBy:mocks.groupBy},estimateTimelineEvent:{count:mocks.count}}}));
+import {getEstimateLifecycleDashboardCounts} from "./dashboardCounts";
+describe("estimate lifecycle dashboard",()=>{it("combines lifecycle state and period event counts",async()=>{mocks.groupBy.mockResolvedValue([{status:"Draft",_count:{_all:2}},{status:"Sent",_count:{_all:3}},{status:"Viewed",_count:{_all:4}},{status:"Invoiced",_count:{_all:5}}]);mocks.count.mockResolvedValueOnce(6).mockResolvedValueOnce(7);expect(await getEstimateLifecycleDashboardCounts("c1",new Date("2026-07-21T12:00:00Z"))).toMatchObject({draftEstimates:2,awaitingApproval:7,completedToday:6,invoicesAwaitingPayment:5,paidThisMonth:7})})});

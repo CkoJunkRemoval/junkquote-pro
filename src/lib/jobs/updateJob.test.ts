@@ -6,8 +6,10 @@ const mocks = vi.hoisted(() => ({
   updateJobRecord: vi.fn(),
   updateEstimate: vi.fn(),
 }));
+const transition=vi.hoisted(()=>vi.fn());
 
 vi.mock("../prisma", () => ({ prisma: { $transaction: mocks.transaction } }));
+vi.mock("@/lib/estimates/estimateLifecycle",()=>({transitionEstimateInTransaction:transition}));
 
 import { updateJob } from "./updateJob";
 
@@ -25,6 +27,6 @@ describe("updateJob scheduling", () => {
     await updateJob("company-a", { id: "job-1", scheduledStart: start, scheduledEnd: end });
 
     expect(mocks.updateJobRecord).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "Scheduled", scheduledStart: start, scheduledEnd: end }) }));
-    expect(mocks.updateEstimate).toHaveBeenCalledWith({ where: { id: "estimate-1" }, data: { status: "Scheduled" } });
+    expect(transition).toHaveBeenCalledWith(expect.any(Object),"company-a","estimate-1","Scheduled",expect.any(Object));
   });
 });

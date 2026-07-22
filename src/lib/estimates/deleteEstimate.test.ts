@@ -7,7 +7,7 @@ import { deleteEstimate } from "./deleteEstimate";
 describe("deleteEstimate", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  for (const status of ["Draft", "Ready", "Sent", "Declined"]) {
+  for (const status of ["Draft", "Sent", "Viewed", "Declined", "Expired"]) {
     it(`deletes a non-approved ${status.toLowerCase()} estimate`, async () => {
       mocks.findFirst.mockResolvedValue({ id: "estimate-1", status, signedAt: null });
       mocks.remove.mockResolvedValue({ id: "estimate-1" });
@@ -18,7 +18,7 @@ describe("deleteEstimate", () => {
 
   it("blocks approved deletion with a clear message", async () => {
     mocks.findFirst.mockResolvedValue({ id: "estimate-1", status: "Approved", signedAt: new Date() });
-    await expect(deleteEstimate("company-1", "estimate-1")).rejects.toThrow("approved and is read-only");
+    await expect(deleteEstimate("company-1", "estimate-1")).rejects.toThrow("cannot be deleted");
     expect(mocks.remove).not.toHaveBeenCalled();
   });
 });

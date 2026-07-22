@@ -1,5 +1,6 @@
 import { prisma } from "../prisma";
 import { syncPricingOutcomeForInvoice } from "@/lib/smartPricing/outcomes";
+import { transitionEstimateInTransaction } from "@/lib/estimates/estimateLifecycle";
 
 export interface CreateInvoiceInput { estimateId: string; jobId?: string; }
 
@@ -45,7 +46,7 @@ export async function createInvoice(companyId: string, input: CreateInvoiceInput
     const calculatedTotal = subtotal - estimate.pricingDiscount + tax;
     const total = isCompletedJob && estimate.pricingTotal !== calculatedTotal ? estimate.pricingTotal : calculatedTotal;
     if (Math.abs(total - calculatedTotal) > 0.005) baseItems.push({ description: "Final job adjustment", kind: "Adjustment", quantity: 1, unitPrice: total - calculatedTotal, amount: total - calculatedTotal, sortOrder: baseItems.length });
-    return tx.invoice.create({
+    const invoice=await tx.invoice.create({
       data: {
         companyId: estimate.companyId,
         customerId: estimate.customerId,
@@ -64,6 +65,8 @@ export async function createInvoice(companyId: string, input: CreateInvoiceInput
         lineItems: { create: baseItems },
       },
     });
+    if(estimate.status==="Completed") await transitionEstimateInTransaction(tx,companyId,estimate.id,"Invoiced",{actor:{label:"Team member"},metadata:{invoiceId:invoice.id}});
+    return invoice;
   });
   if (invoice.jobId) await syncPricingOutcomeForInvoice(companyId, invoice.id);
   return invoice;

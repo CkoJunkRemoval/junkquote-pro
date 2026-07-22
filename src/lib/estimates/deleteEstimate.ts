@@ -1,6 +1,6 @@
 
 import { prisma } from "../prisma";
-import { ESTIMATE_LOCKED_MESSAGE, isEstimateLocked } from "./isEstimateLocked";
+import { canDeleteEstimate, ESTIMATE_DELETE_MESSAGE } from "./lifecyclePolicy";
 
 export async function deleteEstimate(companyId: string, estimateId: string) {
   const estimate = await prisma.estimate.findFirst({
@@ -8,6 +8,6 @@ export async function deleteEstimate(companyId: string, estimateId: string) {
     select: { id: true, status: true, signedAt: true },
   });
   if (!estimate) throw new Error("Estimate not found.");
-  if (isEstimateLocked(estimate)) throw new Error(ESTIMATE_LOCKED_MESSAGE);
+  if (!canDeleteEstimate(estimate)) throw new Error(ESTIMATE_DELETE_MESSAGE);
   await prisma.estimate.delete({ where: { id: estimate.id } });
 }

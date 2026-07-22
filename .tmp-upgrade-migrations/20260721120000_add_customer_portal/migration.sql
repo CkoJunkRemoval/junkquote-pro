@@ -1,0 +1,17 @@
+CREATE TYPE "CustomerPortalAccessStatus" AS ENUM ('Active','Revoked');
+CREATE TYPE "CustomerPortalTokenPurpose" AS ENUM ('SignIn','EmailVerification','Future');
+ALTER TABLE "company_settings" ADD COLUMN "portalShowAssignedCrew" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "job_photos" ADD COLUMN "customerVisible" BOOLEAN NOT NULL DEFAULT false;
+CREATE TABLE "customer_portal_accesses" ("id" TEXT NOT NULL,"companyId" TEXT NOT NULL,"customerId" TEXT NOT NULL,"email" TEXT NOT NULL,"status" "CustomerPortalAccessStatus" NOT NULL DEFAULT 'Active',"lastLoginAt" TIMESTAMP(3),"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" TIMESTAMP(3) NOT NULL,CONSTRAINT "customer_portal_accesses_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "customer_portal_tokens" ("id" TEXT NOT NULL,"portalAccessId" TEXT NOT NULL,"tokenHash" TEXT NOT NULL,"purpose" "CustomerPortalTokenPurpose" NOT NULL,"expiresAt" TIMESTAMP(3) NOT NULL,"usedAt" TIMESTAMP(3),"revokedAt" TIMESTAMP(3),"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,CONSTRAINT "customer_portal_tokens_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "customer_portal_sessions" ("id" TEXT NOT NULL,"portalAccessId" TEXT NOT NULL,"tokenHash" TEXT NOT NULL,"expiresAt" TIMESTAMP(3) NOT NULL,"revokedAt" TIMESTAMP(3),"lastSeenAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,CONSTRAINT "customer_portal_sessions_pkey" PRIMARY KEY ("id"));
+CREATE UNIQUE INDEX "customer_portal_accesses_companyId_email_key" ON "customer_portal_accesses"("companyId","email");
+CREATE INDEX "customer_portal_accesses_companyId_customerId_status_idx" ON "customer_portal_accesses"("companyId","customerId","status");
+CREATE UNIQUE INDEX "customer_portal_tokens_tokenHash_key" ON "customer_portal_tokens"("tokenHash");
+CREATE INDEX "customer_portal_tokens_portalAccessId_purpose_createdAt_idx" ON "customer_portal_tokens"("portalAccessId","purpose","createdAt");
+CREATE UNIQUE INDEX "customer_portal_sessions_tokenHash_key" ON "customer_portal_sessions"("tokenHash");
+CREATE INDEX "customer_portal_sessions_portalAccessId_expiresAt_idx" ON "customer_portal_sessions"("portalAccessId","expiresAt");
+ALTER TABLE "customer_portal_accesses" ADD CONSTRAINT "customer_portal_accesses_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "companies"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "customer_portal_accesses" ADD CONSTRAINT "customer_portal_accesses_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "customers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "customer_portal_tokens" ADD CONSTRAINT "customer_portal_tokens_portalAccessId_fkey" FOREIGN KEY ("portalAccessId") REFERENCES "customer_portal_accesses"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "customer_portal_sessions" ADD CONSTRAINT "customer_portal_sessions_portalAccessId_fkey" FOREIGN KEY ("portalAccessId") REFERENCES "customer_portal_accesses"("id") ON DELETE CASCADE ON UPDATE CASCADE;

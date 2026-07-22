@@ -5,8 +5,9 @@ export function canSaveSignature(
   existingSignature: string | null,
   method: "PublicLink" | "TeamDevice"
 ) {
+  void method;
   if (existingSignature) return false;
-  return method === "PublicLink" ? status === "Sent" : status === "Ready" || status === "Sent";
+  return status === "Sent" || status === "Viewed";
 }
 
 export function validateSignature(name: string, signatureData: string) {

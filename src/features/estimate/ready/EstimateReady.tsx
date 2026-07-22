@@ -177,7 +177,7 @@ export default function EstimateReady() {
             </div>
           )}
 
-          {estimate.status === EstimateStatus.Ready && (
+          {estimate.status === EstimateStatus.Draft && (
             <div className="rounded-xl border border-slate-200 p-6">
               <h2 className="text-xl font-bold">Delivery</h2>
               <p className="mt-1 text-slate-500">
@@ -238,7 +238,7 @@ export default function EstimateReady() {
             </div>
           )}
 
-          {(estimate.status === EstimateStatus.Ready || estimate.status === EstimateStatus.Sent) && showTeamSignature && (
+          {(estimate.status === EstimateStatus.Draft || estimate.status === EstimateStatus.Sent || estimate.status === EstimateStatus.Viewed) && showTeamSignature && (
             <div className="rounded-xl border border-slate-200 p-6"><h2 className="text-xl font-bold">Sign on This Device</h2><input value={teamSignerName} onChange={(event) => setTeamSignerName(event.target.value)} placeholder="Signer full name" className="mt-4 w-full rounded-lg border p-3" /><div className="mt-4"><SignaturePad onChange={setTeamSignature} /></div><div className="mt-4 flex gap-3"><Button type="button" disabled={isSavingStatus} onClick={() => void signOnTeamDevice()}>Save Signature</Button><Button type="button" disabled={isSavingStatus} onClick={() => setShowTeamSignature(false)}>Cancel</Button></div>{teamSignatureError && <p className="mt-3 text-red-600">{teamSignatureError}</p>}</div>
           )}
 

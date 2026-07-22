@@ -4,6 +4,7 @@ import { recordCompletedJobPricing } from "@/lib/smartPricing/history";
 import { syncPricingOutcomeForJob } from "@/lib/smartPricing/outcomes";
 import { createInvoiceFromJob } from "@/lib/invoices/createInvoice";
 import type { DispatchProgress } from "@/generated/prisma/client";
+import { transitionEstimateInTransaction } from "@/lib/estimates/estimateLifecycle";
 
 export interface UpdateJobInput {
   id: string;
@@ -69,10 +70,12 @@ export async function updateJob(companyId: string, input: UpdateJobInput) {
       },
     });
 
-    if (nextStatus === "Completed" && job.estimate.status !== "Completed") {
-      await tx.estimate.update({ where: { id: job.estimateId }, data: { status: "Completed" } });
+    if (nextStatus === "Completed" && job.estimate.status === "InProgress") {
+      await transitionEstimateInTransaction(tx,companyId,job.estimateId,"Completed",{actor:{label:"Crew"},metadata:{jobId:job.id}});
+    } else if (nextStatus === "InProgress" && job.estimate.status === "Scheduled") {
+      await transitionEstimateInTransaction(tx,companyId,job.estimateId,"InProgress",{actor:{label:"Crew"},metadata:{jobId:job.id}});
     } else if (scheduledStart && job.estimate.status === "Approved") {
-      await tx.estimate.update({ where: { id: job.estimateId }, data: { status: "Scheduled" } });
+      await transitionEstimateInTransaction(tx,companyId,job.estimateId,"Scheduled",{actor:{label:"Team member"},metadata:{jobId:job.id}});
     }
 
     return updated;

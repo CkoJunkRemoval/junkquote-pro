@@ -11,7 +11,7 @@ describe("estimate signature validation", () => {
   });
   it("allows successful public and team-device signing states", () => {
     expect(canSaveSignature("Sent", null, "PublicLink")).toBe(true);
-    expect(canSaveSignature("Ready", null, "TeamDevice")).toBe(true);
+    expect(canSaveSignature("Viewed", null, "TeamDevice")).toBe(true);
   });
   it("rejects duplicate signing", () => {
     expect(canSaveSignature("Sent", signature, "PublicLink")).toBe(false);

@@ -8,6 +8,7 @@ import Link from "next/link";
 import { isEstimateLocked } from "@/lib/estimates/isEstimateLocked";
 import { getEstimateRevisionHistory } from "@/lib/estimates/getEstimateRevisionHistory";
 import CreateRevisionButton from "@/features/estimate/CreateRevisionButton";
+import {estimateStatusBadges,listEstimateActivity} from "@/lib/estimates/estimateLifecycle";
 
 export default async function EstimateDetailPage({
   params,
@@ -16,9 +17,10 @@ export default async function EstimateDetailPage({
 }) {
   const { id } = await params;
   const { companyId } = await requireCompanyRole("Owner", "Admin", "Manager", "Office");
-  const [estimate, history] = await Promise.all([
+  const [estimate, history, activity] = await Promise.all([
     getEstimateManagementDetail(companyId, id),
     getEstimateRevisionHistory(companyId, id),
+    listEstimateActivity(companyId,id),
   ]);
 
   if (!estimate) notFound();
@@ -36,7 +38,7 @@ export default async function EstimateDetailPage({
           {estimate.property.address}, {estimate.property.city}, {estimate.property.state} {estimate.property.zip}
         </p>
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          <Summary label="Status" value={estimate.status} />
+          <div className="rounded-xl bg-slate-100 p-4"><p className="text-xs font-medium uppercase text-slate-500">Status</p><span className={`mt-1 inline-block rounded-full px-3 py-1 text-sm font-semibold ${estimateStatusBadges[estimate.status].className}`}>{estimateStatusBadges[estimate.status].label}</span></div>
           <Summary label="Subtotal" value={formatCurrency(estimate.pricingSubtotal)} />
           <Summary label="Labor" value={formatCurrency(estimate.pricingLabor)} />
           <Summary label="Disposal" value={formatCurrency(estimate.pricingDisposal)} />
@@ -46,6 +48,7 @@ export default async function EstimateDetailPage({
         <p className="mt-3 text-sm text-slate-500">Last updated {estimate.updatedAt.toLocaleString()}</p>
         <div className="mt-6 flex flex-wrap gap-3">{!locked && <Link href={`/estimates?estimateId=${id}`} className="rounded-xl bg-blue-700 px-5 py-3 font-semibold text-white">Edit estimate</Link>}{estimate.status === "Approved" && <><CreateRevisionButton estimateId={id} /><ScheduleJobButton estimateId={id} /><CreateInvoiceButton estimateId={id} /></>}</div>
         {history && <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-5"><h2 className="text-xl font-bold">Revision history</h2><div className="mt-4 space-y-2">{history.revisions.map((revision, index) => { const current = revision.id === history.currentId; const latest = index === history.revisions.length - 1; return <Link key={revision.id} href={`/estimates/${revision.id}`} className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3 ${current ? "border-blue-500 bg-blue-50" : "border-slate-200"}`}><span><strong>{revision.revisionNumber === 0 ? "Original" : `Revision ${revision.revisionNumber}`}</strong><span className="ml-2 text-sm text-slate-500">{revision.displayNumber}</span></span><span className="flex items-center gap-2"><span className="rounded-full bg-slate-100 px-2 py-1 text-xs">{revision.status}</span>{current && <span className="text-xs font-semibold text-blue-700">Current</span>}{latest && <span className="text-xs font-semibold text-slate-600">Latest</span>}</span></Link>; })}</div></section>}
+        <section className="mt-8 space-y-3"><h2 className="text-xl font-bold">Activity</h2>{activity.map(item=><p key={item.id} className="rounded-xl border bg-white p-3"><strong>{item.message}</strong><span className="ml-2 text-sm text-slate-500">{item.createdAt.toLocaleString()}</span></p>)}{activity.length===0&&<p className="text-slate-500">No activity yet.</p>}</section>
         <section className="mt-8 space-y-4">
           <h2 className="text-xl font-bold">Job sites</h2>
           {estimate.jobSites.map((jobSite) => (

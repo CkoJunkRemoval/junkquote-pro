@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { isEstimateLocked } from "./isEstimateLocked";
 
 describe("estimate lifecycle lock", () => {
-  for (const status of ["Draft", "Ready", "Sent", "Viewed", "Declined", "Expired"]) {
+  for (const status of ["Draft", "Sent", "Viewed", "Declined", "Expired"]) {
     it(`${status.toLowerCase()} estimates are editable`, () => {
       expect(isEstimateLocked({ status, signedAt: null })).toBe(false);
     });

@@ -1,19 +1,23 @@
 export enum EstimateStatus {
   Draft = "Draft",
 
-  Ready = "Ready",
+  Viewed = "Viewed",
 
   Sent = "Sent",
 
   Approved = "Approved",
 
   Scheduled = "Scheduled",
+  InProgress = "InProgress",
 
   Completed = "Completed",
 
   Declined = "Declined",
 
-  Archived = "Archived",
+  Invoiced = "Invoiced",
+  Paid = "Paid",
+  Expired = "Expired",
+  Canceled = "Canceled",
 }
 
 export interface TimelineEvent {

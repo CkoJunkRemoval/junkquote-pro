@@ -1,5 +1,6 @@
 import { prisma } from "../prisma";
 import { getPublicApprovalError, type PublicApprovalStatus } from "./publicEstimateApproval";
+import { transitionEstimate } from "./estimateLifecycle";
 
 export interface PublicEstimateApproval {
   company: { name: string; phone: string | null; email: string | null; website: string | null; logoUrl: string | null; primaryColor: string | null; secondaryColor: string | null };
@@ -43,14 +44,8 @@ export async function getPublicEstimateByApprovalToken(token: string): Promise<P
   }
 
   const status = estimate.status as PublicApprovalStatus;
-  const publicStatus = status === "Ready" ? "Sent" : status;
-
-  if (status === "Ready") {
-    await prisma.estimate.update({
-      where: { id: estimate.id },
-      data: { status: "Sent" },
-    });
-  }
+  const publicStatus = status === "Sent" ? "Viewed" : status;
+  if (status === "Sent") await transitionEstimate(estimate.companyId,estimate.id,"Viewed",{actor:{label:"Customer"}});
 
   return {
     company: {

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { prisma } from "../prisma";
+import { transitionEstimateInTransaction } from "@/lib/estimates/estimateLifecycle";
 
 export interface ScheduleApprovedEstimateInput {
   estimateId: string;
@@ -27,7 +28,7 @@ export async function scheduleApprovedEstimate(companyId: string, input: Schedul
       truck: input.truck?.trim() || null, crewNotes: input.notes?.trim() || "",
       ...(input.crewId ? { assignments: { create: { companyId, crewId: input.crewId } } } : {}),
     } });
-    await tx.estimate.update({ where: { id: estimate.id }, data: { status: "Scheduled" } });
+    await transitionEstimateInTransaction(tx,companyId,estimate.id,"Scheduled",{actor:{label:"Team member"},metadata:{jobId:job.id}});
     return job;
   });
 }

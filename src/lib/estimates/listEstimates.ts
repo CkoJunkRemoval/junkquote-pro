@@ -1,7 +1,7 @@
-import type { Prisma } from "@/generated/prisma/client";
+import type { EstimateStatus, Prisma } from "@/generated/prisma/client";
 import { prisma } from "../prisma";
 
-export type EstimateListStatus = "Draft" | "Ready" | "Sent" | "Approved" | "Declined" | "Scheduled" | "Completed" | "Archived";
+export type EstimateListStatus = EstimateStatus;
 export type EstimateListSort = "updated_desc" | "updated_asc" | "total_desc" | "total_asc";
 
 export interface ListEstimatesInput { status?: EstimateListStatus; search?: string; sort?: EstimateListSort; page?: number; pageSize?: number; }

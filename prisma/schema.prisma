@@ -31,13 +31,17 @@ enum MembershipStatus {
 
 enum EstimateStatus {
   Draft
-  Ready
   Sent
+  Viewed
   Approved
-  Declined
   Scheduled
+  InProgress
   Completed
-  Archived
+  Invoiced
+  Paid
+  Declined
+  Expired
+  Canceled
 }
 
 enum SignatureMethod {
@@ -225,6 +229,8 @@ model Company {
   memberships             CompanyMembership[]
   customers               Customer[]
   estimates               Estimate[]
+  estimateTimelineEvents  EstimateTimelineEvent[]
+  estimateActivityItems   EstimateActivityFeedItem[]
   jobs                    Job[]
   invoices                Invoice[]
   payments                Payment[]
@@ -495,6 +501,8 @@ model Estimate {
   invoice              Invoice?
   pricingHistory       PricingHistory[]
   smartPricingDecision SmartPricingDecision?
+  timelineEvents       EstimateTimelineEvent[]
+  activityFeedItems    EstimateActivityFeedItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -505,6 +513,39 @@ model Estimate {
   @@index([propertyId])
   @@index([revisionRootId])
   @@map("estimates")
+}
+
+model EstimateTimelineEvent {
+  id         String   @id @default(uuid())
+  eventType  String
+  estimateId String
+  estimate   Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  actor      String
+  timestamp  DateTime @default(now())
+  metadata   Json?
+
+  @@index([estimateId, timestamp])
+  @@index([companyId, timestamp])
+  @@map("estimate_timeline_events")
+}
+
+model EstimateActivityFeedItem {
+  id         String   @id @default(uuid())
+  estimateId String
+  estimate   Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  actor      String
+  message    String
+  eventType  String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([estimateId, createdAt])
+  @@index([companyId, createdAt])
+  @@map("estimate_activity_feed_items")
 }
 
 enum FleetAssetType {

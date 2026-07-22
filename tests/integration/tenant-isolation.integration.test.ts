@@ -36,7 +36,7 @@ describe("real database tenant isolation", () => {
     const sent = await prisma.estimate.create({ data: { companyId: a.company.id, customerId: a.customer.id, propertyId: a.property.id, status: "Sent", approvalToken: "sent-delete-token", approvalTokenExpiresAt: new Date(Date.now() + 60_000), jobSites: { create: { name: "Garage", sortOrder: 0, items: { create: { itemId: "item-1", name: "Chair", category: "Furniture", quantity: 1, sortOrder: 0 } } } } } });
     await deleteEstimate(a.company.id, sent.id);
     expect(await prisma.estimate.findUnique({ where: { id: sent.id } })).toBeNull();
-    await expect(deleteEstimate(a.company.id, a.estimate.id)).rejects.toThrow("approved and is read-only");
+    await expect(deleteEstimate(a.company.id, a.estimate.id)).rejects.toThrow("cannot be deleted");
   });
   it("creates immutable, independently approvable estimate revisions with copied content", async () => {
     const { a } = await createTenantFixtures();
