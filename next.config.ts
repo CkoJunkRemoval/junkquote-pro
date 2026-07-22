@@ -7,7 +7,9 @@ const nextConfig: NextConfig = {
     const security = [
       {
         key: "Content-Security-Policy",
-        value: process.env.CONTENT_SECURITY_POLICY ?? productionContentSecurityPolicy,
+        value:
+          process.env.CONTENT_SECURITY_POLICY ??
+          productionContentSecurityPolicy,
       },
       { key: "X-Frame-Options", value: "DENY" },
       { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
@@ -27,7 +29,38 @@ const nextConfig: NextConfig = {
     ];
     return [
       { source: "/(.*)", headers: security },
-      { source: "/portal/:path*", headers: [{key:"Cache-Control",value:"private, no-store, max-age=0"},{key:"X-Robots-Tag",value:"noindex, nofollow"}] },
+      {
+        source: "/sw.js",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-cache, no-store, must-revalidate",
+          },
+          { key: "Service-Worker-Allowed", value: "/" },
+        ],
+      },
+      {
+        source: "/icons/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=604800, stale-while-revalidate=86400",
+          },
+        ],
+      },
+      {
+        source: "/manifest.webmanifest",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=0, must-revalidate" },
+        ],
+      },
+      {
+        source: "/portal/:path*",
+        headers: [
+          { key: "Cache-Control", value: "private, no-store, max-age=0" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+        ],
+      },
     ];
   },
 };

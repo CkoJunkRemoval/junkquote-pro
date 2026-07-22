@@ -13,6 +13,10 @@ export const authConfig = {
         "/api/health",
         "/portal",
         "/api/private/assets",
+        "/offline",
+        "/sw.js",
+        "/manifest.webmanifest",
+        "/icons",
       ];
       const internal = !publicPrefixes.some((prefix) =>
         request.nextUrl.pathname.startsWith(prefix),
