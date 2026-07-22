@@ -1,12 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { deriveInvoicePaymentState } from "./paymentRecalculation";
 import { syncPricingOutcomeForInvoice } from "@/lib/smartPricing/outcomes";
+import { recordEstimateEventInTransaction } from "@/lib/estimates/estimateEvents";
 
 export interface RecordRefundInput { amount: number; reason?: string; externalReference?: string; refundedAt: Date; createdByUserId: string }
 export async function recordRefund(companyId: string, paymentId: string, input: RecordRefundInput) {
   if (!Number.isFinite(input.amount) || input.amount <= 0) throw new Error("Refund amount must be positive.");
   const result = await prisma.$transaction(async (tx) => {
-    const payment = await tx.payment.findFirst({ where: { id: paymentId, companyId, invoice: { companyId } }, include: { invoice: { select: { id: true, total: true, dueDate: true, status: true } } } });
+    const payment = await tx.payment.findFirst({ where: { id: paymentId, companyId, invoice: { companyId } }, include: { invoice: { select: { id: true, total: true, dueDate: true, status: true, estimateId: true } } } });
     if (!payment) throw new Error("Payment not found.");
     if (payment.invoice.status === "Cancelled") throw new Error("Cancelled invoices cannot be refunded.");
     const user = await tx.user.findFirst({ where: { id: input.createdByUserId, companyId, memberships: { some: { companyId, status: "Active" } } }, select: { id: true } });
@@ -17,6 +18,7 @@ export async function recordRefund(companyId: string, paymentId: string, input: 
     const [payments, refunds] = await Promise.all([tx.payment.aggregate({ where: { companyId, invoiceId: payment.invoiceId }, _sum: { amount: true } }), tx.refund.aggregate({ where: { companyId, invoiceId: payment.invoiceId }, _sum: { amount: true } })]);
     const state = deriveInvoicePaymentState(payment.invoice.total, (payments._sum.amount ?? 0) - (refunds._sum.amount ?? 0), payment.invoice.dueDate);
     await tx.invoice.update({ where: { id: payment.invoiceId }, data: state });
+    await recordEstimateEventInTransaction(tx,{companyId,estimateId:payment.invoice.estimateId,eventType:"Payment Recorded",category:"Payment",actor:{type:"Employee",id:user.id,userId:user.id,displayName:"Team member"},summary:`Refund of $${input.amount.toFixed(2)} recorded.`,visibility:"Both",metadata:{paymentId:payment.id,refundId:refund.id,amount:input.amount,reason:input.reason}});
     return { refund, invoiceState: state };
   });
   await syncPricingOutcomeForInvoice(companyId, result.refund.invoiceId);

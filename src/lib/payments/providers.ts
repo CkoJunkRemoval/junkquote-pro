@@ -1,0 +1,8 @@
+import type {PaymentProvider} from "@/generated/prisma/client";
+export type ProviderTransaction={id:string;amount:number;occurredAt:Date;status:"captured"|"failed"|"refunded";invoiceReference?:string;raw?:Record<string,unknown>};
+export interface PaymentProviderAdapter{name:PaymentProvider;capture(input:{amount:number;currency:string;idempotencyKey:string;invoiceId:string;sourceToken?:string}):Promise<ProviderTransaction>;refund(input:{transactionId:string;amount:number;idempotencyKey:string}):Promise<ProviderTransaction>;listTransactions(input:{from:Date;to:Date}):Promise<ProviderTransaction[]>}
+export class ManualPaymentAdapter implements PaymentProviderAdapter{name="Manual" as const;async capture(input:{amount:number;idempotencyKey:string;invoiceId:string}){return{id:`manual:${input.idempotencyKey}`,amount:input.amount,occurredAt:new Date(),status:"captured" as const,invoiceReference:input.invoiceId}}async refund(input:{transactionId:string;amount:number;idempotencyKey:string}){return{id:`${input.transactionId}:refund:${input.idempotencyKey}`,amount:input.amount,occurredAt:new Date(),status:"refunded" as const}}async listTransactions(){return[]}}
+const adapters=new Map<PaymentProvider,PaymentProviderAdapter>([["Manual",new ManualPaymentAdapter()]]);
+export function registerPaymentProvider(adapter:PaymentProviderAdapter){adapters.set(adapter.name,adapter)}
+export function paymentProvider(name:PaymentProvider){const adapter=adapters.get(name);if(!adapter)throw new Error(`${name} payment provider is not configured.`);return adapter}
+export function configuredPaymentProviders(){return [...adapters.keys()]}

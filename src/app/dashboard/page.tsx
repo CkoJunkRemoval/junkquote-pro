@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { onboardingSections } from "@/lib/onboarding/service";
 import { getEstimateLifecycleDashboardCounts } from "@/lib/estimates/dashboardCounts";
+import {getEstimateActivityDashboard} from "@/lib/estimates/estimateEvents";
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { companyId, role } = await requireCompanyRole(
@@ -20,7 +21,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   if (!onboarding.completedAt && !onboarding.skippedAt) redirect("/onboarding");
   const query = await searchParams; const value = (key: string) => typeof query[key] === "string" ? query[key] as string : ""; const today = new Date(); const defaultFrom = new Date(today); defaultFrom.setDate(today.getDate() - 90); const date = (raw: string, fallback?: Date) => raw && !Number.isNaN(new Date(`${raw}T00:00:00`).getTime()) ? new Date(`${raw}T00:00:00`) : fallback;
   const filters = { from: date(value("from"), defaultFrom), to: date(value("to"), today), estimatorId: value("estimator") || undefined, category: value("category") || undefined, propertyType: value("propertyType") || undefined, crewId: value("crew") || undefined };
-  const [analytics, accuracy, options, schedule, invoices, lifecycle] = await Promise.all([getPricingAnalytics(companyId), getSmartPricingAccuracy(companyId, filters), getSmartPricingFilterOptions(companyId), getJobScheduleSummary(companyId), getInvoiceDashboardSummary(companyId),getEstimateLifecycleDashboardCounts(companyId)]);
+  const [analytics, accuracy, options, schedule, invoices, lifecycle,activity] = await Promise.all([getPricingAnalytics(companyId), getSmartPricingAccuracy(companyId, filters), getSmartPricingFilterOptions(companyId), getJobScheduleSummary(companyId), getInvoiceDashboardSummary(companyId),getEstimateLifecycleDashboardCounts(companyId),getEstimateActivityDashboard(companyId)]);
   return (
     <AppLayout>
       <div className="mx-auto max-w-6xl p-6 sm:p-10">
@@ -28,6 +29,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <p className="mt-2 text-slate-600">Your JunkQuote Pro workspace.</p>
         {!onboarding.dismissedAt && <section className="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-bold">{onboarding.completedAt?"Setup complete":"Finish setting up your workspace"}</h2><p className="text-sm text-slate-600">{onboarding.completedSections.length} of {onboardingSections.length} setup sections complete. {onboarding.completedAt?"You’re ready to create estimates.":"Resume anytime without losing progress."}</p></div><div className="flex gap-2"><Link href={onboarding.completedAt?"/estimates":"/onboarding"} className="rounded bg-blue-700 px-4 py-2 text-white">{onboarding.completedAt?"Create Estimate":"Resume setup"}</Link>{onboarding.completedAt&&<form action={async()=>{"use server";const c=await requireCompanyRole("Owner","Admin");await prisma.companyOnboarding.update({where:{companyId:c.companyId},data:{dismissedAt:new Date()}});redirect("/dashboard")}}><button className="rounded border bg-white px-4 py-2">Dismiss</button></form>}</div></div></section>}
         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">{Object.entries({"Draft Estimates":lifecycle.draftEstimates,"Awaiting Approval":lifecycle.awaitingApproval,"Approved":lifecycle.approved,"Scheduled":lifecycle.scheduled,"In Progress":lifecycle.inProgress,"Completed Today":lifecycle.completedToday,"Invoices Awaiting Payment":lifecycle.invoicesAwaitingPayment,"Paid This Month":lifecycle.paidThisMonth}).map(([title,value])=><Metric key={title} title={title} value={String(value)}/>)}</div>
+        <section className="mt-8 grid gap-5 lg:grid-cols-3"><Metric title="Pending approvals" value={String(activity.pendingApprovals)}/><Metric title="Today's changes" value={String(activity.todaysChanges)}/><div className="rounded-2xl border bg-white p-6"><h2 className="font-bold">Recent company activity</h2><div className="mt-3 space-y-2">{activity.recentCompanyActivity.slice(0,5).map(event=><Link className="block text-sm" href={`/estimates/${event.estimateId}`} key={event.id}><strong>{event.title}</strong><span className="block text-slate-500">{event.summary}</span></Link>)}{!activity.recentCompanyActivity.length&&<p className="text-sm text-slate-500">No recent activity.</p>}</div></div></section>
         <div className="mt-8 grid gap-5 md:grid-cols-3">
           <Link
             href="/estimates"

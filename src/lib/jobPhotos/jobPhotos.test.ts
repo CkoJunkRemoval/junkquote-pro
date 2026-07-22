@@ -8,4 +8,5 @@ describe("job photo validation", () => {
     expect(() => validateJobPhotoFile({ type: "application/pdf", size: 100, name: "file.pdf" } as File)).toThrow("Only JPEG");
     expect(() => validateJobPhotoFile({ type: "image/jpeg", size: maxJobPhotoSize + 1, name: "large.jpg" } as File)).toThrow("10 MB");
   });
+  it("rejects disguised extensions even with an allowed MIME type",()=>expect(()=>validateJobPhotoFile({type:"image/jpeg",size:100,name:"malware.exe"} as File)).toThrow("does not match"));
 });

@@ -3,6 +3,7 @@ const tx = { estimate: { findFirst: vi.fn(), update: vi.fn() }, job: { findUniqu
 const transition=vi.hoisted(()=>vi.fn());
 vi.mock("../prisma", () => ({ prisma: { $transaction: vi.fn((callback) => callback(tx)) } }));
 vi.mock("@/lib/estimates/estimateLifecycle",()=>({transitionEstimateInTransaction:transition}));
+vi.mock("@/lib/estimates/estimateEvents",()=>({recordEstimateEventInTransaction:vi.fn()}));
 import { scheduleApprovedEstimate } from "./scheduleApprovedEstimate";
 
 describe("scheduleApprovedEstimate", () => {

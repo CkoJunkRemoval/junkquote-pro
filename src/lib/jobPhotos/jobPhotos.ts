@@ -17,18 +17,23 @@ export interface UploadJobPhotosInput {
   category: JobPhotoCategory;
   files: File[];
 }
+export interface UploadIdempotentJobPhotoInput {category:JobPhotoCategory;file:File;clientOperationId:string;caption?:string;customerVisible?:boolean;annotationMetadata?:unknown;originalPhotoId?:string}
 export interface UpdateJobPhotoInput {
   category?: JobPhotoCategory;
   caption?: string | null;
   jobSiteId?: string | null;
   takenAt?: Date | null;
   customerVisible?: boolean;
+  annotation?: string | null;
 }
 export function validateJobPhotoFile(file: File) {
   if (!allowedMimeTypes.includes(file.type))
     throw new Error("Only JPEG, PNG, WebP, and HEIC images are supported.");
   if (file.size <= 0 || file.size > maxJobPhotoSize)
     throw new Error("Image must be no larger than 10 MB.");
+  const extension=file.name.split(".").pop()?.toLowerCase();
+  const allowedExtensions:Record<string,string[]>={"image/jpeg":["jpg","jpeg"],"image/png":["png"],"image/webp":["webp"],"image/heic":["heic","heif"]};
+  if(!extension||!allowedExtensions[file.type]?.includes(extension))throw new Error("Photo extension does not match its MIME type.");
 }
 
 async function assertJob(companyId: string, jobId: string) {
@@ -111,6 +116,12 @@ export async function uploadJobPhoto(
   });
   return photo;
 }
+export async function uploadJobPhotoIdempotent(companyId:string,jobId:string,input:UploadIdempotentJobPhotoInput){
+  const job=await assertJob(companyId,jobId);validateJobPhotoFile(input.file);if(!input.clientOperationId.trim()||input.clientOperationId.length>100)throw new Error("A valid photo idempotency key is required.");
+  const existing=await prisma.jobPhoto.findUnique({where:{companyId_clientOperationId:{companyId,clientOperationId:input.clientOperationId}},select:{id:true,jobId:true}});if(existing){if(existing.jobId!==job.id)throw new Error("Photo idempotency key belongs to another job.");return prisma.jobPhoto.findUniqueOrThrow({where:{id:existing.id}});}
+  if(input.originalPhotoId){const original=await prisma.jobPhoto.findFirst({where:{id:input.originalPhotoId,companyId,jobId},select:{id:true}});if(!original)throw new Error("Original photo not found for this job.");}
+  const stored=await localJobPhotoStorage.save(companyId,job.id,input.file);try{const sortOrder=await prisma.jobPhoto.count({where:{companyId,jobId,category:input.category}});return await prisma.jobPhoto.create({data:{companyId,jobId,category:input.category,fileUrl:stored.fileUrl,thumbnailUrl:stored.thumbnailUrl,fileName:sanitizeJobPhotoFilename(input.file.name),mimeType:input.file.type,fileSize:input.file.size,sortOrder,clientOperationId:input.clientOperationId,caption:input.caption?.trim()||null,customerVisible:input.customerVisible??false,annotationMetadata:input.annotationMetadata as never,originalPhotoId:input.originalPhotoId}});}catch(error){await localJobPhotoStorage.remove(companyId,job.id,stored.fileUrl);const raced=await prisma.jobPhoto.findUnique({where:{companyId_clientOperationId:{companyId,clientOperationId:input.clientOperationId}}});if(raced)return raced;throw error;}
+}
 export async function listJobPhotos(companyId: string, jobId: string) {
   const job = await assertJob(companyId, jobId);
   return prisma.jobPhoto.findMany({
@@ -174,6 +185,7 @@ export async function updateJobPhoto(
       ...(input.customerVisible !== undefined
         ? { customerVisible: input.customerVisible }
         : {}),
+      ...(input.annotation !== undefined ? { annotation: input.annotation?.trim() || null } : {}),
     },
   });
 }

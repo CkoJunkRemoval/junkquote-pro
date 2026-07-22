@@ -1,6 +1,7 @@
 "use server";
 
 import { cookies, headers } from "next/headers";
+import{redirect}from"next/navigation";
 import { buildPublicEstimatePdf } from "@/data/output/buildPublicEstimatePdf";
 import { renderEstimatePdf } from "@/data/output/renderEstimatePdf";
 import { renderInvoicePdf } from "@/data/output/renderInvoicePdf";
@@ -21,6 +22,7 @@ import { prisma } from "@/lib/prisma";
 import { checkRateLimit, ratePolicies } from "@/lib/security/rateLimit";
 import { recordAuditEvent } from "@/lib/audit/audit";
 import { currentRequestId } from "@/lib/audit/requestAudit";
+import{createCustomerMessage,requestJobReschedule,respondToPortalEstimate}from"@/lib/portal/workflows";
 
 async function origin() {
   const h = await headers();
@@ -100,8 +102,16 @@ export async function revokePortalAccessAction(accessId: string) {
   return access;
 }
 export async function portalLogoutAction() {
+  const c=await requireCustomerPortalContext().catch(()=>null);if(c)await prisma.customerPortalSession.updateMany({where:{id:c.session.id,revokedAt:null},data:{revokedAt:new Date()}});
   (await cookies()).delete(PORTAL_COOKIE);
 }
+const portalIdentity=(c:Awaited<ReturnType<typeof requireCustomerPortalContext>>)=>({companyId:c.companyId,customerId:c.customerId,portalAccessId:c.portalAccess.id,displayName:[c.customer.firstName,c.customer.lastName].filter(Boolean).join(" ")||"Customer"});
+export async function respondToPortalEstimateAction(input:{estimateId:string;response:"approve"|"decline";customerName:string;signatureData?:string;consentAccepted:boolean;termsVersion:string;declineReason?:string}){const c=await requireCustomerPortalContext();const h=await headers();if(!(await checkRateLimit(`portal-response:${c.portalAccess.id}`,ratePolicies.portal)).allowed)throw new Error("Too many requests. Try again later.");return respondToPortalEstimate(portalIdentity(c),{...input,ipAddress:h.get("x-forwarded-for")?.split(",")[0]?.trim(),userAgent:h.get("user-agent")??undefined})}
+export async function requestPortalRescheduleAction(input:{jobId:string;preferredStart:string;preferredEnd?:string;reason:string;customerNote?:string}){const c=await requireCustomerPortalContext();if(!(await checkRateLimit(`portal-reschedule:${c.portalAccess.id}`,ratePolicies.portal)).allowed)throw new Error("Too many requests. Try again later.");return requestJobReschedule(portalIdentity(c),{...input,preferredStart:new Date(input.preferredStart),preferredEnd:input.preferredEnd?new Date(input.preferredEnd):undefined})}
+export async function sendPortalMessageAction(input:{subject:string;body:string;estimateId?:string;jobId?:string;invoiceId?:string}){const c=await requireCustomerPortalContext();if(!(await checkRateLimit(`portal-message:${c.portalAccess.id}`,ratePolicies.portal)).allowed)throw new Error("Too many messages. Try again later.");return createCustomerMessage(portalIdentity(c),input)}
+export async function respondToPortalEstimateFormAction(estimateId:string,form:FormData){const response=form.get("response")==="decline"?"decline":"approve";await respondToPortalEstimateAction({estimateId,response,customerName:String(form.get("customerName")??""),signatureData:String(form.get("signatureData")??"")||undefined,consentAccepted:form.get("consent")==="on",termsVersion:"portal-v1",declineReason:String(form.get("declineReason")??"")||undefined});redirect(`/portal/estimates/${estimateId}?confirmed=${response}`)}
+export async function requestPortalRescheduleFormAction(jobId:string,form:FormData){await requestPortalRescheduleAction({jobId,preferredStart:String(form.get("preferredStart")??""),preferredEnd:String(form.get("preferredEnd")??"")||undefined,reason:String(form.get("reason")??""),customerNote:String(form.get("customerNote")??"")||undefined});redirect(`/portal/jobs/${jobId}?requested=1`)}
+export async function sendPortalMessageFormAction(target:{estimateId?:string;jobId?:string;invoiceId?:string},form:FormData){await sendPortalMessageAction({...target,subject:String(form.get("subject")??"Question"),body:String(form.get("body")??"")});redirect("/portal/messages?sent=1")}
 export async function downloadPortalEstimateAction(id: string) {
   const c = await requireCustomerPortalContext();
   if(!(await checkRateLimit(`portal-pdf:${c.portalAccess.id}`,ratePolicies.pdf)).allowed)throw new Error("Too many PDF requests. Try again later.");

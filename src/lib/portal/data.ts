@@ -1,11 +1,12 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import{queryEstimateEvents}from"@/lib/estimates/estimateEvents";
 export async function getPortalDashboard(
   companyId: string,
   customerId: string,
 ) {
   const now = new Date();
-  const [estimates, jobs, invoices, payments, plans] = await Promise.all([
+  const [estimates, jobs, invoices, payments, plans,activity] = await Promise.all([
     prisma.estimate.findMany({
       where: {
         companyId,
@@ -84,6 +85,7 @@ export async function getPortalDashboard(
         interval: true,
       },
     }),
+    queryEstimateEvents(companyId,{audience:"customer",customerId,limit:10}),
   ]);
   return {
     estimates,
@@ -91,6 +93,7 @@ export async function getPortalDashboard(
     invoices,
     payments,
     plans,
+    activity:activity.events,
     outstandingActions: [
       ...estimates
         .filter((x) => x.status === "Sent")
@@ -160,16 +163,18 @@ export async function getPortalEstimate(
   customerId: string,
   id: string,
 ) {
-  return prisma.estimate.findFirst({
+  const estimate=await prisma.estimate.findFirst({
     where: { id, companyId, customerId },
-    include: {
-      property: true,
+    select: {id:true,displayNumber:true,status:true,pricingSubtotal:true,pricingLabor:true,pricingDisposal:true,pricingDiscount:true,pricingTotal:true,approvalTokenExpiresAt:true,revisionNumber:true,revisionRootId:true,createdAt:true,updatedAt:true,signedAt:true,
+      property: {select:{address:true,city:true,state:true,zip:true}},
       jobSites: {
         orderBy: { sortOrder: "asc" },
-        include: { items: { orderBy: { sortOrder: "asc" } } },
+        select:{id:true,name:true,customerNotes:true,items: { orderBy: { sortOrder: "asc" },select:{id:true,name:true,quantity:true,priceOverride:true} } },
       },
+      revisionPhotos:{where:{customerVisible:true},orderBy:{sortOrder:"asc"},select:{id:true,fileUrl:true,thumbnailUrl:true,fileName:true,caption:true,category:true}},
     },
   });
+  if(!estimate)return null;const rootId=estimate.revisionRootId??estimate.id;const revisions=await prisma.estimate.findMany({where:{companyId,customerId,OR:[{id:rootId},{revisionRootId:rootId}]},orderBy:{revisionNumber:"asc"},select:{id:true,displayNumber:true,revisionNumber:true,status:true,createdAt:true}});return{...estimate,revisions};
 }
 export async function listPortalJobs(
   companyId: string,
@@ -193,14 +198,7 @@ export async function listPortalJobs(
         where: { customerVisible: true },
         select: { id: true, category: true, caption: true, fileUrl: true },
       },
-      ...(showCrew
-        ? {
-            assignments: {
-              where: { crewId: { not: null } },
-              select: { crew: { select: { name: true } } },
-            },
-          }
-        : {}),
+      assignments:{where:showCrew?{crewId:{not:null}}:{id:"__hidden__"},select:{crew:{select:{name:true}}}},
     },
   });
 }
@@ -228,14 +226,7 @@ export async function getPortalJob(
         where: { customerVisible: true },
         select: { id: true, category: true, caption: true, fileUrl: true },
       },
-      ...(showCrew
-        ? {
-            assignments: {
-              where: { crewId: { not: null } },
-              select: { crew: { select: { name: true } } },
-            },
-          }
-        : {}),
+      assignments:{where:showCrew?{crewId:{not:null}}:{id:"__hidden__"},select:{crew:{select:{name:true}}}},
     },
   });
 }
@@ -246,11 +237,10 @@ export async function listPortalInvoices(
   return prisma.invoice.findMany({
     where: { companyId, customerId },
     orderBy: { createdAt: "desc" },
-    include: {
-      property: true,
+    select:{id:true,displayNumber:true,status:true,total:true,balanceDue:true,dueDate:true,issuedDate:true,createdAt:true,property:{select:{address:true,city:true,state:true,zip:true}},lineItems:{orderBy:{sortOrder:"asc"},select:{id:true,description:true,quantity:true,unitPrice:true,amount:true}},
       payments: {
         orderBy: { paymentDate: "desc" },
-        include: { refunds: true },
+        select:{id:true,amount:true,method:true,paymentDate:true,refunds:{select:{id:true,amount:true}}},
       },
     },
   });
@@ -262,11 +252,10 @@ export async function getPortalInvoice(
 ) {
   const invoice = await prisma.invoice.findFirst({
     where: { id, companyId, customerId },
-    include: {
-      property: true,
+    select:{id:true,displayNumber:true,status:true,total:true,balanceDue:true,dueDate:true,issuedDate:true,createdAt:true,property:{select:{address:true,city:true,state:true,zip:true}},lineItems:{orderBy:{sortOrder:"asc"},select:{id:true,description:true,quantity:true,unitPrice:true,amount:true}},
       payments: {
         orderBy: { paymentDate: "desc" },
-        include: { refunds: true },
+        select:{id:true,amount:true,method:true,paymentDate:true,refunds:{select:{id:true,amount:true}}},
       },
     },
   });

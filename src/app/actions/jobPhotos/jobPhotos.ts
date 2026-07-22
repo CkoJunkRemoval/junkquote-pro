@@ -33,6 +33,7 @@ export async function updateJobPhotoAction(input: {
   jobSiteId?: string | null;
     takenAt?: Date | null;
     customerVisible?: boolean;
+    annotation?: string | null;
 }) {
   const { id, ...changes } = input;
   return updateJobPhoto(await authorizedCompanyId(), id, changes);

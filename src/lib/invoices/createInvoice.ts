@@ -1,6 +1,7 @@
 import { prisma } from "../prisma";
 import { syncPricingOutcomeForInvoice } from "@/lib/smartPricing/outcomes";
 import { transitionEstimateInTransaction } from "@/lib/estimates/estimateLifecycle";
+import {recordEstimateEventInTransaction} from "@/lib/estimates/estimateEvents";
 
 export interface CreateInvoiceInput { estimateId: string; jobId?: string; }
 
@@ -66,6 +67,7 @@ export async function createInvoice(companyId: string, input: CreateInvoiceInput
       },
     });
     if(estimate.status==="Completed") await transitionEstimateInTransaction(tx,companyId,estimate.id,"Invoiced",{actor:{label:"Team member"},metadata:{invoiceId:invoice.id}});
+    else await recordEstimateEventInTransaction(tx,{companyId,estimateId:estimate.id,eventType:"Invoice Generated",category:"Invoice",actor:{type:"Employee",displayName:"Team member"},summary:"Team member generated invoice",visibility:"Both",metadata:{invoiceId:invoice.id},attachments:[{referenceType:"Invoice",referenceId:invoice.id,displayName:invoice.displayNumber??"Invoice"}]});
     return invoice;
   });
   if (invoice.jobId) await syncPricingOutcomeForInvoice(companyId, invoice.id);

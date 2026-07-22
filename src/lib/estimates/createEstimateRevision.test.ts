@@ -6,6 +6,7 @@ const tx = {
   estimatePhoto: { createMany: vi.fn() },
 };
 vi.mock("../prisma", () => ({ prisma: { $transaction: vi.fn((callback) => callback(tx)) } }));
+vi.mock("./estimateEvents",()=>({recordEstimateEventInTransaction:vi.fn()}));
 import { createEstimateRevision } from "./createEstimateRevision";
 
 describe("createEstimateRevision", () => {

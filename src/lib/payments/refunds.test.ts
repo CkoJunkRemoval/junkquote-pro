@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   create: vi.fn(),
   invoiceUpdate: vi.fn(),
   sync: vi.fn(),
+  event: vi.fn(),
 }));
 vi.mock("@/lib/prisma", () => ({
   prisma: { $transaction: mocks.transaction },
@@ -14,6 +15,7 @@ vi.mock("@/lib/prisma", () => ({
 vi.mock("@/lib/smartPricing/outcomes", () => ({
   syncPricingOutcomeForInvoice: mocks.sync,
 }));
+vi.mock("@/lib/estimates/estimateEvents",()=>({recordEstimateEventInTransaction:mocks.event}));
 import { recordRefund } from "./refunds";
 function setup(existingRefund = 0) {
   mocks.transaction.mockImplementation(async (callback) =>

@@ -25,7 +25,10 @@ const nextConfig: NextConfig = {
           ]
         : []),
     ];
-    return [{ source: "/(.*)", headers: security }];
+    return [
+      { source: "/(.*)", headers: security },
+      { source: "/portal/:path*", headers: [{key:"Cache-Control",value:"private, no-store, max-age=0"},{key:"X-Robots-Tag",value:"noindex, nofollow"}] },
+    ];
   },
 };
 

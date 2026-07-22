@@ -1,5 +1,6 @@
 import { prisma } from "../prisma";
 import { isEstimateLocked } from "./isEstimateLocked";
+import { recordEstimateEventInTransaction } from "./estimateEvents";
 
 export async function createEstimateRevision(companyId: string, estimateId: string) {
   return prisma.$transaction(async (tx) => {
@@ -82,6 +83,7 @@ export async function createEstimateRevision(companyId: string, estimateId: stri
         })),
       });
     }
+    await recordEstimateEventInTransaction(tx,{companyId,estimateId:revision.id,eventType:"Revision Created",category:"Revision",actor:{type:"Employee",displayName:"Team member"},summary:`Team member created revision ${revisionNumber}`,visibility:"Both",metadata:{sourceEstimateId:source.id,revisionNumber}});
     return revision;
   }, { isolationLevel: "Serializable" });
 }

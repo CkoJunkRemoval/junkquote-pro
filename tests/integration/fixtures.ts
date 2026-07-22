@@ -6,6 +6,9 @@ export async function resetIntegrationDatabase() {
     await prisma.$transaction([
       prisma.providerWebhookEvent.deleteMany(),
       prisma.auditEvent.deleteMany(),
+      prisma.customerMessageThread.deleteMany(),
+      prisma.customerRescheduleRequest.deleteMany(),
+      prisma.portalEstimateResponse.deleteMany(),
       prisma.company.deleteMany(),
     ]);
   });

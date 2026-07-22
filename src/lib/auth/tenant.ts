@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import type { MembershipRole, MembershipStatus } from "@/generated/prisma/client";
 
 export type TenantContext = {
-  user: { id: string; email: string; firstName: string | null; lastName: string | null };
+  user: { id: string; email: string; firstName: string | null; lastName: string | null; platformAdmin:boolean };
   membership: { id: string; role: MembershipRole; status: MembershipStatus; billingAdmin: boolean };
   company: { id: string; name: string };
   companyId: string;
@@ -23,7 +23,7 @@ const resolveTenantContext = cache(async (): Promise<TenantContext | null> => {
     select: {
       id: true, role: true, status: true, billingAdmin: true, companyId: true,
       company: { select: { id: true, name: true } },
-      user: { select: { id: true, email: true, firstName: true, lastName: true, sessionVersion: true } },
+      user: { select: { id: true, email: true, firstName: true, lastName: true, platformAdmin:true, sessionVersion: true } },
     },
   });
   if (!membership) throw new AuthorizationError("NO_ACTIVE_MEMBERSHIP", "An active company membership is required.");

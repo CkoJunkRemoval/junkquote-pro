@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { prisma } from "../prisma";
 import { transitionEstimateInTransaction } from "@/lib/estimates/estimateLifecycle";
+import {recordEstimateEventInTransaction} from "@/lib/estimates/estimateEvents";
 
 export interface ScheduleApprovedEstimateInput {
   estimateId: string;
@@ -29,6 +30,7 @@ export async function scheduleApprovedEstimate(companyId: string, input: Schedul
       ...(input.crewId ? { assignments: { create: { companyId, crewId: input.crewId } } } : {}),
     } });
     await transitionEstimateInTransaction(tx,companyId,estimate.id,"Scheduled",{actor:{label:"Team member"},metadata:{jobId:job.id}});
+    if(input.crewId)await recordEstimateEventInTransaction(tx,{companyId,estimateId:estimate.id,eventType:"Crew Assigned",category:"Scheduling",actor:{type:"Employee",displayName:"Team member"},summary:"Team member assigned a crew",visibility:"Internal",jobId:job.id,metadata:{jobId:job.id,crewId:input.crewId}});
     return job;
   });
 }

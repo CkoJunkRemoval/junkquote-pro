@@ -2,6 +2,7 @@ import type { PaymentMethod, Prisma } from "@/generated/prisma/client";
 import { prisma } from "../prisma";
 import { deriveInvoicePaymentState } from "./paymentRecalculation";
 import { syncPricingOutcomeForInvoice } from "@/lib/smartPricing/outcomes";
+import {recordEstimateEventInTransaction} from "@/lib/estimates/estimateEvents";
 
 export interface PaymentInput { amount: number; method: PaymentMethod; referenceNumber?: string; paymentDate: Date; notes?: string; }
 export type UpdatePaymentInput = PaymentInput;
@@ -21,7 +22,7 @@ async function recalculateInvoice(tx: Prisma.TransactionClient, companyId: strin
 export async function recordPayment(companyId: string, invoiceId: string, input: PaymentInput) {
   validateAmount(input.amount);
   const result = await prisma.$transaction(async (tx) => {
-    const invoice = await tx.invoice.findFirst({ where: { id: invoiceId, companyId, customer: { companyId }, estimate: { companyId } }, select: { id: true, companyId: true, total: true, status: true } });
+    const invoice = await tx.invoice.findFirst({ where: { id: invoiceId, companyId, customer: { companyId }, estimate: { companyId } }, select: { id: true, companyId: true, total: true, status: true, estimateId:true, displayNumber:true } });
     if (!invoice) throw new Error("Invoice not found.");
     if (invoice.status === "Cancelled") throw new Error("Cancelled invoices cannot receive payments.");
     if (invoice.status === "Void") throw new Error("Void invoices cannot receive payments.");
@@ -29,6 +30,7 @@ export async function recordPayment(companyId: string, invoiceId: string, input:
     if ((existing._sum.amount ?? 0) + input.amount > invoice.total + 0.00001) throw new Error("Payment cannot exceed the invoice total.");
     const payment = await tx.payment.create({ data: { companyId, invoiceId: invoice.id, amount: input.amount, method: input.method, referenceNumber: input.referenceNumber?.trim() || null, paymentDate: input.paymentDate, notes: input.notes?.trim() || "" } });
     const invoiceState = await recalculateInvoice(tx, companyId, invoice.id);
+    await recordEstimateEventInTransaction(tx,{companyId,estimateId:invoice.estimateId,eventType:"Payment Recorded",category:"Payment",actor:{type:"Employee",displayName:"Team member"},summary:`Team member recorded a $${input.amount.toFixed(2)} payment`,visibility:"Both",metadata:{invoiceId,paymentId:payment.id,amount:input.amount,method:input.method},attachments:[{referenceType:"Invoice",referenceId:invoice.id,displayName:invoice.displayNumber??"Invoice"}]});
     return { payment, invoiceState };
   });
   await syncPricingOutcomeForInvoice(companyId, invoiceId);

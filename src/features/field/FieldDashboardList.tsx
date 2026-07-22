@@ -1,0 +1,5 @@
+"use client";
+import Link from "next/link";
+import VirtualList from "./VirtualList";
+type Job={id:string;jobNumber:string|null;fieldStage:string;scheduledStart:Date|null;customer:{firstName:string;lastName:string;phone:string|null};property:{address:string;city:string;state:string;zip:string}};
+export default function FieldDashboardList({title,jobs}:{title:string;jobs:Job[]}){return <section className="rounded-xl bg-white p-5 shadow-sm"><h2 className="mb-3 text-lg font-semibold">{title} <span className="text-sm text-slate-500">({jobs.length})</span></h2><VirtualList label={title} items={jobs} render={job=><Link href={`/field/jobs/${job.id}`} className="block border-b py-3 hover:text-blue-700"><span className="font-medium">{job.jobNumber??"Job"} · {job.customer.firstName} {job.customer.lastName}</span><span className="block text-sm text-slate-500">{job.property.address}, {job.property.city} · {job.fieldStage}</span></Link>}/>{!jobs.length&&<p className="py-3 text-sm text-slate-500">No jobs.</p>}</section>}

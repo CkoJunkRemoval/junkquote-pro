@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
-const { update, findFirst } = vi.hoisted(() => ({ update: vi.fn(), findFirst: vi.fn() }));
-vi.mock("../prisma", () => ({ prisma: { customer: { update, findFirst } } }));
+const { update, findFirst,findMany } = vi.hoisted(() => ({ update: vi.fn(), findFirst: vi.fn(),findMany:vi.fn().mockResolvedValue([]) }));
+vi.mock("../prisma", () => ({ prisma: { customer: { update, findFirst },estimate:{findMany} } }));
+vi.mock("../estimates/estimateEvents",()=>({recordEstimateEvent:vi.fn()}));
 
 import { updateCustomer } from "./updateCustomer";
 

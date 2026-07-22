@@ -1,0 +1,9 @@
+ALTER TYPE "FieldChangeOrderStatus" ADD VALUE IF NOT EXISTS 'Draft';
+ALTER TYPE "FieldChangeOrderStatus" ADD VALUE IF NOT EXISTS 'Submitted';
+ALTER TYPE "FieldChangeOrderStatus" ADD VALUE IF NOT EXISTS 'ManagerReview';
+ALTER TYPE "FieldChangeOrderStatus" ADD VALUE IF NOT EXISTS 'CustomerApprovalRequired';
+ALTER TYPE "FieldChangeOrderStatus" ADD VALUE IF NOT EXISTS 'Rejected';
+ALTER TYPE "FieldChangeOrderStatus" ADD VALUE IF NOT EXISTS 'ChangesRequested';
+ALTER TYPE "JobPhotoCategory" ADD VALUE IF NOT EXISTS 'AdditionalItems';
+ALTER TYPE "JobPhotoCategory" ADD VALUE IF NOT EXISTS 'Receipt';
+ALTER TYPE "DisposalCategory" ADD VALUE IF NOT EXISTS 'Other';

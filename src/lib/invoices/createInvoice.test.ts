@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ transaction: vi.fn(), findEstimate: vi.fn(), findJob: vi.fn(), findInvoice: vi.fn(), findLatest: vi.fn(), findCompany: vi.fn(), createInvoice: vi.fn() }));
 vi.mock("../prisma", () => ({ prisma: { $transaction: mocks.transaction } }));
+vi.mock("@/lib/estimates/estimateEvents",()=>({recordEstimateEventInTransaction:vi.fn()}));
 import { createInvoice } from "./createInvoice";
 
 const approvedEstimate = { id: "estimate-1", companyId: "8306c54b-befc-4f2a-aa2e-42a63d0eccaa", customerId: "customer-1", propertyId: "property-1", status: "Approved", pricingSubtotal: 100, pricingLabor: 25, pricingDisposal: 10, pricingDiscount: 5, pricingTotal: 130 };

@@ -1,5 +1,6 @@
 import { prisma } from "../prisma";
 import { ESTIMATE_LOCKED_MESSAGE, isEstimateLocked } from "../estimates/isEstimateLocked";
+import {recordEstimateEventInTransaction} from "../estimates/estimateEvents";
 
 export interface CreateEstimateItemInput {
   jobSiteId: string;
@@ -13,10 +14,10 @@ export interface CreateEstimateItemInput {
 }
 
 export async function createEstimateItem(companyId: string, input: CreateEstimateItemInput) {
-  const site = await prisma.jobSite.findFirst({ where: { id: input.jobSiteId, estimate: { companyId } }, select: { estimate: { select: { status: true, signedAt: true } } } });
+  const site = await prisma.jobSite.findFirst({ where: { id: input.jobSiteId, estimate: { companyId } }, select: { estimateId:true,estimate: { select: { status: true, signedAt: true } } } });
   if (!site) throw new Error("Job site not found.");
   if (isEstimateLocked(site.estimate)) throw new Error(ESTIMATE_LOCKED_MESSAGE);
-  return prisma.estimateItem.create({
+  return prisma.$transaction(async tx=>{const item=await tx.estimateItem.create({
     data: {
       jobSiteId: input.jobSiteId,
       itemId: input.itemId,
@@ -27,5 +28,5 @@ export async function createEstimateItem(companyId: string, input: CreateEstimat
       priceOverride: input.priceOverride,
       sortOrder: input.sortOrder,
     },
-  });
+  });await recordEstimateEventInTransaction(tx,{companyId,estimateId:site.estimateId,eventType:"Items Changed",category:"Items",actor:{type:"Employee",displayName:"Team member"},summary:`Team member added ${input.name}`,visibility:"Internal",metadata:{action:"added",itemId:item.id,name:item.name,quantity:item.quantity}});return item});
 }

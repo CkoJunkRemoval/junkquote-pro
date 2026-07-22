@@ -11,7 +11,7 @@ export async function getPaymentReceiptData(companyId: string, paymentId: string
     where: { id: paymentId, companyId, invoice: { companyId, customer: { companyId }, estimate: { companyId } } },
     select: {
       id: true, amount: true, method: true, referenceNumber: true, paymentDate: true, notes: true,
-      invoice: { select: { invoiceNumber: true, displayNumber: true, balanceDue: true, customer: { select: { firstName: true, lastName: true } }, company: { select: { name: true, displayName: true, logoUrl: true, primaryColor: true, secondaryColor: true } } } },
+      invoice: { select: { customerId: true, invoiceNumber: true, displayNumber: true, balanceDue: true, customer: { select: { firstName: true, lastName: true } }, company: { select: { name: true, displayName: true, logoUrl: true, primaryColor: true, secondaryColor: true } } } },
     },
   });
 }
