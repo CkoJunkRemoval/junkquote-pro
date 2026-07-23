@@ -1,8 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { selectObjectStorage, safeObjectKey } from "./objectStorage";
+import {
+  allowedLogoMimeTypes,
+  maxLogoFileSize,
+  validateLogoFile,
+} from "@/lib/company/logoFileValidation";
 const prefix = "/api/private/assets/company-logos";
-export const allowedLogoMimeTypes = ["image/jpeg", "image/png", "image/webp"];
-export const maxLogoFileSize = 2 * 1024 * 1024;
+export { allowedLogoMimeTypes, maxLogoFileSize, validateLogoFile };
 export function buildCompanyLogoStoragePrefix(companyId: string) {
   try {
     safeObjectKey(companyId);
@@ -49,12 +53,6 @@ export function companyLogoPathToKey(fileUrl: string) {
   const parts = fileUrl.slice(`${prefix}/`.length).split("/");
   if (parts.length !== 2) return null;
   return safeObjectKey("company-logos", ...parts);
-}
-export function validateLogoFile(file: File) {
-  if (!allowedLogoMimeTypes.includes(file.type))
-    throw new Error("Logo must be a JPEG, PNG, or WebP image.");
-  if (!file.size || file.size > maxLogoFileSize)
-    throw new Error("Logo must be no larger than 2 MB.");
 }
 export const localCompanyLogoStorage = {
   async save(companyId: string, file: File) {

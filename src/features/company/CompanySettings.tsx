@@ -12,6 +12,11 @@ import {
 } from "@/lib/company/settingsTypes";
 import { readableBrandForeground } from "@/lib/company/brandingColors";
 import { CompanyLogo } from "@/components/company/CompanyLogo";
+import LogoUploadControl from "./LogoUploadControl";
+import {
+  createLogoPreview,
+  validateLogoFile,
+} from "@/lib/company/logoFileValidation";
 
 type Company = Awaited<ReturnType<typeof updateCompanyBrandingAction>>;
 type Section = "profile" | "branding" | "documents" | "regional";
@@ -26,6 +31,8 @@ export default function CompanySettings({
   const [saving, setSaving] = useState<Section | "logo" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [selectedLogo, setSelectedLogo] = useState<File | null>(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const dirty = useMemo(
     () => JSON.stringify(draft) !== JSON.stringify(values(company)),
     [company, draft],
@@ -39,6 +46,12 @@ export default function CompanySettings({
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
+  useEffect(
+    () => () => {
+      if (logoPreviewUrl) URL.revokeObjectURL(logoPreviewUrl);
+    },
+    [logoPreviewUrl],
+  );
   function set<K extends keyof typeof draft>(key: K, value: (typeof draft)[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
     setSuccess(null);
@@ -62,16 +75,38 @@ export default function CompanySettings({
       setSaving(null);
     }
   }
-  async function upload(file?: File) {
-    if (!file) return;
+  function selectLogo(file: File | null) {
+    setError(null);
+    setSuccess(null);
+    if (!file) {
+      setSelectedLogo(null);
+      setLogoPreviewUrl(null);
+      return;
+    }
+    try {
+      validateLogoFile(file);
+      setSelectedLogo(file);
+      setLogoPreviewUrl(createLogoPreview(file, URL.createObjectURL));
+    } catch (reason) {
+      setSelectedLogo(null);
+      setLogoPreviewUrl(null);
+      setError(
+        reason instanceof Error ? reason.message : "Unable to select logo.",
+      );
+    }
+  }
+  async function upload() {
+    if (!selectedLogo) return;
     setSaving("logo");
     setError(null);
     setSuccess(null);
     try {
-      const updated = await uploadCompanyLogoAction(file);
+      const updated = await uploadCompanyLogoAction(selectedLogo);
       setCompany(updated as Company);
       setDraft(values(updated as Company));
-      setSuccess("Logo uploaded.");
+      setSelectedLogo(null);
+      setLogoPreviewUrl(null);
+      setSuccess("Logo saved.");
     } catch (reason) {
       setError(
         reason instanceof Error ? reason.message : "Unable to upload logo.",
@@ -81,17 +116,21 @@ export default function CompanySettings({
     }
   }
   async function removeLogo() {
-    if (!window.confirm("Remove this company logo?")) return;
     setSaving("logo");
     setError(null);
+    setSuccess(null);
     try {
       await removeCompanyLogoAction();
       setCompany((current) => ({ ...current, logoUrl: null }));
+      setSelectedLogo(null);
+      setLogoPreviewUrl(null);
       setSuccess("Logo removed.");
+      return true;
     } catch (reason) {
       setError(
         reason instanceof Error ? reason.message : "Unable to remove logo.",
       );
+      return false;
     } finally {
       setSaving(null);
     }
@@ -189,30 +228,19 @@ export default function CompanySettings({
             title="Branding"
             description="A logo and accent colors for customer-facing documents."
           >
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-5 sm:grid-cols-2 sm:items-start">
               <div>
-                <label className="grid gap-1 text-sm font-medium">
-                  Company logo
-                  <input
-                    className="block w-full text-sm"
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    disabled={saving === "logo"}
-                    onChange={(event) => void upload(event.target.files?.[0])}
-                  />
-                </label>
-                <p className="mt-1 text-xs text-slate-500">
-                  JPEG, PNG, or WebP up to 2 MB.
-                </p>
-                {company.logoUrl && (
-                  <button
-                    className="mt-3 text-sm text-red-700 underline"
-                    disabled={saving === "logo"}
-                    onClick={() => void removeLogo()}
-                  >
-                    Remove logo
-                  </button>
-                )}
+                <p className="mb-2 text-sm font-medium">Company logo</p>
+                <LogoUploadControl
+                  companyName={draft.displayName}
+                  currentLogoUrl={company.logoUrl}
+                  selectedFile={selectedLogo}
+                  previewUrl={logoPreviewUrl}
+                  busy={saving === "logo"}
+                  onFileChange={selectLogo}
+                  onSave={() => void upload()}
+                  onRemove={removeLogo}
+                />
               </div>
               <div className="grid gap-3">
                 <Input
