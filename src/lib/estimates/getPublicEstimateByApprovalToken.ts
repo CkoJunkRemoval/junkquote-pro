@@ -1,6 +1,7 @@
 import { prisma } from "../prisma";
 import { getPublicApprovalError, type PublicApprovalStatus } from "./publicEstimateApproval";
 import { transitionEstimate } from "./estimateLifecycle";
+import { buildPersistedCustomerPricingBreakdown, type CustomerPricingBreakdown } from "@/data/pricing/livePricingBreakdown";
 
 export interface PublicEstimateApproval {
   company: { name: string; phone: string | null; email: string | null; website: string | null; logoUrl: string | null; primaryColor: string | null; secondaryColor: string | null };
@@ -12,6 +13,7 @@ export interface PublicEstimateApproval {
     items: Array<{ name: string; category: string; quantity: number; notes: string }>;
   }>;
   pricing: { subtotal: number; labor: number; disposal: number; discount: number; total: number };
+  breakdown: CustomerPricingBreakdown;
   status: PublicApprovalStatus;
   approvalTokenExpiresAt: Date;
   signature?: { signerName: string; signedAt: Date; method: string; data: string };
@@ -26,12 +28,14 @@ export async function getPublicEstimateByApprovalToken(token: string): Promise<P
     where: { approvalToken: token },
     include: {
       company: true,
+      pricingProfile: true,
       customer: true,
       property: true,
       jobSites: {
         orderBy: { sortOrder: "asc" },
         include: { items: { orderBy: { sortOrder: "asc" } } },
       },
+      appliedPricingRules: { orderBy: { displayOrder: "asc" } },
     },
   });
   const error = getPublicApprovalError(
@@ -81,6 +85,12 @@ export async function getPublicEstimateByApprovalToken(token: string): Promise<P
       discount: estimate.pricingDiscount,
       total: estimate.pricingTotal,
     },
+    breakdown: buildPersistedCustomerPricingBreakdown({
+      items: estimate.jobSites.flatMap(site=>site.items),
+      rules: estimate.appliedPricingRules,
+      pricing: {subtotal:estimate.pricingSubtotal,labor:estimate.pricingLabor,disposal:estimate.pricingDisposal,discount:estimate.pricingDiscount,total:estimate.pricingTotal},
+      tax:{enabled:estimate.pricingProfile.taxEnabled,rate:estimate.pricingProfile.taxRate},
+    }),
     status: publicStatus,
     approvalTokenExpiresAt: estimate.approvalTokenExpiresAt,
     signature: estimate.signatureData && estimate.signerName && estimate.signedAt && estimate.signatureMethod

@@ -93,13 +93,10 @@ export default function PublicEstimateApproval({
       </section>
 
       <section className="rounded-2xl border p-6">
-        <h2 className="text-xl font-bold">Estimate Summary</h2>
-        <div className="mt-4 space-y-2 text-slate-700">
-          <div className="flex justify-between"><span>Subtotal</span><span>${estimate.pricing.subtotal.toFixed(2)}</span></div>
-          <div className="flex justify-between"><span>Labor</span><span>${estimate.pricing.labor.toFixed(2)}</span></div>
-          <div className="flex justify-between"><span>Disposal</span><span>${estimate.pricing.disposal.toFixed(2)}</span></div>
-          <div className="flex justify-between"><span>Discount</span><span>-${estimate.pricing.discount.toFixed(2)}</span></div>
-          <div className="flex justify-between border-t pt-3 text-xl font-bold text-slate-900"><span>Total</span><span>${estimate.pricing.total.toFixed(2)}</span></div>
+        <h2 className="text-xl font-bold">Pricing Breakdown</h2>
+        <div className="mt-4 space-y-4 text-slate-700">
+          {estimate.breakdown.sections.map(section=><section key={section.key}><h3 className="font-semibold text-slate-900">{section.title}</h3>{section.lines.map(line=><div className="flex min-h-11 items-center justify-between gap-4 text-sm" key={line.id}><span>{line.quantity&&line.quantity!==1?`${line.quantity} × `:""}{line.label}</span><span>{line.amount<0?"−":""}${Math.abs(line.amount).toFixed(2)}</span></div>)}</section>)}
+          <div className="flex justify-between border-t pt-3 text-xl font-bold text-slate-900"><span>Total</span><span>${estimate.breakdown.grandTotal.toFixed(2)}</span></div>
         </div>
       </section>
 

@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import{queryEstimateEvents}from"@/lib/estimates/estimateEvents";
+import { buildPersistedCustomerPricingBreakdown } from "@/data/pricing/livePricingBreakdown";
 export async function getPortalDashboard(
   companyId: string,
   customerId: string,
@@ -167,14 +168,18 @@ export async function getPortalEstimate(
     where: { id, companyId, customerId },
     select: {id:true,displayNumber:true,status:true,pricingSubtotal:true,pricingLabor:true,pricingDisposal:true,pricingDiscount:true,pricingTotal:true,approvalTokenExpiresAt:true,revisionNumber:true,revisionRootId:true,createdAt:true,updatedAt:true,signedAt:true,
       property: {select:{address:true,city:true,state:true,zip:true}},
+      pricingProfile:{select:{taxEnabled:true,taxRate:true}},
+      appliedPricingRules:{where:{status:"Applied"},orderBy:{displayOrder:"asc"},select:{id:true,name:true,calculatedAmount:true,status:true}},
       jobSites: {
         orderBy: { sortOrder: "asc" },
-        select:{id:true,name:true,customerNotes:true,items: { orderBy: { sortOrder: "asc" },select:{id:true,name:true,quantity:true,priceOverride:true} } },
+        select:{id:true,name:true,customerNotes:true,items: { orderBy: { sortOrder: "asc" },select:{id:true,name:true,quantity:true,basePrice:true,priceOverride:true} } },
       },
       revisionPhotos:{where:{customerVisible:true},orderBy:{sortOrder:"asc"},select:{id:true,fileUrl:true,thumbnailUrl:true,fileName:true,caption:true,category:true}},
     },
   });
-  if(!estimate)return null;const rootId=estimate.revisionRootId??estimate.id;const revisions=await prisma.estimate.findMany({where:{companyId,customerId,OR:[{id:rootId},{revisionRootId:rootId}]},orderBy:{revisionNumber:"asc"},select:{id:true,displayNumber:true,revisionNumber:true,status:true,createdAt:true}});return{...estimate,revisions};
+  if(!estimate)return null;const rootId=estimate.revisionRootId??estimate.id;const revisions=await prisma.estimate.findMany({where:{companyId,customerId,OR:[{id:rootId},{revisionRootId:rootId}]},orderBy:{revisionNumber:"asc"},select:{id:true,displayNumber:true,revisionNumber:true,status:true,createdAt:true}});
+  const breakdown=buildPersistedCustomerPricingBreakdown({items:estimate.jobSites.flatMap(site=>site.items),rules:estimate.appliedPricingRules,pricing:{subtotal:estimate.pricingSubtotal,labor:estimate.pricingLabor,disposal:estimate.pricingDisposal,discount:estimate.pricingDiscount,total:estimate.pricingTotal},tax:{enabled:estimate.pricingProfile.taxEnabled,rate:estimate.pricingProfile.taxRate}});
+  return{...estimate,breakdown,revisions};
 }
 export async function listPortalJobs(
   companyId: string,

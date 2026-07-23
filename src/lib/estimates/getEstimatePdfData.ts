@@ -1,10 +1,11 @@
 import { prisma } from "../prisma";
 import type { PublicEstimateApproval } from "./getPublicEstimateByApprovalToken";
+import { buildPersistedCustomerPricingBreakdown } from "@/data/pricing/livePricingBreakdown";
 
 export async function getEstimatePdfData(companyId: string, estimateId: string): Promise<PublicEstimateApproval> {
   const estimate = await prisma.estimate.findFirst({
     where: { id: estimateId, companyId },
-    include: { company: true, customer: true, property: true, jobSites: { orderBy: { sortOrder: "asc" }, include: { items: { orderBy: { sortOrder: "asc" } } } } },
+    include: { company: true, customer: true, property: true, pricingProfile:true, appliedPricingRules:{orderBy:{displayOrder:"asc"}}, jobSites: { orderBy: { sortOrder: "asc" }, include: { items: { orderBy: { sortOrder: "asc" } } } } },
   });
   if (!estimate) throw new Error("Estimate not found.");
 
@@ -14,6 +15,11 @@ export async function getEstimatePdfData(companyId: string, estimateId: string):
     propertyAddress: { address: estimate.property.address, city: estimate.property.city, state: estimate.property.state, zip: estimate.property.zip },
     jobSites: estimate.jobSites.map((site) => ({ name: site.name, customerNotes: site.customerNotes, items: site.items.map((item) => ({ name: item.name, category: item.category, quantity: item.quantity, notes: item.notes })) })),
     pricing: { subtotal: estimate.pricingSubtotal, labor: estimate.pricingLabor, disposal: estimate.pricingDisposal, discount: estimate.pricingDiscount, total: estimate.pricingTotal },
+    breakdown: buildPersistedCustomerPricingBreakdown({
+      items:estimate.jobSites.flatMap(site=>site.items),rules:estimate.appliedPricingRules,
+      pricing:{subtotal:estimate.pricingSubtotal,labor:estimate.pricingLabor,disposal:estimate.pricingDisposal,discount:estimate.pricingDiscount,total:estimate.pricingTotal},
+      tax:{enabled:estimate.pricingProfile.taxEnabled,rate:estimate.pricingProfile.taxRate},
+    }),
     status: estimate.status,
     approvalTokenExpiresAt: estimate.approvalTokenExpiresAt ?? new Date(0),
     signature: estimate.status === "Approved" && estimate.signatureData && estimate.signerName && estimate.signedAt && estimate.signatureMethod

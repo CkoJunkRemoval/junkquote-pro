@@ -284,7 +284,7 @@ function EstimateWizard({
     }
   }
 
-  const showSidebar = wizardStep <= 4;
+  const showSidebar = wizardStep <= 5;
 
   return (
     <div className="max-w-7xl mx-auto py-12 px-6">
@@ -359,7 +359,7 @@ function EstimateWizard({
 
         </div>
 
-        {showSidebar && (
+        {showSidebar && !isLoadingEstimate && (
           <EstimateSummary />
         )}
 
