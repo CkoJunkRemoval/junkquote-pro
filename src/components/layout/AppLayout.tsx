@@ -6,10 +6,12 @@ import Header from "../navigation/Header";
 
 type Props = {
   children: ReactNode;
+  dashboard?: { canCreateEstimate: boolean };
 };
 
 export default function AppLayout({
   children,
+  dashboard,
 }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const collapsed = useSyncExternalStore(
@@ -37,7 +39,7 @@ export default function AppLayout({
 
       <div className="flex flex-col flex-1">
 
-        <Header onMenu={() => setMobileOpen(true)} />
+        <Header onMenu={() => setMobileOpen(true)} dashboard={dashboard} />
 
         <main className="flex-1 overflow-auto">
           {children}

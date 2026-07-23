@@ -6,8 +6,15 @@ import { signOut } from "next-auth/react";
 import { getCompanyBranding } from "@/app/actions/company/branding";
 import { clearPwaSessionState } from "@/components/pwa/PwaManager";
 import { CompanyLogo } from "@/components/company/CompanyLogo";
+import DashboardQuickActions from "./DashboardQuickActions";
 
-export default function Header({ onMenu }: { onMenu: () => void }) {
+export default function Header({
+  onMenu,
+  dashboard,
+}: {
+  onMenu: () => void;
+  dashboard?: { canCreateEstimate: boolean };
+}) {
   const [company, setCompany] = useState<{
     displayName: string;
     logoUrl: string | null;
@@ -23,14 +30,17 @@ export default function Header({ onMenu }: { onMenu: () => void }) {
       .catch(() => undefined);
   }, []);
   return (
-    <header className="flex h-20 items-center gap-4 border-b border-slate-200 bg-white px-4 sm:px-6">
+    <header className={`flex items-center gap-4 border-b border-slate-200 bg-white px-4 sm:px-6 ${dashboard ? "min-h-20 flex-wrap md:flex-nowrap" : "h-20"}`}>
       <button
         onClick={onMenu}
-        className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden"
+        aria-label="Open navigation"
+        className="min-h-11 min-w-11 rounded-lg p-2 text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 lg:hidden"
       >
         <Menu size={22} />
       </button>
-      <div className="relative hidden max-w-lg flex-1 md:block">
+      {dashboard ? (
+        <DashboardQuickActions canCreateEstimate={dashboard.canCreateEstimate} />
+      ) : <div className="relative hidden max-w-lg flex-1 md:block">
         <Search
           className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
           size={18}
@@ -39,7 +49,7 @@ export default function Header({ onMenu }: { onMenu: () => void }) {
           placeholder="Search customers, estimates, jobs..."
           className="w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-4"
         />
-      </div>
+      </div>}
       <div className="ml-auto flex items-center gap-4">
         <button className="rounded-lg p-2 text-slate-500 hover:bg-slate-100">
           <Bell size={20} />
