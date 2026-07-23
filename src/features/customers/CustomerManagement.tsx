@@ -11,9 +11,9 @@ type CustomerSort = "name_asc" | "name_desc" | "created_desc" | "created_asc" | 
 
 const emptyCustomer = { firstName: "", lastName: "", phone: "", email: "" };
 
-export default function CustomerManagement() {
+export default function CustomerManagement({ initialSearch = "" }: { initialSearch?: string }) {
   const router = useRouter();
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(initialSearch);
   const [sort, setSort] = useState<CustomerSort>("name_asc");
   const [page, setPage] = useState(1);
   const [result, setResult] = useState<CustomerListResult | null>(null);

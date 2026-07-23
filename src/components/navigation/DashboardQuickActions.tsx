@@ -1,8 +1,9 @@
 "use client";
 
-import { Plus, Search } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import GlobalSearch from "./GlobalSearch";
 
 export const NEW_ESTIMATE_HREF = "/estimates?new=1";
 
@@ -74,18 +75,7 @@ export default function DashboardQuickActions({
       <h1 className="text-2xl font-bold text-slate-900 md:text-3xl">
         Dashboard
       </h1>
-      <div className="relative">
-        <Search
-          aria-hidden="true"
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-          size={18}
-        />
-        <input
-          aria-label="Search customers, estimates, and jobs"
-          placeholder="Search customers, estimates, jobs..."
-          className="min-h-11 w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
-        />
-      </div>
+      <GlobalSearch dashboard />
       {canCreateEstimate && (
         <button
           type="button"

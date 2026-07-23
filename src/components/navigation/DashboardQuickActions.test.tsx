@@ -9,6 +9,12 @@ import DashboardQuickActions, {
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
+vi.mock("@/app/actions/search/globalSearch", () => ({
+  globalSearchAction: vi.fn(),
+}));
+vi.mock("./GlobalSearch", () => ({
+  default: () => <input aria-label="Search company workspace" className="min-h-11" />,
+}));
 
 describe("dashboard quick actions", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -60,7 +66,7 @@ describe("dashboard quick actions", () => {
     );
     expect(html).toContain("grid w-full gap-3");
     expect(html).toContain("min-h-11");
-    expect(html).toContain("Search customers, estimates, jobs...");
+    expect(html).toContain("Search company workspace");
     expect(html).not.toMatch(/class="[^"]*\bhidden\b/);
   });
 });

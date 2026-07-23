@@ -5,8 +5,8 @@ import {deleteEstimateAction} from "@/app/actions/estimates/deleteEstimate";
 import {listEstimatesAction} from "@/app/actions/estimates/listEstimates";
 import {canDeleteEstimate,isEstimateEditable,estimateStatusBadges} from "@/lib/estimates/lifecyclePolicy";
 import {estimateManagementStatuses,estimateManagementStatusLabel,type EstimateManagementStatus} from "./estimateListFilters";
-export default function EstimateManagement({initialStatus="All"}:{initialStatus?:EstimateManagementStatus}){
- const[status,setStatus]=useState<EstimateManagementStatus>(initialStatus),[search,setSearch]=useState(""),[page,setPage]=useState(1),[result,setResult]=useState<Awaited<ReturnType<typeof listEstimatesAction>>|null>(null),[error,setError]=useState<string|null>(null);
+export default function EstimateManagement({initialStatus="All",initialSearch=""}:{initialStatus?:EstimateManagementStatus;initialSearch?:string}){
+ const[status,setStatus]=useState<EstimateManagementStatus>(initialStatus),[search,setSearch]=useState(initialSearch),[page,setPage]=useState(1),[result,setResult]=useState<Awaited<ReturnType<typeof listEstimatesAction>>|null>(null),[error,setError]=useState<string|null>(null);
  useEffect(()=>{let active=true;void listEstimatesAction({status:status==="All"?undefined:status,search,page}).then(r=>{if(active)setResult(r)}).catch(e=>{if(active)setError(e instanceof Error?e.message:"Unable to load estimates.")});return()=>{active=false}},[status,search,page]);
  async function remove(id:string){if(!confirm("Delete this estimate? This cannot be undone."))return;try{await deleteEstimateAction(id);setResult(r=>r?{...r,estimates:r.estimates.filter(e=>e.id!==id),total:r.total-1}:r)}catch(e){setError(e instanceof Error?e.message:"Unable to delete estimate.")}}
  const pages=result?Math.max(1,Math.ceil(result.total/result.pageSize)):1;
