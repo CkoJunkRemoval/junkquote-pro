@@ -10,10 +10,15 @@ import type { TenantContext } from "@/lib/auth/tenant";
 export type FieldActor = { userId: string; employeeId: string; displayName: string; manager: boolean; platformAdmin?: boolean };
 const eventActor = (actor: FieldActor): EstimateEventActor => ({ type: actor.platformAdmin ? "PlatformAdmin" : "Employee", id: actor.employeeId, userId: actor.userId, displayName: actor.displayName });
 
-export async function resolveFieldActor(context:TenantContext):Promise<FieldActor> {
-  const employee=await prisma.employee.findFirst({where:{companyId:context.companyId,userId:context.user.id,status:"Active"},select:{id:true,firstName:true,lastName:true}});
-  if(!employee)throw new Error("An active employee profile linked to this account is required for field operations.");
-  return {userId:context.user.id,employeeId:employee.id,displayName:`${employee.firstName} ${employee.lastName}`.trim(),manager:context.user.platformAdmin||["Owner","Admin","Manager","Office"].includes(context.role),platformAdmin:context.user.platformAdmin};
+export async function runFieldQuery<T>(name:string,query:()=>Promise<T>):Promise<T>{
+  try{return await query()}catch(error){console.error(`FIELD_QUERY_FAILED ${name}`,error);throw error}
+}
+
+export async function resolveFieldActor(context:TenantContext,options:{allowUnlinked?:boolean}={}):Promise<FieldActor> {
+  const employee=await runFieldQuery("active_employee",()=>prisma.employee.findFirst({where:{companyId:context.companyId,userId:context.user.id,status:"Active"},select:{id:true,firstName:true,lastName:true}}));
+  if(!employee&&!options.allowUnlinked)throw new Error("An active employee profile linked to this account is required for field operations.");
+  const fallbackName=[context.user.firstName,context.user.lastName].filter(Boolean).join(" ")||context.user.email;
+  return {userId:context.user.id,employeeId:employee?.id??`unlinked:${context.user.id}`,displayName:employee?`${employee.firstName} ${employee.lastName}`.trim():fallbackName,manager:context.user.platformAdmin||["Owner","Admin","Manager","Office"].includes(context.role),platformAdmin:context.user.platformAdmin};
 }
 
 async function assignedJob(companyId: string, jobId: string, actor: FieldActor) {
@@ -31,11 +36,11 @@ export async function getFieldDashboard(companyId: string, actor: FieldActor, no
   const base = { companyId, ...assignment };
   const select = { id:true,jobNumber:true,fieldStage:true,status:true,scheduledStart:true,scheduledEnd:true,customer:{select:{firstName:true,lastName:true,phone:true}},property:{select:{address:true,city:true,state:true,zip:true}} } as const;
   const [today,upcoming,overdue,completed,current] = await Promise.all([
-    prisma.job.findMany({where:{...base,scheduledStart:{gte:start,lt:end}},select,orderBy:{scheduledStart:"asc"},take:50}),
-    prisma.job.findMany({where:{...base,scheduledStart:{gte:end},fieldStage:{notIn:["Completed","ReadyForInvoice"]}},select,orderBy:{scheduledStart:"asc"},take:50}),
-    prisma.job.findMany({where:{...base,scheduledStart:{lt:start},fieldStage:{notIn:["Completed","ReadyForInvoice"]}},select,orderBy:{scheduledStart:"asc"},take:50}),
-    prisma.job.findMany({where:{...base,completedAt:{gte:start,lt:end}},select,orderBy:{completedAt:"desc"},take:50}),
-    prisma.job.findFirst({where:{...base,fieldStage:{in:["EnRoute","Arrived","Working","Loading","Cleanup"]}},select,orderBy:{updatedAt:"desc"}}),
+    runFieldQuery("field_dashboard_today_jobs",()=>prisma.job.findMany({where:{...base,scheduledStart:{gte:start,lt:end}},select,orderBy:{scheduledStart:"asc"},take:50})),
+    runFieldQuery("field_dashboard_upcoming_jobs",()=>prisma.job.findMany({where:{...base,scheduledStart:{gte:end},fieldStage:{notIn:["Completed","ReadyForInvoice"]}},select,orderBy:{scheduledStart:"asc"},take:50})),
+    runFieldQuery("field_dashboard_overdue_jobs",()=>prisma.job.findMany({where:{...base,scheduledStart:{lt:start},fieldStage:{notIn:["Completed","ReadyForInvoice"]}},select,orderBy:{scheduledStart:"asc"},take:50})),
+    runFieldQuery("field_dashboard_completed_jobs",()=>prisma.job.findMany({where:{...base,completedAt:{gte:start,lt:end}},select,orderBy:{completedAt:"desc"},take:50})),
+    runFieldQuery("field_dashboard_current_job",()=>prisma.job.findFirst({where:{...base,fieldStage:{in:["EnRoute","Arrived","Working","Loading","Cleanup"]}},select,orderBy:{updatedAt:"desc"}})),
   ]);
   return { today, upcoming, overdue, completedToday:completed, currentJob:current };
 }
