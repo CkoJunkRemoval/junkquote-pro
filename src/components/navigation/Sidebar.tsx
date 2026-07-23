@@ -22,6 +22,7 @@ const items = [
   { label: "Dispatch", href: "/dispatch", icon: RadioTower },
   { label: "Pricing", href: "/pricing", icon: Tags },
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
+  { label: "Pricing Intelligence", href: "/analytics/pricing", icon: BarChart3 },
   { label: "Settings", href: "/settings", icon: Settings },
   { label: "Billing", href: "/settings/billing", icon: FileText },
 ];
