@@ -10,6 +10,13 @@ import {
 describe("estimate list query input", () => {
   it("uses bounded pagination", () => expect(normalizeEstimateListInput({ page: 2, pageSize: 100 })).toMatchObject({ page: 2, pageSize: 50, skip: 50 }));
   it("keeps a requested status filter", () => expect(normalizeEstimateListInput({ status: "Draft" }).status).toBe("Draft"));
+  it("maps awaiting approval to sent and viewed estimates", () => {
+    const where = buildEstimateListWhere(
+      "8306c54b-befc-4f2a-aa2e-42a63d0eccaa",
+      normalizeEstimateListInput({ status: "AwaitingApproval" }),
+    );
+    expect(where.status).toEqual({ in: ["Sent", "Viewed"] });
+  });
   it("always scopes requests to the development company", () => {
     const where = buildEstimateListWhere("8306c54b-befc-4f2a-aa2e-42a63d0eccaa", normalizeEstimateListInput({ status: "Draft" }));
     expect(where).toMatchObject({

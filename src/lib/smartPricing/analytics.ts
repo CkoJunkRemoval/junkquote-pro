@@ -15,7 +15,7 @@ export async function getPricingAnalytics(companyId: string) {
   return { mostProfitableItems: categories.slice(0, 5), leastProfitableItems: [...categories].reverse().slice(0, 5), topPerformingEstimateCategories: categories.slice(0, 5), varianceCounts,
     averageEstimateAccuracy: quoted ? Math.max(0, 100 - Math.abs(collected - quoted) / quoted * 100) : 0,
     acceptanceRate: decisions.length ? decisions.filter((row) => row.accepted).length / decisions.length * 100 : 0,
-    averageDiscount: history.length ? sum((row) => row.discount) / history.length : 0, revenueVsQuoted: { quoted, collected }, sampleSize: history.length };
+    averageDiscount: history.length ? sum((row) => row.discount) / history.length : 0, revenueVsQuoted: { quoted, collected }, sampleSize: history.length, decisionCount: decisions.length };
 }
 
 export type AccuracyFilters = { from?: Date; to?: Date; estimatorId?: string; category?: string; propertyType?: string; crewId?: string };

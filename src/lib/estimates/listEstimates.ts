@@ -1,7 +1,7 @@
 import type { EstimateStatus, Prisma } from "@/generated/prisma/client";
 import { prisma } from "../prisma";
 
-export type EstimateListStatus = EstimateStatus;
+export type EstimateListStatus = EstimateStatus | "AwaitingApproval";
 export type EstimateListSort = "updated_desc" | "updated_asc" | "total_desc" | "total_asc";
 
 export interface ListEstimatesInput { status?: EstimateListStatus; search?: string; sort?: EstimateListSort; page?: number; pageSize?: number; }
@@ -20,7 +20,14 @@ export function buildEstimateListWhere(companyId: string,
 
   return {
     companyId,
-    ...(query.status ? { status: query.status } : {}),
+    ...(query.status
+      ? {
+          status:
+            query.status === "AwaitingApproval"
+              ? { in: ["Sent", "Viewed"] as EstimateStatus[] }
+              : query.status,
+        }
+      : {}),
     ...(query.search
       ? {
           OR: [

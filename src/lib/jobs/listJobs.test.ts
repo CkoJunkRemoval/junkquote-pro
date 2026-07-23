@@ -29,4 +29,8 @@ describe("job list query", () => {
   it("bounds pagination", () => {
     expect(normalizeJobListInput({ page: 2, pageSize: 100 })).toMatchObject({ page: 2, pageSize: 50, skip: 50 });
   });
+  it("bounds the completed-today filter", () => {
+    const query=normalizeJobListInput({status:"Completed",period:"Today"},new Date("2026-07-23T15:00:00"));
+    expect(buildJobListWhere("tenant-a",query)).toMatchObject({companyId:"tenant-a",status:"Completed",completedAt:{gte:new Date("2026-07-23T00:00:00"),lt:new Date("2026-07-24T00:00:00")}});
+  });
 });

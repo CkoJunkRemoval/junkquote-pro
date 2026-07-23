@@ -15,4 +15,9 @@ describe("invoice list query", () => {
     expect(buildInvoiceListOrderBy("balance_desc")).toEqual({ balanceDue: "desc" });
     expect(normalizeInvoiceListInput({ page: 2, pageSize: 100 })).toMatchObject({ page: 2, pageSize: 50, skip: 50 });
   });
+  it("maps outstanding and paid-this-month KPI filters", () => {
+    expect(buildInvoiceListWhere("tenant-a",normalizeInvoiceListInput({status:"Outstanding"}))).toMatchObject({companyId:"tenant-a",balanceDue:{gt:0},status:{notIn:["Paid","Cancelled"]}});
+    const query=normalizeInvoiceListInput({status:"Paid",period:"ThisMonth"},new Date("2026-07-23T12:00:00"));
+    expect(buildInvoiceListWhere("tenant-a",query)).toMatchObject({companyId:"tenant-a",status:"Paid",paidDate:{gte:new Date("2026-07-01T00:00:00")}});
+  });
 });

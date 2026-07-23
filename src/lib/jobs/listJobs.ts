@@ -2,13 +2,16 @@ import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "../prisma";
 
 export type JobListStatus = "Unscheduled" | "Scheduled" | "InProgress" | "Completed" | "Cancelled";
+export type JobListPeriod = "Today";
 export type JobListSort = "scheduled_asc" | "scheduled_desc" | "updated_desc" | "updated_asc";
-export interface ListJobsInput { status?: JobListStatus; search?: string; sort?: JobListSort; page?: number; pageSize?: number; crewId?: string; unassigned?: boolean; }
+export interface ListJobsInput { status?: JobListStatus; period?: JobListPeriod; search?: string; sort?: JobListSort; page?: number; pageSize?: number; crewId?: string; unassigned?: boolean; }
 
-export function normalizeJobListInput(input: ListJobsInput) {
+export function normalizeJobListInput(input: ListJobsInput, now = new Date()) {
   const pageSize = Math.min(50, Math.max(1, input.pageSize ?? 20));
   const page = Math.max(1, input.page ?? 1);
-  return { page, pageSize, skip: (page - 1) * pageSize, status: input.status, search: input.search?.trim(), sort: input.sort ?? "scheduled_asc", crewId: input.crewId, unassigned: input.unassigned };
+  const dayStart = new Date(now); dayStart.setHours(0,0,0,0);
+  const dayEnd = new Date(dayStart); dayEnd.setDate(dayEnd.getDate()+1);
+  return { page, pageSize, skip: (page - 1) * pageSize, status: input.status, period: input.period, dayStart, dayEnd, search: input.search?.trim(), sort: input.sort ?? "scheduled_asc", crewId: input.crewId, unassigned: input.unassigned };
 }
 
 export function buildJobListWhere(companyId: string, query: ReturnType<typeof normalizeJobListInput>): Prisma.JobWhereInput {
@@ -18,6 +21,7 @@ export function buildJobListWhere(companyId: string, query: ReturnType<typeof no
     ...(query.crewId ? { assignments: { some: { crewId: query.crewId } } } : {}),
     ...(query.unassigned ? { assignments: { none: {} } } : {}),
     ...(query.status ? { status: query.status } : {}),
+    ...(query.period === "Today" ? { completedAt: { gte: query.dayStart, lt: query.dayEnd } } : {}),
     ...(query.search ? { OR: [
       { estimateId: { contains: query.search, mode: "insensitive" } },
       { customer: { AND: nameTerms.map((term) => ({ OR: [{ firstName: { contains: term, mode: "insensitive" } }, { lastName: { contains: term, mode: "insensitive" } }] })) } },
