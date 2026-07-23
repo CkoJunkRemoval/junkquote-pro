@@ -159,9 +159,16 @@ export class SupabaseObjectStorage implements PrivateObjectStorage {
     private readonly bucket: string,
     private readonly fetcher: typeof fetch = fetch,
   ) {}
+  private apiBase() {
+    const url = new URL(this.baseUrl);
+    url.pathname = `${url.pathname.replace(/\/$/, "").replace(/\/storage\/v1$/, "")}/storage/v1`;
+    url.search = "";
+    url.hash = "";
+    return url.toString().replace(/\/$/, "");
+  }
   private objectUrl(key: string) {
     safeObjectKey(...key.split("/"));
-    return `${this.baseUrl.replace(/\/$/, "")}/storage/v1/object/${encodeURIComponent(this.bucket)}/${key.split("/").map(encodeURIComponent).join("/")}`;
+    return `${this.apiBase()}/object/${encodeURIComponent(this.bucket)}/${key.split("/").map(encodeURIComponent).join("/")}`;
   }
   private headers(extra: Record<string, string> = {}) {
     return {
@@ -213,7 +220,7 @@ export class SupabaseObjectStorage implements PrivateObjectStorage {
   }
   async createSignedReadUrl(key: string, expiresInSeconds: number) {
     safeObjectKey(...key.split("/"));
-    const signUrl = `${this.baseUrl.replace(/\/$/, "")}/storage/v1/object/sign/${encodeURIComponent(this.bucket)}/${key.split("/").map(encodeURIComponent).join("/")}`;
+    const signUrl = `${this.apiBase()}/object/sign/${encodeURIComponent(this.bucket)}/${key.split("/").map(encodeURIComponent).join("/")}`;
     const response = await this.fetcher(signUrl, {
       method: "POST",
       headers: this.headers({ "Content-Type": "application/json" }),
@@ -226,7 +233,15 @@ export class SupabaseObjectStorage implements PrivateObjectStorage {
     };
     const signed = body.signedURL ?? body.signedUrl;
     if (!signed) return null;
-    return new URL(signed, this.baseUrl).toString();
+    const apiBase = new URL(`${this.apiBase()}/`);
+    const resolved = signed.startsWith("/object/")
+      ? new URL(
+          `${apiBase.pathname.replace(/\/$/, "")}${signed}`,
+          apiBase.origin,
+        )
+      : new URL(signed, apiBase);
+    if (resolved.origin !== apiBase.origin) return null;
+    return resolved.toString();
   }
   async exists(key: string) {
     return Boolean(await this.metadata(key));
@@ -243,7 +258,7 @@ export class SupabaseObjectStorage implements PrivateObjectStorage {
   }
   async healthCheck() {
     const response = await this.fetcher(
-      `${this.baseUrl.replace(/\/$/, "")}/storage/v1/bucket/${encodeURIComponent(this.bucket)}`,
+      `${this.apiBase()}/bucket/${encodeURIComponent(this.bucket)}`,
       { headers: this.headers() },
     );
     return response.ok;
@@ -267,7 +282,7 @@ export class SupabaseObjectStorage implements PrivateObjectStorage {
   }
   async list(prefix: string) {
     const response = await this.fetcher(
-      `${this.baseUrl.replace(/\/$/, "")}/storage/v1/object/list/${encodeURIComponent(this.bucket)}`,
+      `${this.apiBase()}/object/list/${encodeURIComponent(this.bucket)}`,
       {
         method: "POST",
         headers: this.headers({ "Content-Type": "application/json" }),

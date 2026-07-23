@@ -71,6 +71,7 @@ describe("private tenant assets", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toContain("private");
     expect(response.headers.get("content-type")).toBe("image/png");
+    expect(response.headers.get("content-length")).toBe("1");
   });
   it("regenerates a private signed logo URL on every authorized read", async () => {
     mocks.requireTenantContext.mockResolvedValue({ companyId: "tenant-a" });

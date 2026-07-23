@@ -11,7 +11,35 @@ export function buildCompanyLogoStoragePrefix(companyId: string) {
   }
   return `${prefix}/${companyId}/`;
 }
-function keyFromUrl(fileUrl: string) {
+export function normalizeCompanyLogoPath(
+  companyId: string,
+  value: string | null | undefined,
+) {
+  if (!value) return null;
+  let pathname = value.trim();
+  try {
+    if (/^https?:\/\//i.test(pathname)) pathname = new URL(pathname).pathname;
+  } catch {
+    return null;
+  }
+  const escapedCompany = companyId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const patterns = [
+    new RegExp(
+      `^/api/private/assets/company-logos/${escapedCompany}/([^/?#]+)$`,
+    ),
+    new RegExp(`^/uploads/company-logos/${escapedCompany}/([^/?#]+)$`),
+    new RegExp(
+      `^/storage/v1/object/(?:public|sign|authenticated)/[^/]+/company-logos/${escapedCompany}/([^/?#]+)$`,
+    ),
+  ];
+  for (const pattern of patterns) {
+    const match = pathname.match(pattern);
+    if (match && /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(match[1]))
+      return `${buildCompanyLogoStoragePrefix(companyId)}${match[1]}`;
+  }
+  return null;
+}
+export function companyLogoPathToKey(fileUrl: string) {
   if (
     !fileUrl.startsWith(`${prefix}/`) ||
     fileUrl.includes("..") ||
@@ -44,12 +72,12 @@ export const localCompanyLogoStorage = {
   },
   async remove(companyId: string, fileUrl: string | null | undefined) {
     if (!fileUrl?.startsWith(buildCompanyLogoStoragePrefix(companyId))) return;
-    const key = keyFromUrl(fileUrl);
+    const key = companyLogoPathToKey(fileUrl);
     if (key) await selectObjectStorage().delete(key);
   },
   async readDataUrl(fileUrl: string | null | undefined) {
     if (!fileUrl) return null;
-    const key = keyFromUrl(fileUrl);
+    const key = companyLogoPathToKey(fileUrl);
     if (!key) return null;
     const object = await selectObjectStorage().get(key);
     if (!object) return null;
@@ -57,8 +85,13 @@ export const localCompanyLogoStorage = {
   },
   async createReadUrl(fileUrl: string | null | undefined) {
     if (!fileUrl) return null;
-    const key = keyFromUrl(fileUrl);
+    const key = companyLogoPathToKey(fileUrl);
     if (!key) return null;
     return (await selectObjectStorage().createSignedReadUrl?.(key, 60)) ?? null;
+  },
+  async metadata(fileUrl: string | null | undefined) {
+    if (!fileUrl) return null;
+    const key = companyLogoPathToKey(fileUrl);
+    return key ? selectObjectStorage().metadata(key) : null;
   },
 };

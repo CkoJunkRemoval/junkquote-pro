@@ -54,17 +54,15 @@ describe("private object storage", () => {
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
   it("creates short-lived signed Supabase URLs without persisting them", async () => {
-    const fetcher = vi
-      .fn()
-      .mockResolvedValue(
-        new Response(
-          JSON.stringify({
-            signedURL:
-              "/storage/v1/object/sign/private/company-logos/t/logo.png?token=fresh",
-          }),
-          { status: 200, headers: { "content-type": "application/json" } },
-        ),
-      );
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          signedURL:
+            "/object/sign/private/company-logos/t/logo.png?token=fresh",
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
     const storage = new SupabaseObjectStorage(
       "https://storage.test",
       "secret",
@@ -76,6 +74,9 @@ describe("private object storage", () => {
       60,
     );
     expect(url).toContain("token=fresh");
+    expect(new URL(url!).pathname).toBe(
+      "/storage/v1/object/sign/private/company-logos/t/logo.png",
+    );
     expect(fetcher).toHaveBeenCalledWith(
       expect.stringContaining("/object/sign/private/company-logos/t/logo.png"),
       expect.objectContaining({
@@ -83,5 +84,30 @@ describe("private object storage", () => {
         body: JSON.stringify({ expiresIn: 60 }),
       }),
     );
+  });
+  it("does not duplicate storage/v1 when the configured URL already contains it", async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            signedURL:
+              "/object/sign/private/company-logos/t/logo.png?token=fresh",
+          }),
+          { status: 200 },
+        ),
+      );
+    const storage = new SupabaseObjectStorage(
+      "https://storage.test/storage/v1",
+      "secret",
+      "private",
+      fetcher,
+    );
+    expect(
+      new URL(
+        (await storage.createSignedReadUrl("company-logos/t/logo.png", 60))!,
+      ).pathname,
+    ).toBe("/storage/v1/object/sign/private/company-logos/t/logo.png");
+    expect(fetcher.mock.calls[0][0]).not.toContain("/storage/v1/storage/v1/");
   });
 });
