@@ -1,8 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --surface: #ffffff;
+  --surface-foreground: #0f172a;
+  --muted-foreground: #475569;
+  --input-background: #ffffff;
+  --input-foreground: #0f172a;
+  --border-color: #cbd5e1;
 }
 
 @theme inline {
@@ -14,8 +21,16 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
+    color-scheme: dark;
     --background: #0a0a0a;
-    --foreground: #ededed;
+    --foreground: #f1f5f9;
+    /* Existing application cards intentionally remain light surfaces. */
+    --surface: #ffffff;
+    --surface-foreground: #0f172a;
+    --muted-foreground: #475569;
+    --input-background: #ffffff;
+    --input-foreground: #0f172a;
+    --border-color: #94a3b8;
   }
 }
 
@@ -23,6 +38,33 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* White application surfaces must never inherit the system-dark body color. */
+:where(.bg-white, .bg-slate-50) {
+  color: var(--surface-foreground);
+}
+
+:where(input, select, textarea) {
+  color-scheme: light;
+  background-color: var(--input-background);
+  color: var(--input-foreground);
+  border-color: var(--border-color);
+  opacity: 1;
+}
+
+:where(input, textarea)::placeholder {
+  color: #64748b;
+  opacity: 1;
+}
+
+:where(input, textarea):-webkit-autofill {
+  -webkit-text-fill-color: var(--input-foreground);
+  caret-color: var(--input-foreground);
+}
+
+:where(table) {
+  color: inherit;
 }
 
 html {

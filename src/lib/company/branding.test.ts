@@ -42,8 +42,8 @@ describe("company branding settings", () => {
   });
 
   it("stores and removes logos only through authenticated tenant ownership", async () => {
-    const existing = { ...company, id: "tenant-a", logoUrl: "/uploads/company-logos/tenant-a/old.png" };
-    mocks.findUnique.mockResolvedValue(existing); mocks.saveLogo.mockResolvedValue("/uploads/company-logos/tenant-a/new.png"); mocks.update.mockResolvedValue({ ...existing, logoUrl: "/uploads/company-logos/tenant-a/new.png" });
+    const existing = { ...company, id: "tenant-a", logoUrl: "/api/private/assets/company-logos/tenant-a/old.png" };
+    mocks.findUnique.mockResolvedValue(existing); mocks.saveLogo.mockResolvedValue("/api/private/assets/company-logos/tenant-a/new.png"); mocks.update.mockResolvedValue({ ...existing, logoUrl: "/api/private/assets/company-logos/tenant-a/new.png" });
     const file = new File(["x"], "logo.png", { type: "image/png" });
     await uploadCompanyLogo("tenant-a", file);
     expect(mocks.saveLogo).toHaveBeenCalledWith("tenant-a", file);

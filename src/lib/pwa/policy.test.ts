@@ -37,6 +37,7 @@ describe("PWA policy", () => {
   it.each([
     "/api/auth/session",
     "/api/webhooks/stripe",
+    "/api/private/assets/company-logos/tenant-a/logo.png",
     "/portal/invoices/1",
     "/approve/token",
     "/dashboard",

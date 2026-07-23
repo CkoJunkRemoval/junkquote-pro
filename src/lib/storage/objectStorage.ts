@@ -18,6 +18,10 @@ export interface PrivateObjectStorage {
   readonly name: string;
   put(key: string, data: Buffer, contentType: string): Promise<ObjectMetadata>;
   get(key: string): Promise<{ data: Buffer; metadata: ObjectMetadata } | null>;
+  createSignedReadUrl?(
+    key: string,
+    expiresInSeconds: number,
+  ): Promise<string | null>;
   exists(key: string): Promise<boolean>;
   delete(key: string): Promise<void>;
   healthCheck(): Promise<boolean>;
@@ -84,6 +88,9 @@ export class LocalObjectStorage implements PrivateObjectStorage {
     const metadata = await this.metadata(key);
     if (!metadata) return null;
     return { data: await readFile(this.target(key)), metadata };
+  }
+  async createSignedReadUrl() {
+    return null;
   }
   async exists(key: string) {
     return Boolean(await this.metadata(key));
@@ -203,6 +210,23 @@ export class SupabaseObjectStorage implements PrivateObjectStorage {
         etag: response.headers.get("etag"),
       },
     };
+  }
+  async createSignedReadUrl(key: string, expiresInSeconds: number) {
+    safeObjectKey(...key.split("/"));
+    const signUrl = `${this.baseUrl.replace(/\/$/, "")}/storage/v1/object/sign/${encodeURIComponent(this.bucket)}/${key.split("/").map(encodeURIComponent).join("/")}`;
+    const response = await this.fetcher(signUrl, {
+      method: "POST",
+      headers: this.headers({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ expiresIn: expiresInSeconds }),
+    });
+    if (!response.ok) return null;
+    const body = (await response.json()) as {
+      signedURL?: string;
+      signedUrl?: string;
+    };
+    const signed = body.signedURL ?? body.signedUrl;
+    if (!signed) return null;
+    return new URL(signed, this.baseUrl).toString();
   }
   async exists(key: string) {
     return Boolean(await this.metadata(key));

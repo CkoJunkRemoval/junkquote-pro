@@ -31,7 +31,12 @@ export async function GET(
     _request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     "anonymous";
   if (
-    !(await checkRateLimit(`private-asset:${identity}`, ratePolicies.privateAsset)).allowed
+    !(
+      await checkRateLimit(
+        `private-asset:${identity}`,
+        ratePolicies.privateAsset,
+      )
+    ).allowed
   )
     return new Response("Too many requests", {
       status: 429,
@@ -58,6 +63,15 @@ export async function GET(
       select: { id: true },
     });
     if (!company) return new Response("Not found", { status: 404 });
+    const signedUrl = await localCompanyLogoStorage.createReadUrl(fileUrl);
+    if (signedUrl)
+      return new Response(null, {
+        status: 307,
+        headers: {
+          Location: signedUrl,
+          "Cache-Control": "private, no-store, max-age=0",
+        },
+      });
     return assetResponse(await localCompanyLogoStorage.readDataUrl(fileUrl));
   }
   if (segments.length === 4 && segments[0] === "job-photos") {

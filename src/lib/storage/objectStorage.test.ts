@@ -53,4 +53,35 @@ describe("private object storage", () => {
     expect(await storage.get("job-photos/t/j/f.jpg")).toBeNull();
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
+  it("creates short-lived signed Supabase URLs without persisting them", async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            signedURL:
+              "/storage/v1/object/sign/private/company-logos/t/logo.png?token=fresh",
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      );
+    const storage = new SupabaseObjectStorage(
+      "https://storage.test",
+      "secret",
+      "private",
+      fetcher,
+    );
+    const url = await storage.createSignedReadUrl(
+      "company-logos/t/logo.png",
+      60,
+    );
+    expect(url).toContain("token=fresh");
+    expect(fetcher).toHaveBeenCalledWith(
+      expect.stringContaining("/object/sign/private/company-logos/t/logo.png"),
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ expiresIn: 60 }),
+      }),
+    );
+  });
 });

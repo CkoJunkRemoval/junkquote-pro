@@ -55,4 +55,10 @@ export const localCompanyLogoStorage = {
     if (!object) return null;
     return `data:${object.metadata.contentType ?? "application/octet-stream"};base64,${object.data.toString("base64")}`;
   },
+  async createReadUrl(fileUrl: string | null | undefined) {
+    if (!fileUrl) return null;
+    const key = keyFromUrl(fileUrl);
+    if (!key) return null;
+    return (await selectObjectStorage().createSignedReadUrl?.(key, 60)) ?? null;
+  },
 };

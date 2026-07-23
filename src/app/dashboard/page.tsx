@@ -77,9 +77,9 @@ function Filter({ label, name, type, defaultValue }: { label: string; name: stri
 function Select({ label, name, value, options }: { label: string; name: string; value: string; options: Array<{value:string;label:string}> }) { return <label className="grid gap-1 text-sm font-medium">{label}<select className="rounded border p-2" name={name} defaultValue={value}><option value="">All</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>; }
 function Metric({ title, value }: { title: string; value: string }) {
   return (
-    <div className="rounded-2xl border bg-white p-6">
-      <h2 className="font-bold">{title}</h2>
-      <p className="mt-2 text-2xl font-semibold">{value}</p>
+    <div className="rounded-2xl border bg-white p-6 text-slate-900">
+      <h2 className="font-bold text-slate-700">{title}</h2>
+      <p className="mt-2 text-2xl font-semibold text-slate-950">{value}</p>
     </div>
   );
 }

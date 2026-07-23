@@ -1,11 +1,11 @@
 "use client";
 
 import { Bell, Menu, Search, UserCircle2 } from "lucide-react";
-import Image from "next/image";
 import { useEffect, useState } from "react";
 import { signOut } from "next-auth/react";
 import { getCompanyBranding } from "@/app/actions/company/branding";
 import { clearPwaSessionState } from "@/components/pwa/PwaManager";
+import { CompanyLogo } from "@/components/company/CompanyLogo";
 
 export default function Header({ onMenu }: { onMenu: () => void }) {
   const [company, setCompany] = useState<{
@@ -45,17 +45,7 @@ export default function Header({ onMenu }: { onMenu: () => void }) {
           <Bell size={20} />
         </button>
         <div className="flex items-center gap-2 text-sm">
-          {company?.logoUrl ? (
-            <Image
-              src={company.logoUrl}
-              alt="Company logo"
-              width={32}
-              height={32}
-              className="h-8 w-8 rounded object-contain"
-            />
-          ) : (
-            <UserCircle2 size={30} />
-          )}
+          {company ? <CompanyLogo src={company.logoUrl} companyName={company.displayName} size={32} fallbackClassName="rounded" /> : <UserCircle2 size={30} />}
           <span className="hidden sm:block">
             <strong className="block">
               {company?.displayName ?? "Your company"}
