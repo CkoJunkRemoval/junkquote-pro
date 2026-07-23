@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { PwaManager } from "@/components/pwa/PwaManager";
+import { NativeBridge } from "@/components/native/NativeBridge";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -45,6 +46,7 @@ export default function RootLayout({
     <html lang="en" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
         {children}
+        <NativeBridge />
         <PwaManager />
       </body>
     </html>

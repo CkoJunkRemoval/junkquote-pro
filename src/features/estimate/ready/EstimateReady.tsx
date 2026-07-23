@@ -99,7 +99,7 @@ export default function EstimateReady() {
 
   async function downloadPdf() {
     if (!estimateId) return;
-    downloadPdfFile(await downloadEstimatePdfAction(estimateId), "estimate.pdf");
+    await downloadPdfFile(await downloadEstimatePdfAction(estimateId), "estimate.pdf");
   }
 
   return (

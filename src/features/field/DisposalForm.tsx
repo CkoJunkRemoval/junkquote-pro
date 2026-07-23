@@ -2,6 +2,12 @@
 import { useState, useTransition } from "react";
 import { recordDisposalAction } from "@/app/actions/field/fieldOperations";
 
+const defaultOccurredAt = new Date(
+  Date.now() - new Date().getTimezoneOffset() * 60_000,
+)
+  .toISOString()
+  .slice(0, 16);
+
 export default function DisposalForm({ jobId, initialTotal }: { jobId: string; initialTotal: number }) {
   const [total, setTotal] = useState(initialTotal);
   const [message, setMessage] = useState("");
@@ -23,7 +29,7 @@ export default function DisposalForm({ jobId, initialTotal }: { jobId: string; i
     <form className="mt-3 grid gap-3 sm:grid-cols-2" action={submit}>
       <select name="category" className="min-h-12 rounded border p-3">{[["Landfill","Landfill"],["Recycling","Recycling"],["Donation","Donation"],["ScrapMetal","Scrap"],["HazardousWaste","Hazardous"],["Other","Other"]].map(([value,label])=><option value={value} key={value}>{label}</option>)}</select>
       <input required name="facility" placeholder="Facility" className="min-h-12 rounded border p-3" />
-      <input required name="occurredAt" type="datetime-local" defaultValue={new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16)} className="min-h-12 rounded border p-3" />
+      <input required name="occurredAt" type="datetime-local" defaultValue={defaultOccurredAt} className="min-h-12 rounded border p-3" />
       <div className="flex"><input name="weight" min="0" max="1000000" step="0.01" type="number" placeholder="Weight" className="min-h-12 min-w-0 flex-1 rounded-l border p-3"/><select name="unit" className="min-h-12 rounded-r border p-3"><option>lb</option><option>kg</option><option>ton</option></select></div>
       <input required name="cost" min="0" step="0.01" type="number" placeholder="Cost" className="min-h-12 rounded border p-3" />
       <select name="paymentMethod" className="min-h-12 rounded border p-3"><option>Other</option><option>Cash</option><option>Check</option><option>CreditCard</option><option>DebitCard</option><option>ACH</option></select>

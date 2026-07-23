@@ -22,26 +22,48 @@
     "assets:migrate": "tsx scripts/migrate-private-assets.ts",
     "assets:verify": "tsx scripts/verify-asset-backup.ts",
     "worker:once": "tsx scripts/worker-once.ts",
-    "beta:verify": "tsx scripts/beta-verify.ts"
+    "beta:verify": "tsx scripts/beta-verify.ts",
+    "cap:sync": "cap sync",
+    "cap:android": "cap sync android",
+    "cap:ios": "cap sync ios",
+    "android:apk": "cap build android --androidreleasetype APK",
+    "android:bundle": "cap build android --androidreleasetype AAB"
   },
   "dependencies": {
-    "@prisma/adapter-pg": "^7.8.0",
-    "@prisma/client": "^7.8.0",
+    "@capacitor/android": "^8.4.2",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/browser": "^8.0.4",
+    "@capacitor/camera": "^8.2.1",
+    "@capacitor/core": "^8.4.2",
+    "@capacitor/filesystem": "^8.1.2",
+    "@capacitor/ios": "^8.4.2",
+    "@capacitor/push-notifications": "^8.1.2",
+    "@capacitor/share": "^8.0.1",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@prisma/adapter-pg": "^7.9.0",
+    "@prisma/client": "^7.9.0",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "jspdf": "^4.2.1",
     "lucide-react": "^1.23.0",
-    "next": "16.2.10",
+    "next": "16.2.11",
     "next-auth": "^5.0.0-beta.31",
     "pg": "^8.22.0",
-    "prisma": "^7.8.0",
+    "prisma": "^7.9.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "server-only": "^0.0.1",
     "stripe": "^22.3.2",
     "tailwind-merge": "^3.6.0"
   },
+  "overrides": {
+    "postcss": "8.5.19",
+    "next": {
+      "sharp": "0.35.0"
+    }
+  },
   "devDependencies": {
+    "@capacitor/cli": "^8.4.2",
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",

@@ -139,7 +139,7 @@ export default function InvoicePayments({
   }
   async function receipt(payment: Payment) {
     try {
-      downloadPdf(
+      await downloadPdf(
         await downloadPaymentReceiptAction(payment.id),
         `receipt-${payment.id}.pdf`,
       );

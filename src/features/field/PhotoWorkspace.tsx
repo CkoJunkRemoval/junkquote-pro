@@ -12,6 +12,7 @@ import {
   type OfflinePhotoType,
 } from "@/lib/fieldOperations/offlinePhotoQueue";
 import PhotoAnnotator from "./PhotoAnnotator";
+import { captureNativePhoto } from "@/lib/native/camera";
 export default function PhotoWorkspace({
   jobId,
   companyId,
@@ -57,7 +58,9 @@ export default function PhotoWorkspace({
     [companyId, userId, jobId, refresh, upload],
   );
   useEffect(() => {
-    void refresh().then(() => { if (navigator.onLine) return sync(); });
+    void refresh().then(() => {
+      if (navigator.onLine) return sync();
+    });
     const online = () => void sync();
     window.addEventListener("online", online);
     return () => window.removeEventListener("online", online);
@@ -83,6 +86,17 @@ export default function PhotoWorkspace({
       if (navigator.onLine) await sync();
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Unable to queue photo.");
+    }
+  }
+  async function cameraOrPhotos() {
+    try {
+      const nativePhoto = await captureNativePhoto();
+      if (nativePhoto) await add([nativePhoto]);
+      else input.current?.click();
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "Camera is unavailable.",
+      );
     }
   }
   return (
@@ -154,7 +168,7 @@ export default function PhotoWorkspace({
         />
         <button
           className="min-h-12 rounded bg-blue-600 px-4 text-white"
-          onClick={() => input.current?.click()}
+          onClick={() => void cameraOrPhotos()}
         >
           Camera or choose photos
         </button>
@@ -227,17 +241,17 @@ function QueuedPhoto({
   onRetry: () => void;
   onRemove: () => void;
 }) {
-  const [url, setUrl] = useState("");
+  const image = useRef<HTMLImageElement>(null);
   useEffect(() => {
     const value = URL.createObjectURL(row.file);
-    setUrl(value);
+    if (image.current) image.current.src = value;
     return () => URL.revokeObjectURL(value);
   }, [row.file]);
   return (
     <figure className="rounded-lg border p-2">
       <img
+        ref={image}
         loading="lazy"
-        src={url}
         alt={row.caption || row.fileName}
         className="aspect-square w-full rounded object-cover"
       />

@@ -30,7 +30,8 @@ export function PwaManager() {
   const [updateWorker, setUpdateWorker] = useState<ServiceWorker | null>(null);
   const [reachable, setReachable] = useState(true);
   const [checking, setChecking] = useState(false);
-  const [dismissedAt, setDismissedAt] = useState(Date.now());
+  const [dismissedAt, setDismissedAt] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
   const [pushPermission, setPushPermission] = useState("unsupported");
   const standalone =
     typeof window !== "undefined" &&
@@ -56,19 +57,23 @@ export function PwaManager() {
   }, []);
 
   useEffect(() => {
-    setDismissedAt(Number(localStorage.getItem(DISMISS_KEY) ?? 0));
-    setPushPermission(
-      notificationPermissionState(
-        "Notification" in window,
-        "Notification" in window ? Notification.permission : undefined,
-      ),
-    );
+    const initial = window.setTimeout(() => {
+      setCurrentTime(Date.now());
+      setDismissedAt(Number(localStorage.getItem(DISMISS_KEY) ?? 0));
+      setPushPermission(
+        notificationPermissionState(
+          "Notification" in window,
+          "Notification" in window ? Notification.permission : undefined,
+        ),
+      );
+    }, 0);
     void probe();
     const timer = window.setInterval(() => void probe(), 60_000);
     window.addEventListener("online", probe);
     window.addEventListener("offline", probe);
     return () => {
       clearInterval(timer);
+      clearTimeout(initial);
       window.removeEventListener("online", probe);
       window.removeEventListener("offline", probe);
     };
@@ -125,7 +130,7 @@ export function PwaManager() {
     !standalone &&
     !pathname.startsWith("/portal") &&
     !pathname.startsWith("/approve") &&
-    Date.now() - dismissedAt > COOLDOWN;
+    currentTime - dismissedAt > COOLDOWN;
   const install = async () => {
     if (!installPrompt) {
       setShowInstructions(true);
