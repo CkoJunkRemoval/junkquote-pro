@@ -43,6 +43,7 @@ const initialEstimate: Estimate = {
     currency: "USD",
   },
   pricingManuallyEdited: false,
+  pricingRules: [],
   customerType: null,
 
   customer: {

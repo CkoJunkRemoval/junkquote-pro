@@ -10,6 +10,7 @@ export interface PersistedDraftEstimate {
   propertyId: string;
   currentStep: number;
   pricingDiscount: number;
+  appliedPricingRules?: Estimate["pricingRules"];
   pricingProfileId: string;
   pricingProfile: {
     name: string;
@@ -90,6 +91,7 @@ export function hydrateDraftEstimate(savedEstimate: PersistedDraftEstimate) {
       currency: savedEstimate.pricingProfile.currency,
     },
     pricingManuallyEdited: false,
+    pricingRules: savedEstimate.appliedPricingRules ?? [],
     customerType: "existing",
     customer: {
       id: savedEstimate.customer.id,

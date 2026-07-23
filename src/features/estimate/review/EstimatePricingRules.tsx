@@ -1,0 +1,25 @@
+"use client";
+import { useEffect, useState } from "react";
+import Card from "@/components/ui/Card";
+import { addManualEstimatePricingRuleAction, evaluateEstimatePricingRulesAction, listApplicablePricingRulesAction, updateEstimatePricingRuleAction } from "@/app/actions/pricingRules/pricingRules";
+import { useEstimate } from "../EstimateContext";
+import type { EstimatePricingRuleSnapshot } from "../types";
+
+type AvailableRule=Awaited<ReturnType<typeof listApplicablePricingRulesAction>>[number];
+const button="min-h-11 rounded-xl border border-[var(--border-color)] px-3 font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 disabled:opacity-50";
+export default function EstimatePricingRules(){
+  const {estimate,estimateId,setEstimate}=useEstimate();
+  const [available,setAvailable]=useState<AvailableRule[]>([]),[busy,setBusy]=useState(false),[error,setError]=useState("");
+  async function refresh(){if(!estimateId)return;setBusy(true);setError("");try{const [rows,rules]=await Promise.all([evaluateEstimatePricingRulesAction(estimateId),listApplicablePricingRulesAction(estimate.pricingProfileId)]);setEstimate(current=>({...current,pricingRules:rows as EstimatePricingRuleSnapshot[]}));setAvailable(rules);}catch(reason){setError(reason instanceof Error?reason.message:"Pricing rules could not be evaluated.");}finally{setBusy(false);}}
+  useEffect(()=>{if(!estimateId)return;void Promise.all([evaluateEstimatePricingRulesAction(estimateId),listApplicablePricingRulesAction(estimate.pricingProfileId)]).then(([rows,rules])=>{setEstimate(current=>({...current,pricingRules:rows as EstimatePricingRuleSnapshot[]}));setAvailable(rules);}).catch(reason=>setError(reason instanceof Error?reason.message:"Pricing rules could not be evaluated."));},[estimateId,estimate.pricingProfileId,setEstimate]);
+  async function add(){if(!estimateId)return;const ruleId=window.prompt("Enter an optional rule ID",available.find(rule=>rule.applicationMode==="Optional")?.id||"");if(!ruleId)return;const reason=window.prompt("Reason for adding this rule");if(!reason)return;setBusy(true);try{await addManualEstimatePricingRuleAction(estimateId,ruleId,reason);await refresh();}catch(reason){setError(reason instanceof Error?reason.message:"Rule could not be added.");setBusy(false);}}
+  async function change(row:EstimatePricingRuleSnapshot,status:"Applied"|"Skipped"){if(!estimateId)return;const reason=window.prompt(status==="Skipped"?"Reason for disabling this rule":"Reason for changing this rule");if(!reason)return;const raw=status==="Applied"?window.prompt("Applied amount",String(row.calculatedAmount)):String(row.calculatedAmount);if(raw===null)return;setBusy(true);try{await updateEstimatePricingRuleAction(estimateId,row.id,Number(raw),status,reason);await refresh();}catch(reason){setError(reason instanceof Error?reason.message:"Rule could not be changed.");setBusy(false);}}
+  const snapshots=estimate.pricingRules??[];
+  const grouped={applied:snapshots.filter(x=>x.status==="Applied"&&x.source==="Automatic"),skipped:snapshots.filter(x=>x.status==="Skipped"),manual:snapshots.filter(x=>x.source==="Manual")};
+  return <Card><section aria-labelledby="estimate-pricing-rules"><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 id="estimate-pricing-rules" className="text-2xl font-bold">Estimate Pricing Rules</h2><p className="text-sm text-slate-500">Automatic modifiers and documented estimator adjustments.</p></div><button className={button} disabled={busy||!estimateId} onClick={()=>void add()}>Add optional rule</button></div>
+    {busy&&<p role="status" className="mt-3 text-sm">Updating pricing rules…</p>}{error&&<p role="alert" className="mt-3 text-red-700">{error}</p>}
+    <RuleGroup title="Applied" rows={grouped.applied} onChange={change}/><RuleGroup title="Manual" rows={grouped.manual} onChange={change}/><RuleGroup title="Skipped" rows={grouped.skipped} onChange={change}/>
+    {!snapshots.length&&!busy&&<p className="mt-4 rounded-xl border border-dashed p-4 text-slate-500">No pricing rules apply to this estimate.</p>}
+  </section></Card>;
+}
+function RuleGroup({title,rows,onChange}:{title:string;rows:EstimatePricingRuleSnapshot[];onChange:(row:EstimatePricingRuleSnapshot,status:"Applied"|"Skipped")=>Promise<void>}){if(!rows.length)return null;return <section className="mt-5"><h3 className="font-semibold">{title}</h3><div className="mt-2 space-y-2">{rows.map(row=><article key={row.id} className="flex flex-wrap items-center gap-3 rounded-xl border p-3"><div className="min-w-52 flex-1"><strong>{row.name}</strong><p className="text-xs text-slate-500">{row.reason||`${row.calculationType} at ${row.value}`}</p></div><span className="font-bold">{row.calculatedAmount<0?"−":""}${Math.abs(row.calculatedAmount).toFixed(2)}</span>{row.status==="Applied"?<button className={button} onClick={()=>void onChange(row,"Skipped")}>Disable</button>:<button className={button} onClick={()=>void onChange(row,"Applied")}>Restore</button>}</article>)}</div></section>}

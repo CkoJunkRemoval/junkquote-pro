@@ -20,6 +20,9 @@ export default async function SettingsPage() {
         <Library size={18} aria-hidden="true" />
         Manage Item Library
       </Link>
+      <Link href="/settings/pricing-rules" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-4 font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600">
+        Manage Pricing Rules
+      </Link>
     </div>
     <CompanySettings initialCompany={company} />
     <SmartPricingSettings initial={smartPricing} />

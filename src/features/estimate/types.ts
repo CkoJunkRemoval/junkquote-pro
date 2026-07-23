@@ -56,6 +56,22 @@ export interface EstimateItem {
   pricingManuallyEdited: boolean;
 }
 
+export interface EstimatePricingRuleSnapshot {
+  id: string;
+  pricingRuleId?: string | null;
+  name: string;
+  category: string;
+  calculationType: string;
+  value: number;
+  calculatedAmount: number;
+  taxable: boolean;
+  displayOrder: number;
+  source: string;
+  status: string;
+  reason?: string | null;
+  manuallyAdjusted: boolean;
+}
+
 export interface JobSite {
   id: string;
 
@@ -126,6 +142,7 @@ export interface Estimate {
   pricingDefaults: PricingProfileDefaults;
 
   pricingManuallyEdited: boolean;
+  pricingRules?: EstimatePricingRuleSnapshot[];
 
   customerType: CustomerType | null;
 

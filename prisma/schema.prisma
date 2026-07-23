@@ -350,6 +350,7 @@ model Company {
   pricingOutcomes         PricingOutcome[]
   pricingProfiles         PricingProfile[]
   itemLibrary             ItemLibrary[]
+  pricingRules            PricingRule[]
   servicePlans            ServicePlan[]
   portalAccesses          CustomerPortalAccess[]
   auditEvents             AuditEvent[]
@@ -634,6 +635,7 @@ model Estimate {
   smartPricingDecision SmartPricingDecision?
   timelineEvents       EstimateTimelineEvent[]
   activityFeedItems    EstimateActivityFeedItem[]
+  appliedPricingRules  EstimatePricingRule[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -671,6 +673,7 @@ model PricingProfile {
 
   estimates     Estimate[]
   itemOverrides PricingProfileItemOverride[]
+  pricingRules  PricingRule[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -746,6 +749,78 @@ model PricingProfileItemOverride {
   @@index([pricingProfileId])
   @@index([itemLibraryId])
   @@map("pricing_profile_item_overrides")
+}
+
+model PricingRule {
+  id               String @id @default(uuid())
+  companyId        String
+  company          Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  pricingProfileId String?
+  pricingProfile   PricingProfile? @relation(fields: [pricingProfileId], references: [id], onDelete: Cascade)
+
+  name            String
+  description     String?
+  active          Boolean @default(true)
+  priority        Int     @default(100)
+  category        String
+  applicationMode String  @default("Automatic")
+  valueType       String
+  value           Float
+  maxValue        Float?
+  minimumEstimate Float?
+  maximumEstimate Float?
+  taxable         Boolean @default(true)
+
+  conditions        RuleCondition[]
+  estimateSnapshots EstimatePricingRule[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([companyId, active, priority])
+  @@index([pricingProfileId, active])
+  @@map("pricing_rules")
+}
+
+model RuleCondition {
+  id            String @id @default(uuid())
+  pricingRuleId String
+  pricingRule   PricingRule @relation(fields: [pricingRuleId], references: [id], onDelete: Cascade)
+  field         String
+  operator      String @default("equals")
+  value         String
+  secondaryValue String?
+  displayOrder  Int @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([pricingRuleId, displayOrder])
+  @@map("rule_conditions")
+}
+
+model EstimatePricingRule {
+  id                String @id @default(uuid())
+  estimateId        String
+  estimate          Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+  pricingRuleId     String?
+  pricingRule       PricingRule? @relation(fields: [pricingRuleId], references: [id], onDelete: SetNull)
+  name              String
+  category          String
+  calculationType   String
+  value             Float
+  calculatedAmount  Float
+  taxable           Boolean @default(true)
+  displayOrder      Int @default(0)
+  source            String @default("Automatic")
+  status            String @default("Applied")
+  reason            String?
+  manuallyAdjusted  Boolean @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([estimateId, displayOrder])
+  @@index([pricingRuleId])
+  @@map("estimate_pricing_rules")
 }
 
 model EstimateTimelineEvent {

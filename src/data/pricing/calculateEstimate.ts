@@ -27,6 +27,8 @@ export interface EstimateTotals {
   subtotal: number;
 
   total: number;
+  pricingRules: number;
+  discounts: number;
 }
 
 export function calculateJobSiteSubtotal(jobSite: JobSite) {
@@ -117,9 +119,12 @@ export function calculateEstimate(
     configuredLaborUnits * estimate.pricingDefaults.laborRate,
   );
 
+  const appliedRules = (estimate.pricingRules ?? []).filter((rule) => rule.status === "Applied");
+  const pricingRules = appliedRules.filter((rule) => rule.calculatedAmount > 0).reduce((sum, rule) => sum + rule.calculatedAmount, 0);
+  const ruleDiscounts = Math.abs(appliedRules.filter((rule) => rule.calculatedAmount < 0).reduce((sum, rule) => sum + rule.calculatedAmount, 0));
   const calculatedTotal = Math.max(
     0,
-    subtotal + labor - estimate.pricing.discount
+    subtotal + labor + pricingRules - estimate.pricing.discount - ruleDiscounts
   );
 
   const tax = estimate.pricingDefaults.taxEnabled
@@ -154,6 +159,8 @@ export function calculateEstimate(
     tax,
 
     subtotal,
+    pricingRules,
+    discounts: estimate.pricing.discount + ruleDiscounts,
 
     total,
   };

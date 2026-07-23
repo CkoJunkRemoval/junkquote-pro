@@ -7,6 +7,7 @@ export async function getEstimate(companyId: string, estimateId: string) {
       pricingProfile: true,
       customer: true,
       property: true,
+      appliedPricingRules: { orderBy: [{ displayOrder: "asc" }, { createdAt: "asc" }] },
       jobSites: {
         orderBy: { sortOrder: "asc" },
         include: {
