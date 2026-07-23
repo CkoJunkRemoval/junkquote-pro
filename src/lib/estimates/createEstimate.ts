@@ -1,3 +1,41 @@
-import {prisma} from "../prisma";import {randomUUID} from "node:crypto";import{recordEstimateEventInTransaction}from"./estimateEvents";
-export interface CreateEstimateInput{customerId:string;propertyId:string}
-export async function createEstimate(companyId:string,input:CreateEstimateInput){const[company,customer,property]=await Promise.all([prisma.company.findFirst({where:{id:companyId},select:{estimatePrefix:true}}),prisma.customer.findFirst({where:{id:input.customerId,companyId},select:{id:true}}),prisma.property.findFirst({where:{id:input.propertyId,customer:{companyId}},select:{id:true,customerId:true}})]);if(!company)throw new Error("Company not found.");if(!customer||!property||property.customerId!==customer.id)throw new Error("Customer or property not found.");return prisma.$transaction(async tx=>{const estimate=await tx.estimate.create({data:{companyId,customerId:input.customerId,propertyId:input.propertyId,displayNumber:`${company.estimatePrefix}-${randomUUID().slice(0,8).toUpperCase()}`}});await recordEstimateEventInTransaction(tx,{companyId,estimateId:estimate.id,eventType:"Estimate Created",category:"Estimate",actor:{type:"Employee",displayName:"Team member"},summary:"Team member created estimate",visibility:"Both",metadata:{status:"Draft"}});return estimate;});}
+import { randomUUID } from "node:crypto";
+import { prisma } from "../prisma";
+import { recordEstimateEventInTransaction } from "./estimateEvents";
+
+export interface CreateEstimateInput { customerId: string; propertyId: string }
+
+export async function createEstimate(companyId: string, input: CreateEstimateInput) {
+  const [company, customer, property, pricingProfile] = await Promise.all([
+    prisma.company.findFirst({ where: { id: companyId }, select: { estimatePrefix: true } }),
+    prisma.customer.findFirst({ where: { id: input.customerId, companyId }, select: { id: true } }),
+    prisma.property.findFirst({ where: { id: input.propertyId, customer: { companyId } }, select: { id: true, customerId: true } }),
+    prisma.pricingProfile.findFirst({ where: { companyId, active: true, defaultProfile: true } }),
+  ]);
+  if (!company) throw new Error("Company not found.");
+  if (!customer || !property || property.customerId !== customer.id) throw new Error("Customer or property not found.");
+  if (!pricingProfile) throw new Error("A default pricing profile is required before creating an estimate.");
+
+  return prisma.$transaction(async (tx) => {
+    const estimate = await tx.estimate.create({
+      data: {
+        companyId,
+        customerId: input.customerId,
+        propertyId: input.propertyId,
+        pricingProfileId: pricingProfile.id,
+        displayNumber: `${company.estimatePrefix}-${randomUUID().slice(0, 8).toUpperCase()}`,
+      },
+      include: { pricingProfile: true },
+    });
+    await recordEstimateEventInTransaction(tx, {
+      companyId,
+      estimateId: estimate.id,
+      eventType: "Estimate Created",
+      category: "Estimate",
+      actor: { type: "Employee", displayName: "Team member" },
+      summary: "Team member created estimate",
+      visibility: "Both",
+      metadata: { status: "Draft", pricingProfileId: pricingProfile.id },
+    });
+    return estimate;
+  });
+}

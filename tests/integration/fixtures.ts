@@ -18,6 +18,13 @@ async function createTenant(label: "A" | "B", invoiceNumber: number) {
   const company = await prisma.company.create({
     data: { name: `Company ${label}`, displayName: `Company ${label}` },
   });
+  const pricingProfile = await prisma.pricingProfile.create({
+    data: {
+      companyId: company.id,
+      name: "Standard",
+      defaultProfile: true,
+    },
+  });
   const user = await prisma.user.create({
     data: {
       companyId: company.id,
@@ -89,6 +96,7 @@ async function createTenant(label: "A" | "B", invoiceNumber: number) {
   const estimate = await prisma.estimate.create({
     data: {
       companyId: company.id,
+      pricingProfileId: pricingProfile.id,
       customerId: customer.id,
       propertyId: property.id,
       status: "Approved",
@@ -151,6 +159,7 @@ async function createTenant(label: "A" | "B", invoiceNumber: number) {
   });
   return {
     company,
+    pricingProfile,
     user,
     ownerMembership,
     officeMembership,

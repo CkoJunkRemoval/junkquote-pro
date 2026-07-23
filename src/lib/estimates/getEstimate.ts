@@ -4,6 +4,7 @@ export async function getEstimate(companyId: string, estimateId: string) {
   return prisma.estimate.findFirst({
     where: { id: estimateId, companyId },
     include: {
+      pricingProfile: true,
       customer: true,
       property: true,
       jobSites: {

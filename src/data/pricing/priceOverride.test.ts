@@ -8,6 +8,10 @@ import { calculateEstimate } from "./calculateEstimate";
 
 function createEstimate(item: EstimateItem): Estimate {
   return {
+    pricingProfileId: "profile-1",
+    pricingProfileName: "Standard",
+    pricingDefaults: { minimumCharge: 125, tripFee: 0, laborRate: 65, dumpFee: 0, mileageRate: 0, fuelSurcharge: 0, defaultCrewSize: 1, taxEnabled: false, taxRate: 0, currency: "USD" },
+    pricingManuallyEdited: false,
     customerType: "existing",
     customer: {
       id: "customer-1",

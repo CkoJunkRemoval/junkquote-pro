@@ -9,6 +9,20 @@ export interface PersistedDraftEstimate {
   propertyId: string;
   currentStep: number;
   pricingDiscount: number;
+  pricingProfileId: string;
+  pricingProfile: {
+    name: string;
+    minimumCharge: number;
+    tripFee: number;
+    laborRate: number;
+    dumpFee: number;
+    mileageRate: number;
+    fuelSurcharge: number;
+    defaultCrewSize: number;
+    taxEnabled: boolean;
+    taxRate: number;
+    currency: string;
+  };
   status: string;
   customer: {
     id: string;
@@ -76,6 +90,21 @@ export function hydrateDraftEstimate(savedEstimate: PersistedDraftEstimate) {
   });
 
   const estimate: Estimate = {
+    pricingProfileId: savedEstimate.pricingProfileId,
+    pricingProfileName: savedEstimate.pricingProfile.name,
+    pricingDefaults: {
+      minimumCharge: savedEstimate.pricingProfile.minimumCharge,
+      tripFee: savedEstimate.pricingProfile.tripFee,
+      laborRate: savedEstimate.pricingProfile.laborRate,
+      dumpFee: savedEstimate.pricingProfile.dumpFee,
+      mileageRate: savedEstimate.pricingProfile.mileageRate,
+      fuelSurcharge: savedEstimate.pricingProfile.fuelSurcharge,
+      defaultCrewSize: savedEstimate.pricingProfile.defaultCrewSize,
+      taxEnabled: savedEstimate.pricingProfile.taxEnabled,
+      taxRate: savedEstimate.pricingProfile.taxRate,
+      currency: savedEstimate.pricingProfile.currency,
+    },
+    pricingManuallyEdited: false,
     customerType: "existing",
     customer: {
       id: savedEstimate.customer.id,

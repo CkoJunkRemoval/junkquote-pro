@@ -14,6 +14,7 @@ import { createEstimateAction } from "@/app/actions/estimates/createEstimate";
 import { loadEstimateAction } from "@/app/actions/estimates/loadEstimate";
 import { saveEstimateProgressAction } from "@/app/actions/estimates/saveEstimateProgress";
 import { updateEstimateStatusAction } from "@/app/actions/estimates/updateEstimateStatus";
+import { changeEstimatePricingProfileAction } from "@/app/actions/pricingProfiles/pricingProfiles";
 import { calculateEstimate } from "@/data/pricing/calculateEstimate";
 
 import {
@@ -27,6 +28,21 @@ import { EstimateStatus } from "./status";
 import { hydrateDraftEstimate } from "./draftEstimateHydration";
 
 const initialEstimate: Estimate = {
+  pricingProfileId: "",
+  pricingProfileName: "",
+  pricingDefaults: {
+    minimumCharge: 0,
+    tripFee: 0,
+    laborRate: 0,
+    dumpFee: 0,
+    mileageRate: 0,
+    fuelSurcharge: 0,
+    defaultCrewSize: 1,
+    taxEnabled: false,
+    taxRate: 0,
+    currency: "USD",
+  },
+  pricingManuallyEdited: false,
   customerType: null,
 
   customer: {
@@ -101,6 +117,21 @@ interface EstimateContextType {
     pricing: Estimate["pricing"]
   ) => void;
 
+  changePricingProfile: (profile: {
+    id: string;
+    name: string;
+    minimumCharge: number;
+    tripFee: number;
+    laborRate: number;
+    dumpFee: number;
+    mileageRate: number;
+    fuelSurcharge: number;
+    defaultCrewSize: number;
+    taxEnabled: boolean;
+    taxRate: number;
+    currency: string;
+  }) => Promise<void>;
+
   setStatus: (
     status: EstimateStatus
   ) => Promise<void>;
@@ -153,6 +184,23 @@ export function EstimateProvider({
 
       estimateSelectionRef.current = selectionKey;
       setEstimateId(createdEstimate.id);
+      setEstimate((previous) => ({
+        ...previous,
+        pricingProfileId: createdEstimate.pricingProfileId,
+        pricingProfileName: createdEstimate.pricingProfile.name,
+        pricingDefaults: {
+          minimumCharge: createdEstimate.pricingProfile.minimumCharge,
+          tripFee: createdEstimate.pricingProfile.tripFee,
+          laborRate: createdEstimate.pricingProfile.laborRate,
+          dumpFee: createdEstimate.pricingProfile.dumpFee,
+          mileageRate: createdEstimate.pricingProfile.mileageRate,
+          fuelSurcharge: createdEstimate.pricingProfile.fuelSurcharge,
+          defaultCrewSize: createdEstimate.pricingProfile.defaultCrewSize,
+          taxEnabled: createdEstimate.pricingProfile.taxEnabled,
+          taxRate: createdEstimate.pricingProfile.taxRate,
+          currency: createdEstimate.pricingProfile.currency,
+        },
+      }));
     } finally {
       creatingEstimateRef.current = false;
     }
@@ -305,7 +353,44 @@ export function EstimateProvider({
     setEstimate((prev) => ({
       ...prev,
       pricing,
+      pricingManuallyEdited: true,
     }));
+  }
+
+  async function changePricingProfile(profile: Parameters<EstimateContextType["changePricingProfile"]>[0]) {
+    if (!estimateId) throw new Error("Save the estimate before changing its pricing profile.");
+    await changeEstimatePricingProfileAction(estimateId, profile.id);
+    setEstimate((previous) => {
+      const next = {
+        ...previous,
+        pricingProfileId: profile.id,
+        pricingProfileName: profile.name,
+        pricingDefaults: {
+          minimumCharge: profile.minimumCharge,
+          tripFee: profile.tripFee,
+          laborRate: profile.laborRate,
+          dumpFee: profile.dumpFee,
+          mileageRate: profile.mileageRate,
+          fuelSurcharge: profile.fuelSurcharge,
+          defaultCrewSize: profile.defaultCrewSize,
+          taxEnabled: profile.taxEnabled,
+          taxRate: profile.taxRate,
+          currency: profile.currency,
+        },
+        pricingManuallyEdited: false,
+      };
+      const totals = calculateEstimate(next);
+      return {
+        ...next,
+        pricing: {
+          subtotal: totals.subtotal,
+          labor: totals.labor,
+          disposal: totals.disposalFees,
+          discount: next.pricing.discount,
+          total: totals.total,
+        },
+      };
+    });
   }
 
   async function setStatus(
@@ -340,6 +425,7 @@ export function EstimateProvider({
         updateProperty,
         setJobSites,
         updatePricing,
+        changePricingProfile,
         setStatus,
       }}
     >

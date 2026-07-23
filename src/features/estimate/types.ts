@@ -2,6 +2,7 @@ import {
   EstimateStatus,
   TimelineEvent,
 } from "./status";
+import type { PricingProfileDefaults } from "@/lib/pricingProfiles/types";
 
 export type CustomerType = "new" | "existing";
 
@@ -97,6 +98,14 @@ export interface PricingSummary {
 }
 
 export interface Estimate {
+  pricingProfileId: string;
+
+  pricingProfileName: string;
+
+  pricingDefaults: PricingProfileDefaults;
+
+  pricingManuallyEdited: boolean;
+
   customerType: CustomerType | null;
 
   customer: Customer;

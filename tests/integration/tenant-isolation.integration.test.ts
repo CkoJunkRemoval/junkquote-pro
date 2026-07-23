@@ -33,7 +33,7 @@ describe("real database tenant isolation", () => {
   it("isolates estimate reads, updates, deletes, and customer/property pairing", async () => { const { a, b } = await createTenantFixtures(); expect(await getEstimate(a.company.id, b.estimate.id)).toBeNull(); await expect(updateEstimateStatus(a.company.id, b.estimate.id, "Sent")).rejects.toThrow(); await expect(deleteEstimate(a.company.id, b.estimate.id)).rejects.toThrow(); await expect(createEstimate(a.company.id, { customerId: a.customer.id, propertyId: b.property.id })).rejects.toThrow("Customer or property not found"); });
   it("deletes sent estimates with dependent sites and blocks approved estimates", async () => {
     const { a } = await createTenantFixtures();
-    const sent = await prisma.estimate.create({ data: { companyId: a.company.id, customerId: a.customer.id, propertyId: a.property.id, status: "Sent", approvalToken: "sent-delete-token", approvalTokenExpiresAt: new Date(Date.now() + 60_000), jobSites: { create: { name: "Garage", sortOrder: 0, items: { create: { itemId: "item-1", name: "Chair", category: "Furniture", quantity: 1, sortOrder: 0 } } } } } });
+    const sent = await prisma.estimate.create({ data: { companyId: a.company.id, pricingProfileId: a.pricingProfile.id, customerId: a.customer.id, propertyId: a.property.id, status: "Sent", approvalToken: "sent-delete-token", approvalTokenExpiresAt: new Date(Date.now() + 60_000), jobSites: { create: { name: "Garage", sortOrder: 0, items: { create: { itemId: "item-1", name: "Chair", category: "Furniture", quantity: 1, sortOrder: 0 } } } } } });
     await deleteEstimate(a.company.id, sent.id);
     expect(await prisma.estimate.findUnique({ where: { id: sent.id } })).toBeNull();
     await expect(deleteEstimate(a.company.id, a.estimate.id)).rejects.toThrow("cannot be deleted");
@@ -56,7 +56,7 @@ describe("real database tenant isolation", () => {
   });
   it("schedules and completes an approved estimate with operational fields", async () => {
     const { a } = await createTenantFixtures();
-    const estimate = await prisma.estimate.create({ data: { companyId: a.company.id, customerId: a.customer.id, propertyId: a.property.id, status: "Approved", pricingTotal: 300 } });
+    const estimate = await prisma.estimate.create({ data: { companyId: a.company.id, pricingProfileId: a.pricingProfile.id, customerId: a.customer.id, propertyId: a.property.id, status: "Approved", pricingTotal: 300 } });
     const start = new Date(Date.now() + 3_600_000); const end = new Date(start.getTime() + 7_200_000);
     const job = await scheduleApprovedEstimate(a.company.id, { estimateId: estimate.id, scheduledStart: start.toISOString(), scheduledEnd: end.toISOString(), crewId: a.crew.id, truck: "Truck 7", notes: "Use side gate" });
     expect(await prisma.job.findUniqueOrThrow({ where: { id: job.id }, include: { assignments: true } })).toMatchObject({ jobNumber: expect.stringMatching(/^JOB-/), status: "Scheduled", truck: "Truck 7", crewNotes: "Use side gate", assignments: [expect.objectContaining({ crewId: a.crew.id })] });

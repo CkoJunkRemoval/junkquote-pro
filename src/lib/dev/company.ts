@@ -22,6 +22,15 @@ export async function getDevelopmentCompany() {
         companyId: company.id,
       },
     });
+    await prisma.pricingProfile.create({
+      data: {
+        companyId: company.id,
+        name: "Standard",
+        description: "Default company pricing",
+        defaultProfile: true,
+        minimumCharge: company.defaultMinimumCharge,
+      },
+    });
   }
 
   return company;

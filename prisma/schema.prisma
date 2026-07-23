@@ -348,6 +348,7 @@ model Company {
   smartPricingDecisions   SmartPricingDecision[]
   createdRefunds          Refund[]
   pricingOutcomes         PricingOutcome[]
+  pricingProfiles         PricingProfile[]
   servicePlans            ServicePlan[]
   portalAccesses          CustomerPortalAccess[]
   auditEvents             AuditEvent[]
@@ -595,6 +596,9 @@ model Estimate {
   propertyId String
   property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 
+  pricingProfileId String
+  pricingProfile   PricingProfile @relation(fields: [pricingProfileId], references: [id], onDelete: Restrict)
+
   status EstimateStatus @default(Draft)
 
   pricingSubtotal     Float  @default(0)
@@ -637,8 +641,42 @@ model Estimate {
   @@index([companyId])
   @@index([customerId])
   @@index([propertyId])
+  @@index([pricingProfileId])
   @@index([revisionRootId])
   @@map("estimates")
+}
+
+model PricingProfile {
+  id String @id @default(uuid())
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  name            String
+  description     String?
+  active          Boolean @default(true)
+  defaultProfile  Boolean @default(false)
+  minimumCharge   Float   @default(0)
+  tripFee         Float   @default(0)
+  laborRate       Float   @default(0)
+  dumpFee         Float   @default(0)
+  mileageRate     Float   @default(0)
+  fuelSurcharge   Float   @default(0)
+  defaultCrewSize Int     @default(1)
+  taxEnabled      Boolean @default(false)
+  taxRate         Float   @default(0)
+  currency        String  @default("USD")
+  displayOrder    Int     @default(0)
+
+  estimates Estimate[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([companyId, active])
+  @@index([companyId, defaultProfile])
+  @@map("pricing_profiles")
 }
 
 model EstimateTimelineEvent {

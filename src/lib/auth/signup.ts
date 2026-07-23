@@ -128,6 +128,18 @@ export async function createCompanyOwner(input: SignupInput) {
           active: true,
         },
       });
+      stage = "pricing-profile-create";
+      await tx.pricingProfile.create({
+        data: {
+          companyId: company.id,
+          name: "Standard",
+          description: "Default company pricing",
+          defaultProfile: true,
+          minimumCharge: company.defaultMinimumCharge,
+          taxRate: 0,
+          currency: "USD",
+        },
+      });
       stage = "user-create";
       const user = await tx.user.create({
         data: {

@@ -30,6 +30,7 @@ export async function createEstimateRevision(companyId: string, estimateId: stri
     const revision = await tx.estimate.create({
       data: {
         companyId,
+        pricingProfileId: source.pricingProfileId,
         customerId: source.customerId,
         propertyId: source.propertyId,
         displayNumber: `${baseNumber}-R${revisionNumber}`,

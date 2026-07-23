@@ -60,7 +60,8 @@ describe("self-service signup", () => {
 
   it("creates only server-selected owner and active membership values", async () => {
     const tx = {
-      company: { create: vi.fn().mockResolvedValue({ id: "company-1" }) },
+      company: { create: vi.fn().mockResolvedValue({ id: "company-1", defaultMinimumCharge: 0 }) },
+      pricingProfile: { create: vi.fn().mockResolvedValue({ id: "profile-1" }) },
       user: { create: vi.fn().mockResolvedValue({ id: "user-1" }) },
       companyMembership: {
         create: vi.fn().mockResolvedValue({ id: "membership-1" }),
@@ -101,9 +102,10 @@ describe("self-service signup", () => {
       const tx = {
         company: {
           create: vi.fn(
-            async () => (pending.push("company"), { id: "company-1" }),
+            async () => (pending.push("company"), { id: "company-1", defaultMinimumCharge: 0 }),
           ),
         },
+        pricingProfile: { create: vi.fn(async () => ({ id: "profile-1" })) },
         user: {
           create: vi.fn(async () => (pending.push("user"), { id: "user-1" })),
         },

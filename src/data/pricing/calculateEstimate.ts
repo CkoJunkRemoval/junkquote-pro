@@ -108,15 +108,18 @@ export function calculateEstimate(
   const subtotal =
     basePrice +
     disposalFees +
-    disposalMarkup;
+    disposalMarkup +
+    estimate.pricingDefaults.dumpFee +
+    estimate.pricingDefaults.tripFee +
+    estimate.pricingDefaults.fuelSurcharge;
 
-  const minimumCharge = DEFAULT_PRICING.minimumJob;
+  const minimumCharge = estimate.pricingDefaults.minimumCharge;
 
   const laborCalculation =
     calculateLabor(
       truckVolume,
       heavyItems,
-      DEFAULT_PRICING.laborRate
+      estimate.pricingDefaults.laborRate
     );
 
   const labor =
@@ -127,8 +130,9 @@ export function calculateEstimate(
     subtotal + labor - estimate.pricing.discount
   );
 
-  const tax =
-    calculatedTotal * DEFAULT_PRICING.taxRate;
+  const tax = estimate.pricingDefaults.taxEnabled
+    ? calculatedTotal * (estimate.pricingDefaults.taxRate / 100)
+    : 0;
 
   const total =
     Math.max(
@@ -149,8 +153,10 @@ export function calculateEstimate(
 
     minimumCharge,
 
-    recommendedCrew:
+    recommendedCrew: Math.max(
       laborCalculation.recommendedCrew,
+      estimate.pricingDefaults.defaultCrewSize,
+    ),
 
     laborHours:
       laborCalculation.laborHours,

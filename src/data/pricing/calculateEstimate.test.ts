@@ -6,6 +6,10 @@ import { EstimateStatus } from "@/features/estimate/status";
 
 function createEstimate(items: EstimateItem[], discount = 0): Estimate {
   return {
+    pricingProfileId: "profile-1",
+    pricingProfileName: "Standard",
+    pricingDefaults: { minimumCharge: 125, tripFee: 0, laborRate: 65, dumpFee: 0, mileageRate: 0, fuelSurcharge: 0, defaultCrewSize: 1, taxEnabled: false, taxRate: 0, currency: "USD" },
+    pricingManuallyEdited: false,
     customerType: "existing",
     customer: {
       id: "customer-1",
@@ -61,6 +65,12 @@ function item(itemId: string, quantity = 1): EstimateItem {
 }
 
 describe("calculateEstimate minimum charge", () => {
+  it("uses the selected profile defaults", () => {
+    const estimate = createEstimate([]);
+    estimate.pricingDefaults.minimumCharge = 321;
+    expect(calculateEstimate(estimate).total).toBe(321);
+  });
+
   it("uses the minimum for no items", () => {
     expect(calculateEstimate(createEstimate([])).total).toBe(125);
   });

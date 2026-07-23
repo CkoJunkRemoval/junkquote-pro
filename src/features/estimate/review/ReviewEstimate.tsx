@@ -7,6 +7,7 @@ import { useEstimate } from "../EstimateContext";
 import EstimateSummary from "@/components/estimate/EstimateSummary";
 import EstimateBreakdown from "@/components/estimate/EstimateBreakdown";
 import SmartPricingPanel from "../smartPricing/SmartPricingPanel";
+import PricingProfileSelect from "./PricingProfileSelect";
 
 export default function ReviewEstimate() {
   const { estimate } = useEstimate();
@@ -83,6 +84,8 @@ export default function ReviewEstimate() {
             </div>
 
           </div>
+
+          <PricingProfileSelect />
 
         </div>
 
