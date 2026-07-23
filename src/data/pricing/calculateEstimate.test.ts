@@ -55,6 +55,13 @@ function createEstimate(items: EstimateItem[], discount = 0): Estimate {
 
 function item(itemId: string, quantity = 1): EstimateItem {
   return {
+    basePrice: itemId === "refrigerator" ? 125 : 8, disposalFee: itemId === "refrigerator" ? 25 : 0,
+    laborHours: .25, weightClass: itemId === "refrigerator" ? "Heavy" : "Light",
+    estimatedVolume: itemId === "refrigerator" ? 25 : 2, crewRequirement: 1,
+    recyclable: false, donationEligible: false, hazardous: false, refrigerant: false,
+    electronics: false, mattress: false, tire: false, appliance: false,
+    constructionDebris: false, yardWaste: false, requiresDisassembly: false,
+    requiresSpecialEquipment: false, pricingManuallyEdited: false,
     id: `${itemId}-1`,
     itemId,
     name: itemId,

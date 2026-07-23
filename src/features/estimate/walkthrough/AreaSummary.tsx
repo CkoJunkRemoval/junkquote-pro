@@ -1,7 +1,5 @@
 "use client";
 
-import { ITEM_LIBRARY } from "@/data/items";
-
 import { JobSite } from "../types";
 
 interface AreaSummaryProps {
@@ -20,19 +18,13 @@ export default function AreaSummary({
   let heavyItems = 0;
 
   jobSite.items.forEach((estimateItem) => {
-    const libraryItem = ITEM_LIBRARY.find(
-      (item) => item.id === estimateItem.itemId
-    );
-
-    if (!libraryItem) return;
-
     totalVolume +=
-      libraryItem.volume *
+      estimateItem.estimatedVolume *
       estimateItem.quantity;
 
     if (
-      libraryItem.weightClass === "Heavy" ||
-      libraryItem.weightClass === "Extra Heavy"
+      estimateItem.weightClass === "Heavy" ||
+      estimateItem.weightClass === "Extra Heavy"
     ) {
       heavyItems += estimateItem.quantity;
     }

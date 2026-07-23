@@ -1,4 +1,5 @@
 import { prisma } from "../prisma";
+import { DEFAULT_ITEM_LIBRARY } from "../itemLibrary/defaultItems";
 
 export async function getDevelopmentCompany() {
   let company = await prisma.company.findFirst({
@@ -30,6 +31,9 @@ export async function getDevelopmentCompany() {
         defaultProfile: true,
         minimumCharge: company.defaultMinimumCharge,
       },
+    });
+    await prisma.itemLibrary.createMany({
+      data: DEFAULT_ITEM_LIBRARY.map((item) => ({ companyId: company!.id, ...item })),
     });
   }
 

@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import ItemCard from "@/components/estimate/ItemCard";
-import { ITEM_LIBRARY, type ItemDefinition } from "@/data/items";
+import { listEffectiveEstimateItemsAction } from "@/app/actions/itemLibrary/itemLibrary";
 
 import { createEstimateItemAction } from "@/app/actions/estimateItems/createEstimateItem";
 import { deleteEstimateItemAction } from "@/app/actions/estimateItems/deleteEstimateItem";
@@ -23,21 +23,32 @@ export default function ItemGrid({
 }: ItemGridProps) {
   const { estimate, setJobSites } = useEstimate();
   const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("");
+  const [library, setLibrary] = useState<Awaited<ReturnType<typeof listEffectiveEstimateItemsAction>>>([]);
+  const [libraryError, setLibraryError] = useState("");
   const [savingItemId, setSavingItemId] = useState<string | null>(null);
 
-  const filteredItems = useMemo(() => {
-    return ITEM_LIBRARY.filter((item) => {
-      const matchesArea = item.commonAreas.includes(
-        jobSite.name
-      );
+  useEffect(() => {
+    if (!estimate.pricingProfileId) return;
+    let current = true;
+    void listEffectiveEstimateItemsAction(estimate.pricingProfileId).then((items) => {
+      if (current) setLibrary(items);
+    }).catch(() => {
+      if (current) setLibraryError("Item Library could not be loaded.");
+    });
+    return () => { current = false; };
+  }, [estimate.pricingProfileId]);
 
+  const categories = useMemo(() => [...new Set(library.map((item) => item.category))], [library]);
+  const filteredItems = useMemo(() => {
+    return library.filter((item) => {
       const matchesSearch = item.name
         .toLowerCase()
         .includes(search.toLowerCase());
 
-      return matchesArea && matchesSearch;
+      return matchesSearch && (!category || item.category === category);
     });
-  }, [jobSite.name, search]);
+  }, [category, library, search]);
 
   function getEstimateItem(itemId: string) {
     return jobSite.items.find(
@@ -63,7 +74,7 @@ export default function ItemGrid({
   }
 
   async function updateItemQuantity(
-    item: ItemDefinition,
+    item: (typeof library)[number],
     change: number
   ) {
     const existing = getEstimateItem(item.id);
@@ -78,9 +89,7 @@ export default function ItemGrid({
       if (!existing) {
         const createdItem = await createEstimateItemAction({
           jobSiteId: jobSite.id,
-          itemId: item.id,
-          name: item.name,
-          category: item.category,
+          itemLibraryId: item.id,
           quantity: 1,
           sortOrder: jobSite.items.length,
         });
@@ -175,6 +184,11 @@ export default function ItemGrid({
         onChange={(event) => setSearch(event.target.value)}
         className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
       />
+      <select aria-label="Filter items by category" value={category} onChange={(event) => setCategory(event.target.value)} className="min-h-11 w-full rounded-xl border border-slate-300 px-4 outline-none focus:border-blue-500">
+        <option value="">All categories</option>
+        {categories.map((value) => <option key={value}>{value}</option>)}
+      </select>
+      {libraryError && <p role="alert" className="text-sm text-red-700">{libraryError}</p>}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {filteredItems.length === 0 ? (

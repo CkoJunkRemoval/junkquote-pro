@@ -48,6 +48,11 @@ function createDraft(overrides: Partial<PersistedDraftEstimate> = {}): Persisted
       crewNotes: "",
       internalNotes: "",
       items: [{
+        basePrice: 125, disposalFee: 25, laborHours: .75, weightClass: "Heavy",
+        estimatedVolume: 25, crewRequirement: 2, recyclable: true, donationEligible: false,
+        hazardous: false, refrigerant: true, electronics: false, mattress: false,
+        tire: false, appliance: true, constructionDebris: false, yardWaste: false,
+        requiresDisassembly: false, requiresSpecialEquipment: false, pricingManuallyEdited: true,
         id: "item-1",
         itemId: "refrigerator",
         name: "Refrigerator",

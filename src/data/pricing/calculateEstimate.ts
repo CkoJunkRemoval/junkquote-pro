@@ -1,4 +1,3 @@
-import { ITEM_LIBRARY } from "@/data/items";
 import { Estimate, JobSite } from "@/features/estimate/types";
 
 import { DEFAULT_PRICING } from "./defaultPricing";
@@ -35,18 +34,12 @@ export function calculateJobSiteSubtotal(jobSite: JobSite) {
   let disposalFees = 0;
 
   jobSite.items.forEach((estimateItem) => {
-    const item = ITEM_LIBRARY.find(
-      (libraryItem) => libraryItem.id === estimateItem.itemId
-    );
-
-    if (!item) return;
-
     basePrice +=
-      (estimateItem.priceOverride ?? item.basePrice) *
+      (estimateItem.priceOverride ?? estimateItem.basePrice) *
       estimateItem.quantity;
 
     disposalFees +=
-      item.disposalFee * estimateItem.quantity;
+      estimateItem.disposalFee * estimateItem.quantity;
   });
 
   return (
@@ -68,33 +61,30 @@ export function calculateEstimate(
   let basePrice = 0;
 
   let disposalFees = 0;
+  let configuredLaborHours = 0;
+  let configuredLaborUnits = 0;
 
   estimate.jobSites.forEach((site) => {
     site.items.forEach((estimateItem) => {
-      const item = ITEM_LIBRARY.find(
-        (libraryItem) =>
-          libraryItem.id === estimateItem.itemId
-      );
-
-      if (!item) return;
-
       itemCount += estimateItem.quantity;
 
       truckVolume +=
-        item.volume *
+        estimateItem.estimatedVolume *
         estimateItem.quantity;
 
       basePrice +=
-        (estimateItem.priceOverride ?? item.basePrice) *
+        (estimateItem.priceOverride ?? estimateItem.basePrice) *
         estimateItem.quantity;
 
       disposalFees +=
-        item.disposalFee *
+        estimateItem.disposalFee *
         estimateItem.quantity;
+      configuredLaborHours += estimateItem.laborHours * estimateItem.quantity;
+      configuredLaborUnits += estimateItem.laborHours * estimateItem.crewRequirement * estimateItem.quantity;
 
       if (
-        item.weightClass === "Heavy" ||
-        item.weightClass === "Extra Heavy"
+        estimateItem.weightClass === "Heavy" ||
+        estimateItem.weightClass === "Extra Heavy"
       ) {
         heavyItems += estimateItem.quantity;
       }
@@ -122,8 +112,10 @@ export function calculateEstimate(
       estimate.pricingDefaults.laborRate
     );
 
-  const labor =
-    laborCalculation.laborCost;
+  const labor = Math.max(
+    laborCalculation.laborCost,
+    configuredLaborUnits * estimate.pricingDefaults.laborRate,
+  );
 
   const calculatedTotal = Math.max(
     0,
@@ -153,13 +145,9 @@ export function calculateEstimate(
 
     minimumCharge,
 
-    recommendedCrew: Math.max(
-      laborCalculation.recommendedCrew,
-      estimate.pricingDefaults.defaultCrewSize,
-    ),
+    recommendedCrew: Math.max(laborCalculation.recommendedCrew, estimate.pricingDefaults.defaultCrewSize, ...estimate.jobSites.flatMap((site) => site.items.map((item) => item.crewRequirement))),
 
-    laborHours:
-      laborCalculation.laborHours,
+    laborHours: Math.max(laborCalculation.laborHours, configuredLaborHours),
 
     labor,
 

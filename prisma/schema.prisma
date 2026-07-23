@@ -349,6 +349,7 @@ model Company {
   createdRefunds          Refund[]
   pricingOutcomes         PricingOutcome[]
   pricingProfiles         PricingProfile[]
+  itemLibrary             ItemLibrary[]
   servicePlans            ServicePlan[]
   portalAccesses          CustomerPortalAccess[]
   auditEvents             AuditEvent[]
@@ -668,7 +669,8 @@ model PricingProfile {
   currency        String  @default("USD")
   displayOrder    Int     @default(0)
 
-  estimates Estimate[]
+  estimates     Estimate[]
+  itemOverrides PricingProfileItemOverride[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -677,6 +679,73 @@ model PricingProfile {
   @@index([companyId, active])
   @@index([companyId, defaultProfile])
   @@map("pricing_profiles")
+}
+
+model ItemLibrary {
+  id        String @id @default(uuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  category     String
+  name         String
+  description  String?
+  active       Boolean @default(true)
+  displayOrder Int     @default(0)
+
+  basePrice       Float @default(0)
+  disposalFee     Float @default(0)
+  laborHours      Float @default(0.25)
+  weightClass     String @default("Medium")
+  estimatedVolume Float @default(0)
+
+  recyclable        Boolean @default(false)
+  donationEligible  Boolean @default(false)
+  hazardous          Boolean @default(false)
+  refrigerant        Boolean @default(false)
+  electronics        Boolean @default(false)
+  mattress           Boolean @default(false)
+  tire               Boolean @default(false)
+  appliance          Boolean @default(false)
+  constructionDebris Boolean @default(false)
+  yardWaste          Boolean @default(false)
+
+  requiresTwoPeople        Boolean @default(false)
+  requiresDisassembly      Boolean @default(false)
+  requiresSpecialEquipment Boolean @default(false)
+  notes                    String?
+
+  profileOverrides PricingProfileItemOverride[]
+  estimateItems    EstimateItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([companyId, category])
+  @@index([companyId, active])
+  @@index([companyId, displayOrder])
+  @@map("item_library")
+}
+
+model PricingProfileItemOverride {
+  id               String @id @default(uuid())
+  pricingProfileId String
+  pricingProfile   PricingProfile @relation(fields: [pricingProfileId], references: [id], onDelete: Cascade)
+  itemLibraryId    String
+  itemLibrary      ItemLibrary @relation(fields: [itemLibraryId], references: [id], onDelete: Cascade)
+
+  basePrice       Float?
+  disposalFee     Float?
+  laborHours      Float?
+  crewRequirement Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([pricingProfileId, itemLibraryId])
+  @@index([pricingProfileId])
+  @@index([itemLibraryId])
+  @@map("pricing_profile_item_overrides")
 }
 
 model EstimateTimelineEvent {
@@ -1907,11 +1976,32 @@ model EstimateItem {
   jobSite   JobSite @relation(fields: [jobSiteId], references: [id], onDelete: Cascade)
 
   itemId        String
+  libraryItemId String?
+  libraryItem   ItemLibrary? @relation(fields: [libraryItemId], references: [id], onDelete: SetNull)
   name          String
   category      String
   quantity      Int    @default(1)
   notes         String @default("")
   priceOverride Float?
+  basePrice       Float   @default(0)
+  disposalFee     Float   @default(0)
+  laborHours      Float   @default(0)
+  weightClass     String  @default("Medium")
+  estimatedVolume Float  @default(0)
+  crewRequirement Int    @default(1)
+  recyclable        Boolean @default(false)
+  donationEligible  Boolean @default(false)
+  hazardous          Boolean @default(false)
+  refrigerant        Boolean @default(false)
+  electronics        Boolean @default(false)
+  mattress           Boolean @default(false)
+  tire               Boolean @default(false)
+  appliance          Boolean @default(false)
+  constructionDebris Boolean @default(false)
+  yardWaste          Boolean @default(false)
+  requiresDisassembly      Boolean @default(false)
+  requiresSpecialEquipment Boolean @default(false)
+  pricingManuallyEdited    Boolean @default(false)
   sortOrder     Int
 
   createdAt DateTime @default(now())
@@ -1919,6 +2009,7 @@ model EstimateItem {
 
   @@unique([jobSiteId, itemId])
   @@index([jobSiteId])
+  @@index([libraryItemId])
   @@map("estimate_items")
 }
 

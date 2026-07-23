@@ -59,7 +59,21 @@ export async function createEstimateRevision(companyId: string, estimateId: stri
           crewNotes: site.crewNotes,
           internalNotes: site.internalNotes,
           sortOrder: site.sortOrder,
-          items: { create: site.items.map((item) => ({ itemId: item.itemId, name: item.name, category: item.category, quantity: item.quantity, notes: item.notes, priceOverride: item.priceOverride, sortOrder: item.sortOrder })) },
+          items: { create: site.items.map((item) => ({
+            itemId: item.itemId, libraryItemId: item.libraryItemId, name: item.name,
+            category: item.category, quantity: item.quantity, notes: item.notes,
+            priceOverride: item.priceOverride, basePrice: item.basePrice,
+            disposalFee: item.disposalFee, laborHours: item.laborHours,
+            weightClass: item.weightClass, estimatedVolume: item.estimatedVolume,
+            crewRequirement: item.crewRequirement, recyclable: item.recyclable,
+            donationEligible: item.donationEligible, hazardous: item.hazardous,
+            refrigerant: item.refrigerant, electronics: item.electronics,
+            mattress: item.mattress, tire: item.tire, appliance: item.appliance,
+            constructionDebris: item.constructionDebris, yardWaste: item.yardWaste,
+            requiresDisassembly: item.requiresDisassembly,
+            requiresSpecialEquipment: item.requiresSpecialEquipment,
+            pricingManuallyEdited: item.pricingManuallyEdited, sortOrder: item.sortOrder,
+          })) },
         },
       });
       siteIds.set(site.id, copy.id);

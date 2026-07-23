@@ -143,6 +143,7 @@ export async function changeEstimatePricingProfile(
   actingUserId: string,
   estimateId: string,
   profileId: string,
+  replaceManualItemPricing = false,
 ) {
   return prisma.$transaction(async (tx) => {
     const [estimate, profile] = await Promise.all([
@@ -153,7 +154,27 @@ export async function changeEstimatePricingProfile(
     if (isEstimateLocked(estimate)) throw new Error("Approved estimates are read-only.");
     if (!profile) throw new Error("Select an active pricing profile.");
     if (estimate.pricingProfileId === profile.id) return profile;
+    const estimateItems = await tx.estimateItem.findMany({
+      where: { jobSite: { estimateId: estimate.id } },
+      include: { libraryItem: { include: { profileOverrides: { where: { pricingProfileId: profile.id } } } } },
+    });
+    if (!replaceManualItemPricing && estimateItems.some((item) => item.pricingManuallyEdited))
+      throw new Error("Manually edited item pricing requires confirmation before changing profiles.");
     await tx.estimate.update({ where: { id: estimate.id }, data: { pricingProfileId: profile.id } });
+    for (const item of estimateItems) {
+      if (!item.libraryItem) continue;
+      const override = item.libraryItem.profileOverrides[0];
+      await tx.estimateItem.update({
+        where: { id: item.id },
+        data: {
+          basePrice: override?.basePrice ?? item.libraryItem.basePrice,
+          disposalFee: override?.disposalFee ?? item.libraryItem.disposalFee,
+          laborHours: override?.laborHours ?? item.libraryItem.laborHours,
+          crewRequirement: override?.crewRequirement ?? (item.libraryItem.requiresTwoPeople ? 2 : 1),
+          ...(replaceManualItemPricing ? { priceOverride: null, pricingManuallyEdited: false } : {}),
+        },
+      });
+    }
     await tx.auditEvent.create({
       data: {
         companyId,

@@ -21,14 +21,15 @@ export default function PricingProfileSelect() {
   async function select(profileId: string) {
     const profile = profiles.find((item) => item.id === profileId);
     if (!profile || profile.id === estimate.pricingProfileId) return;
+    const hasManualPricing = estimate.pricingManuallyEdited || estimate.jobSites.some((site) => site.items.some((item) => item.pricingManuallyEdited));
     if (
-      estimate.pricingManuallyEdited &&
+      hasManualPricing &&
       !window.confirm("Changing profiles will replace manually edited pricing values. Continue?")
     ) return;
     setPending(true);
     setError("");
     try {
-      await changePricingProfile(profile);
+      await changePricingProfile(profile, hasManualPricing);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Pricing profile could not be changed.");
     } finally {

@@ -1,4 +1,3 @@
-import { ITEM_LIBRARY } from "@/data/items";
 import { Estimate } from "@/features/estimate/types";
 
 export interface BreakdownItem {
@@ -16,20 +15,13 @@ export function buildEstimateBreakdown(
 
   estimate.jobSites.forEach((site) => {
     site.items.forEach((estimateItem) => {
-      const item = ITEM_LIBRARY.find(
-        (libraryItem) =>
-          libraryItem.id === estimateItem.itemId
-      );
-
-      if (!item) return;
-
       const unitPrice =
-        (estimateItem.priceOverride ?? item.basePrice) +
-        item.disposalFee;
+        (estimateItem.priceOverride ?? estimateItem.basePrice) +
+        estimateItem.disposalFee;
 
       rows.push({
         area: site.name,
-        itemName: item.name,
+        itemName: estimateItem.name,
         quantity: estimateItem.quantity,
         unitPrice,
         totalPrice:

@@ -57,6 +57,11 @@ function createEstimate(item: EstimateItem): Estimate {
 
 function box(priceOverride?: number): EstimateItem {
   return {
+    basePrice: 8, disposalFee: 0, laborHours: .1, weightClass: "Light",
+    estimatedVolume: 2, crewRequirement: 1, recyclable: true, donationEligible: false,
+    hazardous: false, refrigerant: false, electronics: false, mattress: false,
+    tire: false, appliance: false, constructionDebris: false, yardWaste: false,
+    requiresDisassembly: false, requiresSpecialEquipment: false, pricingManuallyEdited: priceOverride !== undefined,
     id: "box-1",
     itemId: "box",
     name: "Boxes",
@@ -86,6 +91,11 @@ describe("estimate item price overrides", () => {
 
   it("preserves a zero override when an item is reloaded", () => {
     const reloadedItem = toEstimateItem({
+      basePrice: 8, disposalFee: 0, laborHours: .1, weightClass: "Light",
+      estimatedVolume: 2, crewRequirement: 1, recyclable: true, donationEligible: false,
+      hazardous: false, refrigerant: false, electronics: false, mattress: false,
+      tire: false, appliance: false, constructionDebris: false, yardWaste: false,
+      requiresDisassembly: false, requiresSpecialEquipment: false, pricingManuallyEdited: true,
       id: "box-1",
       itemId: "box",
       name: "Boxes",

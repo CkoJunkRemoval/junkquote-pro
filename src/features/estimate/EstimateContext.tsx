@@ -130,7 +130,7 @@ interface EstimateContextType {
     taxEnabled: boolean;
     taxRate: number;
     currency: string;
-  }) => Promise<void>;
+  }, replaceManualItemPricing?: boolean) => Promise<void>;
 
   setStatus: (
     status: EstimateStatus
@@ -357,40 +357,10 @@ export function EstimateProvider({
     }));
   }
 
-  async function changePricingProfile(profile: Parameters<EstimateContextType["changePricingProfile"]>[0]) {
+  async function changePricingProfile(profile: Parameters<EstimateContextType["changePricingProfile"]>[0], replaceManualItemPricing = false) {
     if (!estimateId) throw new Error("Save the estimate before changing its pricing profile.");
-    await changeEstimatePricingProfileAction(estimateId, profile.id);
-    setEstimate((previous) => {
-      const next = {
-        ...previous,
-        pricingProfileId: profile.id,
-        pricingProfileName: profile.name,
-        pricingDefaults: {
-          minimumCharge: profile.minimumCharge,
-          tripFee: profile.tripFee,
-          laborRate: profile.laborRate,
-          dumpFee: profile.dumpFee,
-          mileageRate: profile.mileageRate,
-          fuelSurcharge: profile.fuelSurcharge,
-          defaultCrewSize: profile.defaultCrewSize,
-          taxEnabled: profile.taxEnabled,
-          taxRate: profile.taxRate,
-          currency: profile.currency,
-        },
-        pricingManuallyEdited: false,
-      };
-      const totals = calculateEstimate(next);
-      return {
-        ...next,
-        pricing: {
-          subtotal: totals.subtotal,
-          labor: totals.labor,
-          disposal: totals.disposalFees,
-          discount: next.pricing.discount,
-          total: totals.total,
-        },
-      };
-    });
+    await changeEstimatePricingProfileAction(estimateId, profile.id, replaceManualItemPricing);
+    await hydrateEstimate(estimateId);
   }
 
   async function setStatus(

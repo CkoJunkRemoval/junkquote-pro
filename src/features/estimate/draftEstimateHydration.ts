@@ -2,6 +2,7 @@ import { calculateEstimate, calculateJobSiteSubtotal } from "@/data/pricing/calc
 
 import { EstimateStatus } from "./status";
 import type { Estimate, JobSite } from "./types";
+import { toEstimateItem, type PersistedEstimateItem } from "./estimateItemMapper";
 
 export interface PersistedDraftEstimate {
   id: string;
@@ -48,29 +49,13 @@ export interface PersistedDraftEstimate {
     customerNotes: string;
     crewNotes: string;
     internalNotes: string;
-    items: Array<{
-      id: string;
-      itemId: string;
-      name: string;
-      category: string;
-      quantity: number;
-      notes: string;
-      priceOverride: number | null;
-    }>;
+    items: PersistedEstimateItem[];
   }>;
 }
 
 export function hydrateDraftEstimate(savedEstimate: PersistedDraftEstimate) {
   const jobSites: JobSite[] = savedEstimate.jobSites.map((jobSite) => {
-    const items = jobSite.items.map((item) => ({
-      id: item.id,
-      itemId: item.itemId,
-      name: item.name,
-      category: item.category,
-      quantity: item.quantity,
-      notes: item.notes,
-      priceOverride: item.priceOverride ?? undefined,
-    }));
+    const items = jobSite.items.map(toEstimateItem);
     const restoredJobSite = {
       id: jobSite.id,
       name: jobSite.name,

@@ -62,6 +62,7 @@ describe("self-service signup", () => {
     const tx = {
       company: { create: vi.fn().mockResolvedValue({ id: "company-1", defaultMinimumCharge: 0 }) },
       pricingProfile: { create: vi.fn().mockResolvedValue({ id: "profile-1" }) },
+      itemLibrary: { createMany: vi.fn().mockResolvedValue({ count: 10 }) },
       user: { create: vi.fn().mockResolvedValue({ id: "user-1" }) },
       companyMembership: {
         create: vi.fn().mockResolvedValue({ id: "membership-1" }),
@@ -106,6 +107,7 @@ describe("self-service signup", () => {
           ),
         },
         pricingProfile: { create: vi.fn(async () => ({ id: "profile-1" })) },
+        itemLibrary: { createMany: vi.fn(async () => ({ count: 10 })) },
         user: {
           create: vi.fn(async () => (pending.push("user"), { id: "user-1" })),
         },

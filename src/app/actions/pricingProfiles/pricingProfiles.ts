@@ -40,7 +40,7 @@ export async function setPricingProfileArchivedAction(profileId: string, archive
 export async function deletePricingProfileAction(profileId: string) {
   const context = await manager(); const result = await deletePricingProfile(context.companyId, context.userId, profileId); refresh(); return result;
 }
-export async function changeEstimatePricingProfileAction(estimateId: string, profileId: string) {
+export async function changeEstimatePricingProfileAction(estimateId: string, profileId: string, replaceManualItemPricing = false) {
   const context = await requireCompanyRole("Owner", "Admin", "Manager", "Office");
-  return changeEstimatePricingProfile(context.companyId, context.user.id, estimateId, profileId);
+  return changeEstimatePricingProfile(context.companyId, context.user.id, estimateId, profileId, replaceManualItemPricing);
 }

@@ -33,6 +33,27 @@ export interface EstimateItem {
   notes: string;
 
   priceOverride?: number;
+
+  libraryItemId?: string;
+  basePrice: number;
+  disposalFee: number;
+  laborHours: number;
+  weightClass: string;
+  estimatedVolume: number;
+  crewRequirement: number;
+  recyclable: boolean;
+  donationEligible: boolean;
+  hazardous: boolean;
+  refrigerant: boolean;
+  electronics: boolean;
+  mattress: boolean;
+  tire: boolean;
+  appliance: boolean;
+  constructionDebris: boolean;
+  yardWaste: boolean;
+  requiresDisassembly: boolean;
+  requiresSpecialEquipment: boolean;
+  pricingManuallyEdited: boolean;
 }
 
 export interface JobSite {

@@ -17,6 +17,6 @@ export async function updateEstimateItem(companyId: string, input: UpdateEstimat
   if (isEstimateLocked(item.jobSite.estimate)) throw new Error(ESTIMATE_LOCKED_MESSAGE);
   return prisma.$transaction(async tx=>{const updated=await tx.estimateItem.update({
     where: { id },
-    data,
+    data: { ...data, ...(input.priceOverride !== undefined ? { pricingManuallyEdited: true } : {}) },
   });await recordEstimateEventInTransaction(tx,{companyId,estimateId:item.jobSite.estimateId,eventType:"Items Changed",category:"Items",actor:{type:"Employee",displayName:"Team member"},summary:`Team member updated ${item.name}`,visibility:"Internal",metadata:{action:"updated",itemId:id,fields:Object.keys(data)}});return updated});
 }
