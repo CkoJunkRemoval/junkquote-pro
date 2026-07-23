@@ -546,16 +546,26 @@ model Property {
   nickname     String?
   propertyType String?
 
-  address String
-  city    String
-  state   String
-  zip     String
+  address           String
+  addressLine2      String?
+  city              String
+  state             String
+  zip               String
+  country           String   @default("US")
+  normalizedAddress String?
+  latitude          Float?
+  longitude         Float?
 
   gateCode      String?
   accessNotes   String?
   parkingNotes  String?
+  hazardNotes   String?
+  notes         String?
+  serviceArea   String?
   dangerousPets String?
   hoaNotes      String?
+  active         Boolean  @default(true)
+  archivedAt     DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -566,6 +576,9 @@ model Property {
   servicePlans ServicePlan[]
 
   @@index([customerId])
+  @@index([customerId, active])
+  @@index([normalizedAddress])
+  @@index([city])
   @@map("properties")
 }
 
