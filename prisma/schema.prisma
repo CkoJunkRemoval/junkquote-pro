@@ -417,6 +417,10 @@ model CompanySettings {
   pdfBrandingEnabled              Boolean @default(true)
   portalBrandingEnabled           Boolean @default(true)
   itemLibraryDefaults             Json?
+  pricingRegion                   String?
+  pricingMarket                   String?
+  standardLibraryVersion          String?
+  standardLibraryInitializedAt    DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -715,6 +719,7 @@ model ItemLibrary {
   requiresTwoPeople        Boolean @default(false)
   requiresDisassembly      Boolean @default(false)
   requiresSpecialEquipment Boolean @default(false)
+  estimateRequired         Boolean @default(false)
   notes                    String?
 
   profileOverrides PricingProfileItemOverride[]

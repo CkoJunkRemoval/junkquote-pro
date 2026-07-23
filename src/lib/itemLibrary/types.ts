@@ -1,5 +1,5 @@
 export const STANDARD_ITEM_CATEGORIES = [
-  "Appliances", "Furniture", "Electronics", "Construction", "Yard Waste",
+  "Appliances", "Furniture", "Bedroom", "Electronics", "Construction", "Yard Waste",
   "Household", "Office", "Garage", "Outdoor", "Hot Tub", "Sheds",
   "Concrete", "Dirt", "Roofing", "Miscellaneous",
 ] as const;
@@ -31,6 +31,7 @@ export type ItemLibraryInput = {
   requiresTwoPeople: boolean;
   requiresDisassembly: boolean;
   requiresSpecialEquipment: boolean;
+  estimateRequired?: boolean;
   notes?: string | null;
 };
 

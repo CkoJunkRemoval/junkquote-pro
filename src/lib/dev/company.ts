@@ -1,5 +1,5 @@
 import { prisma } from "../prisma";
-import { DEFAULT_ITEM_LIBRARY } from "../itemLibrary/defaultItems";
+import { DEFAULT_ITEM_LIBRARY, standardItemId } from "../itemLibrary/defaultItems";
 
 export async function getDevelopmentCompany() {
   let company = await prisma.company.findFirst({
@@ -33,7 +33,12 @@ export async function getDevelopmentCompany() {
       },
     });
     await prisma.itemLibrary.createMany({
-      data: DEFAULT_ITEM_LIBRARY.map((item) => ({ companyId: company!.id, ...item })),
+      data: DEFAULT_ITEM_LIBRARY.map((item) => ({
+        companyId: company!.id,
+        id: standardItemId(company!.id, item),
+        ...item,
+        estimateRequired: item.estimateRequired ?? false,
+      })),
     });
   }
 

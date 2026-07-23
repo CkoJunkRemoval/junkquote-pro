@@ -5,7 +5,7 @@ export const ITEM_CSV_HEADERS = [
   "weightClass", "estimatedVolume", "recyclable", "donationEligible", "hazardous",
   "refrigerant", "electronics", "mattress", "tire", "appliance",
   "constructionDebris", "yardWaste", "requiresTwoPeople", "requiresDisassembly",
-  "requiresSpecialEquipment", "notes", "displayOrder",
+  "requiresSpecialEquipment", "estimateRequired", "notes", "displayOrder",
 ] as const;
 
 const quote = (value: unknown) => `"${String(value ?? "").replaceAll('"', '""')}"`;
@@ -58,7 +58,8 @@ export function previewItemLibraryCsv(csv: string, existing: Array<{ category: s
         mattress: boolean(record.mattress), tire: boolean(record.tire), appliance: boolean(record.appliance),
         constructionDebris: boolean(record.constructionDebris), yardWaste: boolean(record.yardWaste),
         requiresTwoPeople: boolean(record.requiresTwoPeople), requiresDisassembly: boolean(record.requiresDisassembly),
-        requiresSpecialEquipment: boolean(record.requiresSpecialEquipment), notes: record.notes || null,
+        requiresSpecialEquipment: boolean(record.requiresSpecialEquipment), estimateRequired: boolean(record.estimateRequired),
+        notes: record.notes || null,
       });
     }
   });

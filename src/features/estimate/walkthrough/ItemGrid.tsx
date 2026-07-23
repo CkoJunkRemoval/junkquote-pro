@@ -202,6 +202,11 @@ export default function ItemGrid({
 
             return (
               <div key={item.id} className="space-y-3">
+                {item.estimateRequired && (
+                  <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900" role="note">
+                    Estimate Required
+                  </p>
+                )}
                 <ItemCard
                   title={item.name}
                   category={item.category}

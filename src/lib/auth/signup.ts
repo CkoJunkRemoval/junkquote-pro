@@ -3,7 +3,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors/appError";
 import { billingConfig } from "@/lib/billing/config";
-import { DEFAULT_ITEM_LIBRARY } from "@/lib/itemLibrary/defaultItems";
+import { DEFAULT_ITEM_LIBRARY, standardItemId } from "@/lib/itemLibrary/defaultItems";
 
 export const signupPasswordMinimum = 12;
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -143,7 +143,12 @@ export async function createCompanyOwner(input: SignupInput) {
       });
       stage = "item-library-create";
       await tx.itemLibrary.createMany({
-        data: DEFAULT_ITEM_LIBRARY.map((item) => ({ companyId: company.id, ...item })),
+        data: DEFAULT_ITEM_LIBRARY.map((item) => ({
+          companyId: company.id,
+          id: standardItemId(company.id, item),
+          ...item,
+          estimateRequired: item.estimateRequired ?? false,
+        })),
       });
       stage = "user-create";
       const user = await tx.user.create({

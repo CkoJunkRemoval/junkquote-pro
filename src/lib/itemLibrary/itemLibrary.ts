@@ -20,7 +20,7 @@ export function validateItemLibraryInput(input: ItemLibraryInput) {
 }
 function data(input: ItemLibraryInput) {
   validateItemLibraryInput(input);
-  return { ...input, name: input.name.trim(), category: input.category.trim(), description: text(input.description), notes: text(input.notes), active: input.active ?? true };
+  return { ...input, name: input.name.trim(), category: input.category.trim(), description: text(input.description), notes: text(input.notes), active: input.active ?? true, estimateRequired: input.estimateRequired ?? false };
 }
 async function unique(companyId: string, category: string, name: string, excludeId?: string) {
   const found = await prisma.itemLibrary.findFirst({ where: { companyId, active: true, category: { equals: category.trim(), mode: "insensitive" }, name: { equals: name.trim(), mode: "insensitive" }, ...(excludeId ? { id: { not: excludeId } } : {}) }, select: { id: true } });
@@ -90,7 +90,8 @@ export async function duplicateItemLibraryItem(companyId: string, actingUserId: 
     constructionDebris: source.constructionDebris, yardWaste: source.yardWaste,
     requiresTwoPeople: source.requiresTwoPeople,
     requiresDisassembly: source.requiresDisassembly,
-    requiresSpecialEquipment: source.requiresSpecialEquipment, notes: source.notes,
+    requiresSpecialEquipment: source.requiresSpecialEquipment,
+    estimateRequired: source.estimateRequired, notes: source.notes,
   });
 }
 export async function setItemLibraryActive(companyId: string, actingUserId: string, ids: string[], active: boolean) {
