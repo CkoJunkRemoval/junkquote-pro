@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { validateProductionEnvironment } from "./environment";
+import { inspectProductionEnvironment } from "./environment";
 import { selectObjectStorage } from "@/lib/storage/objectStorage";
 import { coordinationStore } from "@/lib/distributed/store";
 const bounded = <T>(promise: Promise<T>, ms = 3000) =>
@@ -10,18 +10,15 @@ const bounded = <T>(promise: Promise<T>, ms = 3000) =>
     ),
   ]);
 export async function checkReadiness() {
-  const checks: Record<string, "ok" | "failed"> = {
+  const checks: Record<string, "ok" | "degraded" | "failed"> = {
     configuration: "ok",
     database: "ok",
     schema: "ok",
     storage: "ok",
     redis: "ok",
   };
-  try {
-    validateProductionEnvironment();
-  } catch {
-    checks.configuration = "failed";
-  }
+  const environment = inspectProductionEnvironment();
+  if (environment.errors.length) checks.configuration = "failed";
   await Promise.all([
     bounded(prisma.$queryRaw`SELECT 1`).catch(() => {
       checks.database = "failed";
@@ -38,7 +35,26 @@ export async function checkReadiness() {
     ).catch(() => {
       checks.storage = "failed";
     }),
-    bounded(coordinationStore().health().then((health) => { if (!health.ok || (process.env.NODE_ENV === "production" && health.mode !== "redis")) throw new Error("Redis unavailable."); })).catch(() => { checks.redis = "failed"; }),
+    bounded(
+      coordinationStore()
+        .health()
+        .then((health) => {
+          if (!health.ok) throw new Error("Redis unavailable.");
+          if (health.mode !== "redis") checks.redis = "degraded";
+        }),
+    ).catch(() => {
+      checks.redis = "failed";
+    }),
   ]);
-  return { ready: Object.values(checks).every((x) => x === "ok"), checks };
+  return {
+    ready: [
+      checks.configuration,
+      checks.database,
+      checks.schema,
+      checks.storage,
+    ].every((x) => x === "ok"),
+    checks,
+    warnings: environment.warnings,
+    optionalFeatures: environment.features,
+  };
 }

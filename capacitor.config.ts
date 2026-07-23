@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
 const hostedUrl =
-  process.env.CAPACITOR_SERVER_URL ?? "https://app.junkquote.pro";
+  process.env.CAPACITOR_SERVER_URL ?? "https://junkquoteprohq.com";
 const hostedHost = new URL(hostedUrl).hostname;
 
 if (!hostedUrl.startsWith("https://")) {

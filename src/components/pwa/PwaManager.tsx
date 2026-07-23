@@ -66,8 +66,8 @@ export function PwaManager() {
           "Notification" in window ? Notification.permission : undefined,
         ),
       );
+      void probe();
     }, 0);
-    void probe();
     const timer = window.setInterval(() => void probe(), 60_000);
     window.addEventListener("online", probe);
     window.addEventListener("offline", probe);

@@ -1,5 +1,5 @@
 export const NATIVE_APP_SCHEME = "junkquote";
-export const NATIVE_APP_HOST = "app.junkquote.pro";
+export const NATIVE_APP_HOST = "junkquoteprohq.com";
 
 export function nativeRouteFromUrl(value: string): string | null {
   try {

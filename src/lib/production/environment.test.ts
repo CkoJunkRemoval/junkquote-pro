@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { validateProductionEnvironment } from "./environment";
+import {
+  inspectProductionEnvironment,
+  validateProductionEnvironment,
+} from "./environment";
 const valid = {
   NODE_ENV: "production",
   DATABASE_URL: "postgresql://user:pass@db.example.com/junkquote",
@@ -48,4 +51,41 @@ describe("production environment", () => {
         AUTH_URL: "http://app.example.com",
       }),
     ).toThrow("HTTPS"));
+  it("starts with warnings when optional services and a CSP override are absent", () => {
+    const optionalNames = [
+      "STRIPE_SECRET_KEY",
+      "STRIPE_WEBHOOK_SECRET",
+      "STRIPE_PRICE_STARTER",
+      "STRIPE_PRICE_PROFESSIONAL",
+      "STRIPE_PRICE_BUSINESS",
+      "KV_REST_API_URL",
+      "KV_REST_API_TOKEN",
+      "CONTENT_SECURITY_POLICY",
+    ];
+    const coreOnly = Object.fromEntries(
+      Object.entries(valid).filter(([name]) => !optionalNames.includes(name)),
+    );
+    const status = inspectProductionEnvironment(coreOnly);
+    expect(status.errors).toEqual([]);
+    expect(status.features).toEqual({
+      billing: false,
+      redis: false,
+      pushNotifications: false,
+    });
+    expect(status.contentSecurityPolicySource).toBe("safe-default");
+    expect(status.warnings).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("Stripe billing is disabled"),
+        expect.stringContaining("Redis coordination is disabled"),
+      ]),
+    );
+  });
+  it("keeps platform administration configuration required", () => {
+    const withoutAdmin = Object.fromEntries(
+      Object.entries(valid).filter(([name]) => name !== "PLATFORM_ADMIN_EMAIL"),
+    );
+    expect(inspectProductionEnvironment(withoutAdmin).errors).toContain(
+      "PLATFORM_ADMIN_EMAIL is required in production.",
+    );
+  });
 });

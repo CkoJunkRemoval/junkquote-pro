@@ -6,7 +6,8 @@ describe("Capacitor configuration", () => {
     expect(config.appId).toBe("com.junkquote.pro");
     expect(config.appName).toBe("JunkQuote Pro");
     expect(config.webDir).toBe("native-shell");
-    expect(config.server?.url).toMatch(/^https:\/\//);
+    expect(config.server?.url).toBe("https://junkquoteprohq.com");
+    expect(config.server?.allowNavigation).toEqual(["junkquoteprohq.com"]);
     expect(config.server?.cleartext).toBe(false);
   });
 

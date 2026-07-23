@@ -12,7 +12,7 @@
 - Writable directory: `.data` only for the single-worker lock and administrative reports. Production assets do not use it.
 - Backup ownership must be assigned to a named operator before opening the gate.
 
-Required variables are documented in `.env.example`. Production additionally requires `EMAIL_PROVIDER=resend`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`, `PRIVATE_ASSET_STORAGE_DRIVER=supabase`, `SUPABASE_STORAGE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET`, `BACKGROUND_WORKERS_ENABLED=true`, HTTPS application/auth URLs, database credentials, and a strong `AUTH_SECRET`.
+Required variables are documented in `.env.example`. Production core requires `EMAIL_PROVIDER=resend`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`, private storage provider credentials, HTTPS application/auth URLs, database credentials, a strong `AUTH_SECRET`, and `PLATFORM_ADMIN_EMAIL`. Stripe, Redis, push notifications, the worker toggle, and a custom CSP override are optional; disabled integrations are reported as warnings. The controlled beta profile should still enable workers and use Redis before accepting multi-instance traffic.
 
 ## Worker model
 

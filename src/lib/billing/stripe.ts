@@ -1,3 +1,29 @@
-import Stripe from"stripe";
-let client:Stripe|undefined;export function getStripe(){const key=process.env.STRIPE_SECRET_KEY;if(!key)throw new Error("STRIPE_SECRET_KEY is not configured.");return client??=new Stripe(key,{maxNetworkRetries:2});}
-export function requireStripeWebhookSecret(){const value=process.env.STRIPE_WEBHOOK_SECRET;if(!value)throw new Error("STRIPE_WEBHOOK_SECRET is not configured.");return value;}
+import Stripe from "stripe";
+export class BillingUnavailableError extends Error {
+  constructor() {
+    super(
+      "Billing is unavailable because Stripe is not configured for this deployment.",
+    );
+    this.name = "BillingUnavailableError";
+  }
+}
+export function isBillingAvailable(env: NodeJS.ProcessEnv = process.env) {
+  return Boolean(
+    env.STRIPE_SECRET_KEY?.trim() &&
+      env.STRIPE_WEBHOOK_SECRET?.trim() &&
+      env.STRIPE_PRICE_STARTER?.trim() &&
+      env.STRIPE_PRICE_PROFESSIONAL?.trim() &&
+      env.STRIPE_PRICE_BUSINESS?.trim(),
+  );
+}
+let client: Stripe | undefined;
+export function getStripe() {
+  if (!isBillingAvailable()) throw new BillingUnavailableError();
+  return (client ??= new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    maxNetworkRetries: 2,
+  }));
+}
+export function requireStripeWebhookSecret() {
+  if (!isBillingAvailable()) throw new BillingUnavailableError();
+  return process.env.STRIPE_WEBHOOK_SECRET!;
+}

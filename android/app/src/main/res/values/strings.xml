@@ -3,5 +3,5 @@
     <string name="app_name">JunkQuote Pro</string>
     <string name="title_activity_main">JunkQuote Pro</string>
     <string name="package_name">com.junkquote.pro</string>
-    <string name="custom_url_scheme">com.junkquote.pro</string>
+    <string name="custom_url_scheme">junkquote</string>
 </resources>

@@ -20,5 +20,11 @@ describe("web manifest", () => {
       "Today's Jobs",
       "Customers",
     ]);
+    expect([value.start_url, value.scope]).toEqual(["/", "/"]);
+    expect(
+      value.shortcuts?.every((shortcut) => shortcut.url.startsWith("/")),
+    ).toBe(true);
+    expect(JSON.stringify(value)).not.toContain("junkquote.pro");
+    expect(JSON.stringify(value)).not.toContain("junkquoteprohq.com");
   });
 });
