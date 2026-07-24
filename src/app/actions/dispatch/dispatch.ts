@@ -11,6 +11,8 @@ import { recordAuditEvent } from "@/lib/audit/audit";
 import { currentRequestId } from "@/lib/audit/requestAudit";
 import { checkRateLimit, ratePolicies } from "@/lib/security/rateLimit";
 import { AppError } from "@/lib/errors/appError";
+import { createEmployeeAvailability, inspectScheduleConflicts, scheduleJob, updateSchedulingStatus } from "@/lib/dispatch/scheduling";
+import type { SchedulingStatus } from "@/generated/prisma/client";
 export async function loadDispatchAction(date: Date) {
   const context = await requireCompanyRole(
     "Owner",
@@ -27,6 +29,31 @@ export async function loadDispatchAction(date: Date) {
 }
 async function operational() {
   return requireCompanyRole("Owner", "Admin", "Manager", "Office");
+}
+async function scheduler() {
+  return requireCompanyRole("Owner", "Admin", "Office");
+}
+export async function scheduleJobAction(jobId: string, input: Parameters<typeof scheduleJob>[4]) {
+  const context = await scheduler();
+  return scheduleJob(context.companyId, context.user.id, context.role, jobId, input);
+}
+export async function inspectScheduleConflictsAction(jobId: string, input: Parameters<typeof scheduleJob>[4]) {
+  const context = await scheduler();
+  return inspectScheduleConflicts(context.companyId, jobId, input);
+}
+export async function updateSchedulingStatusAction(jobId: string, status: SchedulingStatus, reason?: string) {
+  const context = await requireCompanyRole("Owner", "Admin", "Office", "Crew");
+  if (context.role === "Crew") {
+    if (!["EnRoute", "Arrived", "InProgress", "Completed", "Delayed"].includes(status)) throw new Error("Crew cannot make this scheduling change.");
+    const employee = await (await import("@/lib/prisma")).prisma.employee.findFirst({ where: { companyId: context.companyId, userId: context.user.id }, select: { id: true } });
+    const assigned = employee && await (await import("@/lib/prisma")).prisma.jobAssignment.findFirst({ where: { companyId: context.companyId, jobId, employeeId: employee.id, status: { not: "Removed" } }, select: { id: true } });
+    if (!assigned) throw new Error("Crew may update only assigned jobs.");
+  }
+  return updateSchedulingStatus(context.companyId, context.user.id, context.role, jobId, status, reason);
+}
+export async function createEmployeeAvailabilityAction(input: Parameters<typeof createEmployeeAvailability>[2]) {
+  const context = await scheduler();
+  return createEmployeeAvailability(context.companyId, context.user.id, input);
 }
 export async function updateDispatchJobAction(
   jobId: string,

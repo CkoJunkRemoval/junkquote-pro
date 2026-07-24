@@ -1,466 +1,74 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import {
-  assignDispatchCrewAction,
-  assignDispatchEmployeeAction,
-  sendDispatchMessageAction,
-  updateDispatchJobAction,
-} from "@/app/actions/dispatch/dispatch";
+import { AlertTriangle, ChevronLeft, ChevronRight, Clock3, MapPin, Truck, Users } from "lucide-react";
+import { inspectScheduleConflictsAction, scheduleJobAction, updateSchedulingStatusAction } from "@/app/actions/dispatch/dispatch";
 import type { getDispatchData } from "@/lib/dispatch/dispatch";
-import { filterDispatchJobs } from "@/lib/dispatch/calculations";
+import type { JobAssignmentRole, SchedulingStatus } from "@/generated/prisma/client";
+
 type Data = Awaited<ReturnType<typeof getDispatchData>>;
-type Job = Data["jobs"][number];
-const columns = [
-  "Unscheduled",
-  "Scheduled",
-  "InProgress",
-  "Completed",
-  "Cancelled",
-] as const;
-export default function DispatchCenter({ initial }: { initial: Data }) {
-  const [jobs, setJobs] = useState(initial.jobs);
-  const [filters, setFilters] = useState({
-    crewId: "",
-    employeeId: "",
-    estimatorId: "",
-    status: "",
-    priority: "",
-    recurring: "",
-    customer: "",
-  });
-  useEffect(() => {
-    const saved = localStorage.getItem("dispatch:filters");
-    if (saved)
-      try {
-        queueMicrotask(() => setFilters(JSON.parse(saved)));
-      } catch {}
-  }, []);
-  useEffect(() => {
-    localStorage.setItem("dispatch:filters", JSON.stringify(filters));
-  }, [filters]);
-  const visible = useMemo(
-    () => filterDispatchJobs(jobs, filters),
-    [jobs, filters],
-  );
-  async function move(job: Job, status: (typeof columns)[number]) {
-    if (initial.readOnly || job.status === status) return;
-    try {
-      const updated = await updateDispatchJobAction(job.id, {
-        status,
-        scheduledStart: job.scheduledStart,
-        scheduledEnd: job.scheduledEnd,
-      });
-      setJobs((current) =>
-        current.map((row) =>
-          row.id === job.id ? { ...row, ...updated } : row,
-        ),
-      );
-    } catch (error) {
-      alert(error instanceof Error ? error.message : "Unable to move job.");
-    }
-  }
-  async function progress(job: Job, value: "EnRoute" | "Arrived") {
-    const updated = await updateDispatchJobAction(job.id, {
-      dispatchProgress: value,
-    });
-    setJobs((current) =>
-      current.map((row) => (row.id === job.id ? { ...row, ...updated } : row)),
-    );
-  }
-  async function schedule(job: Job) {
-    const start = prompt(
-      "Start (YYYY-MM-DDTHH:mm)",
-      job.scheduledStart
-        ? new Date(job.scheduledStart).toISOString().slice(0, 16)
-        : "",
-    );
-    if (!start) return;
-    const end = prompt(
-      "End (YYYY-MM-DDTHH:mm)",
-      job.scheduledEnd
-        ? new Date(job.scheduledEnd).toISOString().slice(0, 16)
-        : "",
-    );
-    if (!end) return;
-    const updated = await updateDispatchJobAction(job.id, {
-      scheduledStart: new Date(start),
-      scheduledEnd: new Date(end),
-    });
-    setJobs((current) =>
-      current.map((row) => (row.id === job.id ? { ...row, ...updated } : row)),
-    );
-  }
-  return (
-    <main className="mx-auto max-w-[1600px] p-4 sm:p-6">
-      <div>
-        <h1 className="text-3xl font-bold">Dispatch & Operations Center</h1>
-        <p className="text-slate-600">
-          Today’s workload, assignments, alerts, and financial status.
-        </p>
-      </div>
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
-        {Object.entries(initial.metrics).map(([key, value]) => (
-          <div key={key} className="rounded-xl border bg-white p-3">
-            <p className="text-xs font-semibold uppercase text-slate-500">
-              {label(key)}
-            </p>
-            <p className="text-xl font-bold">
-              {key.toLowerCase().includes("revenue") ||
-              key.toLowerCase().includes("balance")
-                ? money(Number(value))
-                : Math.round(Number(value))}
-            </p>
-          </div>
-        ))}
-      </div>
-      <section className="mt-5 rounded-xl border bg-white p-4">
-        <div className="grid gap-2 md:grid-cols-4 lg:grid-cols-9">
-          <Select
-            value={filters.crewId}
-            onChange={(v) => setFilters((f) => ({ ...f, crewId: v }))}
-            label="Crew"
-            options={initial.crews.map((x) => ({ value: x.id, label: x.name }))}
-          />
-          <Select
-            value={filters.employeeId}
-            onChange={(v) => setFilters((f) => ({ ...f, employeeId: v }))}
-            label="Employee"
-            options={initial.employees.map((x) => ({
-              value: x.id,
-              label: `${x.firstName} ${x.lastName}`,
-            }))}
-          />
-          <Select
-            value={filters.status}
-            onChange={(v) => setFilters((f) => ({ ...f, status: v }))}
-            label="Status"
-            options={columns.map((x) => ({ value: x, label: x }))}
-          />
-          <Select
-            value={filters.estimatorId}
-            onChange={(v) => setFilters((f) => ({ ...f, estimatorId: v }))}
-            label="Estimator"
-            options={jobs
-              .flatMap((job) =>
-                job.estimator
-                  ? [
-                      {
-                        value: job.estimator.id,
-                        label:
-                          [job.estimator.firstName, job.estimator.lastName]
-                            .filter(Boolean)
-                            .join(" ") || job.estimator.email,
-                      },
-                    ]
-                  : [],
-              )
-              .filter(
-                (option, index, all) =>
-                  all.findIndex((entry) => entry.value === option.value) ===
-                  index,
-              )}
-          />
-          <Select
-            value={filters.priority}
-            onChange={(v) => setFilters((f) => ({ ...f, priority: v }))}
-            label="Priority"
-            options={["Low", "Normal", "High", "Urgent"].map((x) => ({
-              value: x,
-              label: x,
-            }))}
-          />
-          <Select
-            value={filters.recurring}
-            onChange={(v) => setFilters((f) => ({ ...f, recurring: v }))}
-            label="Recurring"
-            options={[
-              { value: "yes", label: "Recurring" },
-              { value: "no", label: "One-time" },
-            ]}
-          />
-          <label className="grid gap-1 text-xs font-semibold">
-            Customer
-            <input
-              className="rounded border p-2 text-sm"
-              value={filters.customer}
-              onChange={(e) =>
-                setFilters((f) => ({ ...f, customer: e.target.value }))
-              }
-            />
-          </label>
-          <button
-            className="self-end rounded border p-2 text-sm"
-            onClick={() =>
-              setFilters({
-                crewId: "",
-                employeeId: "",
-                estimatorId: "",
-                status: "",
-                priority: "",
-                recurring: "",
-                customer: "",
-              })
-            }
-          >
-            Clear
-          </button>
-          <label className="grid gap-1 text-xs font-semibold">
-            Date
-            <input
-              type="date"
-              className="rounded border p-2 text-sm"
-              defaultValue={new Date(initial.start).toISOString().slice(0, 10)}
-              onChange={(event) => {
-                window.location.href = `/dispatch?date=${event.target.value}`;
-              }}
-            />
-          </label>
-        </div>
-      </section>
-      <div className="mt-5 grid gap-4 xl:grid-cols-5">
-        {columns.map((status) => (
-          <section
-            key={status}
-            className="min-h-64 rounded-xl bg-slate-100 p-3"
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => {
-              const job = jobs.find(
-                (x) => x.id === e.dataTransfer.getData("jobId"),
-              );
-              if (job) void move(job, status);
-            }}
-          >
-            <h2 className="mb-3 font-bold">
-              {status}{" "}
-              <span className="text-sm text-slate-500">
-                ({visible.filter((j) => j.status === status).length})
-              </span>
-            </h2>
-            <div className="space-y-3">
-              {visible
-                .filter((j) => j.status === status)
-                .map((job) => (
-                  <article
-                    draggable={!initial.readOnly}
-                    onDragStart={(e) => e.dataTransfer.setData("jobId", job.id)}
-                    key={job.id}
-                    className={`rounded-xl border-l-4 bg-white p-3 shadow-sm ${job.priority === "Urgent" ? "border-l-red-600" : job.priority === "High" ? "border-l-orange-500" : "border-l-blue-500"}`}
-                  >
-                    <div className="flex justify-between">
-                      <strong>
-                        {job.customer.firstName} {job.customer.lastName}
-                      </strong>
-                      {job.servicePlan && (
-                        <span className="rounded bg-violet-100 px-1 text-xs">
-                          Recurring
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm">{job.property.address}</p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {windowText(job)} ·{" "}
-                      {job.assignments
-                        .flatMap((a) => (a.crew ? [a.crew.name] : []))
-                        .join(", ") || "Unassigned"}
-                    </p>
-                    <p className="text-xs">
-                      Invoice: {job.invoice?.status ?? "None"} · Payment:{" "}
-                      {job.paymentStatus} · Comms: {job.communicationStatus}
-                    </p>
-                    {job.notifications.length > 0 && (
-                      <p className="mt-2 text-xs font-semibold text-red-700">
-                        ⚠ {job.notifications.join(" · ")}
-                      </p>
-                    )}
-                    <p className="mt-1 truncate text-xs text-slate-500">
-                      {job.crewNotes || job.customerNotes || "No notes"}
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-1 text-xs">
-                      <a
-                        href={`tel:${job.customer.phone}`}
-                        className="rounded border px-2 py-1"
-                      >
-                        Call
-                      </a>
-                      <a
-                        target="_blank"
-                        href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${job.property.address}, ${job.property.city}, ${job.property.state} ${job.property.zip}`)}`}
-                        className="rounded border px-2 py-1"
-                      >
-                        Navigate
-                      </a>
-                      <Link
-                        href={`/customers/${job.customerId}`}
-                        className="rounded border px-2 py-1"
-                      >
-                        Customer
-                      </Link>
-                      <Link
-                        href={`/estimates/${job.estimateId}`}
-                        className="rounded border px-2 py-1"
-                      >
-                        Estimate
-                      </Link>
-                      {job.invoice && (
-                        <Link
-                          href={`/invoices/${job.invoice.id}`}
-                          className="rounded border px-2 py-1"
-                        >
-                          Invoice
-                        </Link>
-                      )}
-                      {!initial.readOnly && (
-                        <>
-                          <label className="sr-only" htmlFor={`dispatch-status-${job.id}`}>Move job status</label>
-                          <select id={`dispatch-status-${job.id}`} aria-label={`Move ${job.customer.firstName} ${job.customer.lastName} job`} value={job.status} onChange={(event)=>void move(job,event.target.value as (typeof columns)[number])} className="rounded border px-2 py-1">
-                            {columns.map(option=><option key={option}>{option}</option>)}
-                          </select>
-                          <button
-                            onClick={() =>
-                              void sendDispatchMessageAction(
-                                job.id,
-                                "Your crew is on the way.",
-                              )
-                            }
-                            className="rounded border px-2 py-1"
-                          >
-                            Message
-                          </button>
-                          <button
-                            onClick={() => void progress(job, "EnRoute")}
-                            className="rounded border px-2 py-1"
-                          >
-                            En route
-                          </button>
-                          <button
-                            onClick={() => void progress(job, "Arrived")}
-                            className="rounded border px-2 py-1"
-                          >
-                            Arrived
-                          </button>
-                          <button
-                            onClick={() => void schedule(job)}
-                            className="rounded border px-2 py-1"
-                          >
-                            Schedule
-                          </button>
-                          {job.status === "InProgress" && (
-                            <button
-                              onClick={() => void move(job, "Completed")}
-                              className="rounded bg-green-700 px-2 py-1 text-white"
-                            >
-                              Complete
-                            </button>
-                          )}
-                          <select
-                            aria-label="Assign crew"
-                            defaultValue=""
-                            onChange={(e) => {
-                              if (e.target.value)
-                                void assignDispatchCrewAction(
-                                  job.id,
-                                  e.target.value,
-                                );
-                            }}
-                            className="rounded border"
-                          >
-                            <option value="">+ Crew</option>
-                            {initial.crews.map((x) => (
-                              <option key={x.id} value={x.id}>
-                                {x.name}
-                              </option>
-                            ))}
-                          </select>
-                          <select
-                            aria-label="Assign employee"
-                            defaultValue=""
-                            onChange={(e) => {
-                              if (e.target.value)
-                                void assignDispatchEmployeeAction(
-                                  job.id,
-                                  e.target.value,
-                                );
-                            }}
-                            className="rounded border"
-                          >
-                            <option value="">+ Employee</option>
-                            {initial.employees.map((x) => (
-                              <option key={x.id} value={x.id}>
-                                {x.firstName}
-                              </option>
-                            ))}
-                          </select>
-                        </>
-                      )}
-                    </div>
-                  </article>
-                ))}
-            </div>
-          </section>
-        ))}
-      </div>
-      <section className="mt-6 rounded-xl border bg-white p-5">
-        <h2 className="text-xl font-bold">Crew workload & daily timeline</h2>
-        <div className="mt-3 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {initial.workloads.map((workload) => (
-            <div
-              key={workload.crewId}
-              className={`rounded border p-3 ${workload.overloaded ? "border-red-400 bg-red-50" : workload.idle ? "border-amber-300" : ""}`}
-            >
-              <strong>{workload.name}</strong>
-              <p className="text-sm">
-                {workload.assignedHours.toFixed(1)}h assigned ·{" "}
-                {workload.remainingCapacity.toFixed(1)}h remaining
-              </p>
-              <p className="text-xs text-slate-500">
-                Finish{" "}
-                {workload.estimatedCompletion?.toLocaleTimeString() ?? "—"} ·
-                Idle gaps {workload.idleGapHours.toFixed(1)}h · Overlaps{" "}
-                {workload.overlaps}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
-    </main>
-  );
+type Job = Data["jobs"][number] | Data["unscheduled"][number];
+const statusOptions: SchedulingStatus[] = ["Unscheduled","Tentative","Scheduled","Confirmed","EnRoute","Arrived","InProgress","Completed","Delayed","Cancelled","NoShow"];
+const button = "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[var(--border-color)] px-3 font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 disabled:opacity-50";
+
+export default function DispatchCenter({ initial, date }: { initial: Data; date: string }) {
+  const [editing,setEditing]=useState<Job|null>(null);
+  const open=(job:Job)=>{history.pushState({dispatchSheet:true},"");setEditing(job);};
+  useEffect(()=>{const close=()=>setEditing(null);window.addEventListener("popstate",close);return()=>window.removeEventListener("popstate",close)},[]);
+  const navigate=(days:number)=>{const next=new Date(`${date}T12:00:00`);next.setDate(next.getDate()+days);window.location.href=query({date:next.toISOString().slice(0,10),view:initial.view});};
+  const groups=useMemo(()=>Array.from({length:initial.view==="week"?7:1},(_,index)=>{const day=new Date(initial.start);day.setDate(day.getDate()+index);return{day,jobs:initial.jobs.filter(job=>new Date(job.scheduledStart!).toDateString()===day.toDateString())}}),[initial]);
+  return <main className="mx-auto max-w-[1600px] p-4 sm:p-6">
+    <header className="flex flex-wrap items-start justify-between gap-4"><div><p className="font-semibold text-blue-700">Scheduling foundation</p><h1 className="text-3xl font-bold">Dispatch & Scheduling</h1><p className="text-slate-600 dark:text-slate-300">Schedule jobs, resources, arrival windows, and field status.</p></div><Link href={query({date:new Date().toISOString().slice(0,10),view:initial.view})} className={button}>Today</Link></header>
+    <nav aria-label="Schedule navigation" className="mt-5 flex flex-wrap items-center gap-2">
+      <button aria-label="Previous date range" className={button} onClick={()=>navigate(initial.view==="week"?-7:-1)}><ChevronLeft/></button>
+      <input aria-label="Schedule date" type="date" value={date} onChange={event=>window.location.href=query({date:event.target.value,view:initial.view})} className="min-h-11 rounded-xl border bg-[var(--surface)] px-3"/>
+      <button aria-label="Next date range" className={button} onClick={()=>navigate(initial.view==="week"?7:1)}><ChevronRight/></button>
+      {(["day","week","list"] as const).map(view=><Link key={view} href={query({view,date})} aria-current={initial.view===view?"page":undefined} className={`${button} ${initial.view===view?"bg-blue-700 text-white":""}`}>{view[0].toUpperCase()+view.slice(1)}</Link>)}
+    </nav>
+    <Filters initial={initial}/>
+    {!initial.readOnly&&<section className="mt-6 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100"><div className="flex items-center justify-between gap-3"><div><h2 className="text-xl font-bold">Unscheduled Jobs</h2><p className="text-sm">{initial.unscheduledCount} jobs require scheduling.</p></div></div><div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">{initial.unscheduled.map(job=><JobCard key={job.id} job={job} action={<button className={button} onClick={()=>open(job)}>Schedule</button>}/>)}</div>{!initial.unscheduled.length&&<p className="mt-3 text-sm">No unscheduled jobs.</p>}</section>}
+    <section className="mt-6"><h2 className="text-xl font-bold">{initial.view==="week"?"Week schedule":"Chronological agenda"}</h2>
+      <div className="mt-4 grid gap-4 md:hidden">{initial.jobs.map(job=><JobCard key={job.id} job={job} action={!initial.readOnly?<><button className={button} onClick={()=>open(job)}>Reschedule</button><StatusActions job={job}/></>:undefined}/>)}</div>
+      <div className={`mt-4 hidden gap-3 md:grid ${initial.view==="week"?"grid-cols-7":"grid-cols-1"}`}>{groups.map(group=><section key={group.day.toISOString()} className="min-w-0 rounded-2xl border bg-[var(--surface)] p-3"><h3 className="font-semibold">{group.day.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})}</h3><div className="mt-3 space-y-3">{group.jobs.map(job=><JobCard key={job.id} job={job} compact={initial.view==="week"} action={!initial.readOnly?<><button className={button} onClick={()=>open(job)}>Edit</button><StatusActions job={job}/></>:undefined}/>)}</div></section>)}</div>
+      {!initial.jobs.length&&<p className="mt-4 rounded-2xl border border-dashed p-8 text-center text-slate-500">No scheduled jobs in this range.</p>}
+    </section>
+    {editing&&<ScheduleSheet job={editing} data={initial} onClose={()=>{if(history.state?.dispatchSheet)history.back();else setEditing(null)}}/>}
+  </main>;
 }
-function Select({
-  value,
-  onChange,
-  label,
-  options,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  label: string;
-  options: Array<{ value: string; label: string }>;
-}) {
-  return (
-    <label className="grid gap-1 text-xs font-semibold">
-      {label}
-      <select
-        className="rounded border p-2 text-sm"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        <option value="">All</option>
-        {options.map((x) => (
-          <option key={x.value} value={x.value}>
-            {x.label}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
+
+function Filters({initial}:{initial:Data}){return <form method="get" className="mt-5 grid gap-2 rounded-2xl border bg-[var(--surface)] p-4 sm:grid-cols-2 lg:grid-cols-6"><input type="hidden" name="view" value={initial.view}/><Select name="status" label="Status" options={statusOptions.map(value=>({value,label:label(value)}))}/><Select name="employeeId" label="Crew member" options={initial.employees.map(row=>({value:row.id,label:`${row.firstName} ${row.lastName}`}))}/><Select name="crewLeadId" label="Crew lead" options={initial.employees.map(row=>({value:row.id,label:`${row.firstName} ${row.lastName}`}))}/><Select name="vehicleId" label="Vehicle" options={initial.vehicles.map(row=>({value:row.id,label:row.name}))}/><label className="grid gap-1 text-sm font-medium">City<input name="city" className="min-h-11 rounded-xl border bg-[var(--surface)] px-3"/></label><label className="grid gap-1 text-sm font-medium">ZIP<input name="zip" className="min-h-11 rounded-xl border bg-[var(--surface)] px-3"/></label><label className="grid gap-1 text-sm font-medium">Service area<input name="serviceArea" className="min-h-11 rounded-xl border bg-[var(--surface)] px-3"/></label><label className="flex min-h-11 items-center gap-2"><input type="checkbox" name="unscheduledOnly" value="1"/>Unscheduled only</label><label className="flex min-h-11 items-center gap-2"><input type="checkbox" name="conflictOnly" value="1"/>Conflicts only</label><button className={button}>Apply filters</button></form>}
+function Select({name,label:caption,options}:{name:string;label:string;options:Array<{value:string;label:string}>}){return <label className="grid gap-1 text-sm font-medium">{caption}<select name={name} className="min-h-11 rounded-xl border bg-[var(--surface)] px-3"><option value="">All</option>{options.map(row=><option key={row.value} value={row.value}>{row.label}</option>)}</select></label>}
+
+function JobCard({job,action,compact}:{job:Job;action?:React.ReactNode;compact?:boolean}){const crew=job.assignments.flatMap(row=>row.employee?[`${row.employee.firstName} ${row.employee.lastName}`]:row.crew?[row.crew.name]:[]);const vehicles=job.vehicleAssignments.map(row=>row.fleetAsset.name);return <article className="rounded-xl border bg-[var(--surface)] p-3 shadow-sm"><div className="flex items-start justify-between gap-2"><div><p className="text-xs font-semibold text-blue-700">{job.jobNumber??`Job ${job.id.slice(0,8)}`}</p><h3 className="font-bold">{job.customer.firstName} {job.customer.lastName}</h3></div><span className="rounded-full border px-2 py-1 text-xs">{label(job.schedulingStatus)}</span></div><p className="mt-2 flex gap-2 text-sm"><Clock3 size={16}/>{job.scheduledStart?windowText(job):"Unscheduled"} · {job.estimatedDurationMinutes??"?"} min</p><p className="mt-1 flex gap-2 text-sm"><MapPin size={16}/>{job.property.address}, {job.property.city}</p>{!compact&&<><p className="mt-1 flex gap-2 text-sm"><Users size={16}/>{crew.join(", ")||"No crew"} ({job.requiredCrewSize} required)</p><p className="mt-1 flex gap-2 text-sm"><Truck size={16}/>{vehicles.join(", ")||"No vehicle"}</p><p className="mt-1 text-sm">Value: {money(job.estimate.pricingTotal)}</p></>}{job.internalAccessNotes&&<p className="mt-2 text-sm font-medium">Access: {job.internalAccessNotes}</p>}{job.conflicts.length>0&&<p className="mt-2 flex gap-2 text-sm font-semibold text-red-700"><AlertTriangle size={16}/>{job.conflicts.join(" · ")}</p>}<div className="mt-3 flex flex-wrap gap-2">{action}<Link className={button} href={`/jobs/${job.id}`}>Job detail</Link></div></article>}
+function StatusActions({job}:{job:Job}){async function set(status:SchedulingStatus){const needsReason=["Delayed","Cancelled","NoShow"].includes(status);const reason=needsReason?window.prompt(`Reason for ${label(status).toLowerCase()}`)??"":undefined;if(needsReason&&!reason)return;await updateSchedulingStatusAction(job.id,status,reason);window.location.reload()}return <><button className={button} onClick={()=>void set("Confirmed")}>Confirm</button><button className={button} onClick={()=>void set("Delayed")}>Delay</button><button className={button} onClick={()=>void set("Cancelled")}>Cancel</button></>}
+
+function ScheduleSheet({job,data,onClose}:{job:Job;data:Data;onClose:()=>void}) {
+  const startDefault=job.scheduledStart?local(job.scheduledStart):local(new Date());
+  const endDefault=job.scheduledEnd?local(job.scheduledEnd):local(new Date(new Date(startDefault).getTime()+120*60000));
+  const [start,setStart]=useState(startDefault),[end,setEnd]=useState(endDefault);
+  const [arrivalStart,setArrivalStart]=useState(job.arrivalWindowStart?local(job.arrivalWindowStart):""),[arrivalEnd,setArrivalEnd]=useState(job.arrivalWindowEnd?local(job.arrivalWindowEnd):"");
+  const [duration,setDuration]=useState(job.estimatedDurationMinutes??120),[status,setStatus]=useState<"Tentative"|"Scheduled"|"Confirmed">(job.schedulingStatus==="Tentative"||job.schedulingStatus==="Confirmed"?job.schedulingStatus:"Scheduled");
+  const [employees,setEmployees]=useState(job.assignments.flatMap(row=>row.employeeId?[row.employeeId]:[])),[vehicles,setVehicles]=useState(job.vehicleAssignments.map(row=>row.fleetAssetId));
+  const [dispatchNotes,setDispatchNotes]=useState(job.dispatchNotes),[accessNotes,setAccessNotes]=useState(job.internalAccessNotes),[instructions,setInstructions]=useState(job.customerInstructions);
+  const [conflicts,setConflicts]=useState<Array<{code:string;severity:string;message:string}>>([]),[overrideReason,setOverrideReason]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState("");
+  const input=()=>({scheduledStart:new Date(start),scheduledEnd:new Date(end),arrivalWindowStart:arrivalStart?new Date(arrivalStart):null,arrivalWindowEnd:arrivalEnd?new Date(arrivalEnd):null,estimatedDurationMinutes:duration,schedulingStatus:status,employeeAssignments:employees.map((employeeId,index)=>({employeeId,role:(index===0?"CrewLead":"Helper") as JobAssignmentRole,lead:index===0})),vehicleIds:vehicles,dispatchNotes,internalAccessNotes:accessNotes,customerInstructions:instructions,allDay:false,timeZone:Intl.DateTimeFormat().resolvedOptions().timeZone,expectedVersion:job.scheduleVersion,overrideReason});
+  async function review(){setBusy(true);setError("");try{setConflicts((await inspectScheduleConflictsAction(job.id,input())).conflicts)}catch(reason){setError(message(reason))}finally{setBusy(false)}}
+  async function save(){setBusy(true);setError("");try{await scheduleJobAction(job.id,input());window.location.reload()}catch(reason){setError(message(reason));setBusy(false)}}
+  return <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 p-3 sm:p-8" role="dialog" aria-modal="true" aria-labelledby="schedule-title"><section className="mx-auto max-w-3xl rounded-2xl bg-[var(--surface)] p-4 shadow-2xl sm:p-6"><div className="flex justify-between gap-3"><div><h2 id="schedule-title" className="text-2xl font-bold">{job.scheduledStart?"Reschedule":"Schedule"} {job.jobNumber??"job"}</h2><p>{job.customer.firstName} {job.customer.lastName}</p></div><button className={button} onClick={onClose}>Close</button></div>
+    <div className="mt-5 grid gap-4 sm:grid-cols-2"><DateField label="Start" value={start} onChange={setStart}/><DateField label="End" value={end} onChange={setEnd}/><DateField label="Arrival window start" value={arrivalStart} onChange={setArrivalStart}/><DateField label="Arrival window end" value={arrivalEnd} onChange={setArrivalEnd}/><label className="grid gap-1 font-medium">Expected duration (minutes)<input className="min-h-11 rounded-xl border px-3" type="number" min="1" max="1440" value={duration} onChange={event=>setDuration(Number(event.target.value))}/></label><label className="grid gap-1 font-medium">Save as<select className="min-h-11 rounded-xl border px-3" value={status} onChange={event=>setStatus(event.target.value as typeof status)}><option>Tentative</option><option>Scheduled</option><option>Confirmed</option></select></label></div>
+    <fieldset className="mt-5"><legend className="font-bold">Crew</legend><div className="mt-2 grid gap-2 sm:grid-cols-2">{data.employees.map(row=><Check key={row.id} checked={employees.includes(row.id)} label={`${row.firstName} ${row.lastName} · ${row.role}`} onChange={checked=>setEmployees(current=>checked?[...current,row.id]:current.filter(id=>id!==row.id))}/>)}</div></fieldset>
+    <fieldset className="mt-5"><legend className="font-bold">Vehicles</legend><div className="mt-2 grid gap-2 sm:grid-cols-2">{data.vehicles.map(row=><Check key={row.id} checked={vehicles.includes(row.id)} label={`${row.name} · ${label(row.type)}`} onChange={checked=>setVehicles(current=>checked?[...current,row.id]:current.filter(id=>id!==row.id))}/>)}</div></fieldset>
+    <div className="mt-5 grid gap-3"><Area label="Dispatch notes (internal)" value={dispatchNotes} onChange={setDispatchNotes}/><Area label="Internal access notes" value={accessNotes} onChange={setAccessNotes}/><Area label="Customer instructions" value={instructions} onChange={setInstructions}/></div>
+    {conflicts.length>0&&<section className="mt-5 rounded-xl border border-amber-300 bg-amber-50 p-3 text-amber-950"><h3 className="font-bold">Conflict review</h3>{conflicts.map(row=><p className="mt-1 text-sm" key={row.code}><strong>{row.severity==="blocking"?"Blocking":"Warning"}:</strong> {row.message}</p>)}{conflicts.some(row=>row.severity==="warning")&&<label className="mt-3 grid gap-1 font-medium">Owner/Admin override reason<textarea className="rounded-xl border p-3" value={overrideReason} onChange={event=>setOverrideReason(event.target.value)}/></label>}</section>}
+    {error&&<p role="alert" className="mt-4 text-red-700">{error}</p>}<div className="mt-5 flex flex-wrap gap-2"><button className={button} disabled={busy} onClick={()=>void review()}>Review conflicts</button><button className={`${button} bg-blue-700 text-white`} disabled={busy||conflicts.some(row=>row.severity==="blocking")} onClick={()=>void save()}>Save schedule</button></div>
+  </section></div>;
 }
-const label = (v: string) => v.replace(/([A-Z])/g, " $1").trim();
-const money = (v: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
-    v,
-  );
-const windowText = (job: Job) =>
-  job.scheduledStart
-    ? `${new Date(job.scheduledStart).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}–${job.scheduledEnd ? new Date(job.scheduledEnd).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "?"}`
-    : "Unscheduled";
+function DateField({label:caption,value,onChange}:{label:string;value:string;onChange:(value:string)=>void}){return <label className="grid gap-1 font-medium">{caption}<input type="datetime-local" className="min-h-11 rounded-xl border px-3" value={value} onChange={event=>onChange(event.target.value)}/></label>}
+function Check({label:caption,checked,onChange}:{label:string;checked:boolean;onChange:(value:boolean)=>void}){return <label className="flex min-h-11 items-center gap-2 rounded-xl border px-3"><input type="checkbox" checked={checked} onChange={event=>onChange(event.target.checked)}/>{caption}</label>}
+function Area({label:caption,value,onChange}:{label:string;value:string;onChange:(value:string)=>void}){return <label className="grid gap-1 font-medium">{caption}<textarea className="min-h-20 rounded-xl border p-3" value={value} onChange={event=>onChange(event.target.value)}/></label>}
+const query=(changes:Record<string,string>)=>`/dispatch?${new URLSearchParams(changes)}`;
+const local=(value:Date|string)=>{const date=new Date(value);const offset=date.getTimezoneOffset();return new Date(date.getTime()-offset*60000).toISOString().slice(0,16)};
+const windowText=(job:Job)=>job.arrivalWindowStart&&job.arrivalWindowEnd?`${new Date(job.arrivalWindowStart).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})}–${new Date(job.arrivalWindowEnd).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})} arrival`:job.scheduledStart?`${new Date(job.scheduledStart).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})}–${job.scheduledEnd?new Date(job.scheduledEnd).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}):"?"}`:"Unscheduled";
+const label=(value:string)=>value.replace(/([A-Z])/g," $1").trim();
+const money=(value:number)=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(value);
+const message=(reason:unknown)=>reason instanceof Error?reason.message:"Scheduling could not be saved.";

@@ -194,6 +194,10 @@ export async function listPortalJobs(
       status: true,
       scheduledStart: true,
       scheduledEnd: true,
+      arrivalWindowStart: true,
+      arrivalWindowEnd: true,
+      schedulingStatus: true,
+      customerInstructions: true,
       customerNotes: true,
       servicePlan: { select: { name: true } },
       property: {
@@ -222,6 +226,10 @@ export async function getPortalJob(
       status: true,
       scheduledStart: true,
       scheduledEnd: true,
+      arrivalWindowStart: true,
+      arrivalWindowEnd: true,
+      schedulingStatus: true,
+      customerInstructions: true,
       customerNotes: true,
       servicePlan: { select: { name: true } },
       property: {

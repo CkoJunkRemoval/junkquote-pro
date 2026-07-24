@@ -58,8 +58,6 @@ export default function JobDetail({
       const updated = await updateJobAction({
         id: job.id,
         ...(nextStatus ? { status: nextStatus } : {}),
-        scheduledStart: scheduledStart ? new Date(scheduledStart) : null,
-        scheduledEnd: scheduledEnd ? new Date(scheduledEnd) : null,
         crewNotes,
         customerNotes,
         truck,
@@ -121,20 +119,17 @@ export default function JobDetail({
       {message && <p className="mt-4 text-green-700">{message}</p>}
       <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6">
         <h2 className="text-xl font-bold">Job schedule and status</h2>
+        <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+          <p>Scheduling status: <strong>{labelStatus(job.schedulingStatus)}</strong></p>
+          <p>Arrival window: <strong>{job.arrivalWindowStart&&job.arrivalWindowEnd?`${new Date(job.arrivalWindowStart).toLocaleString()} – ${new Date(job.arrivalWindowEnd).toLocaleTimeString()}`:"Not set"}</strong></p>
+          <p>Expected duration: <strong>{job.estimatedDurationMinutes?`${job.estimatedDurationMinutes} minutes`:"Not set"}</strong></p>
+          <p>Vehicles: <strong>{job.vehicleAssignments.map(row=>row.fleetAsset.name).join(", ")||"Unassigned"}</strong></p>
+        </div>
+        <Link href={`/dispatch?date=${job.scheduledStart?new Date(job.scheduledStart).toISOString().slice(0,10):new Date().toISOString().slice(0,10)}`} className="mt-3 inline-flex min-h-11 items-center rounded-lg border px-4 font-semibold">Open in Dispatch</Link>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <Field
-            label="Scheduled start"
-            value={scheduledStart}
-            onChange={setScheduledStart}
-            type="datetime-local"
-          />
+          <p className="rounded-lg border p-3 text-sm">Scheduled start<br/><strong>{scheduledStart?new Date(scheduledStart).toLocaleString():"Unscheduled"}</strong></p>
           <Field label="Truck" value={truck} onChange={setTruck} type="text" />
-          <Field
-            label="Scheduled end"
-            value={scheduledEnd}
-            onChange={setScheduledEnd}
-            type="datetime-local"
-          />
+          <p className="rounded-lg border p-3 text-sm">Scheduled end<br/><strong>{scheduledEnd?new Date(scheduledEnd).toLocaleString():"Unscheduled"}</strong></p>
         </div>
         <div className="mt-4 flex flex-wrap gap-3">
           <button
@@ -163,6 +158,10 @@ export default function JobDetail({
           {job.status === "InProgress" && <> · <strong>{job.dispatchProgress === "Arrived" ? "On Site" : job.dispatchProgress === "EnRoute" ? "En Route" : job.dispatchProgress}</strong></>}
         </p>
         <p className="mt-2 text-sm text-slate-600">Crew: {job.assignments.map((assignment) => assignment.crew?.name || `${assignment.employee?.firstName ?? ""} ${assignment.employee?.lastName ?? ""}`.trim()).filter(Boolean).join(", ") || "Unassigned"} · Truck: {job.truck || "Unassigned"}</p>
+      </section>
+      <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6">
+        <h2 className="text-xl font-bold">Schedule history</h2>
+        <div className="mt-3 space-y-2">{job.company.auditEvents.map(event=><p key={event.id} className="rounded-lg border p-3 text-sm"><strong>{event.eventType.replaceAll("_"," ")}</strong> · {new Date(event.createdAt).toLocaleString()}</p>)}{!job.company.auditEvents.length&&<p className="text-sm text-slate-500">No scheduling history yet.</p>}</div>
       </section>
       {job.status === "Completed" && <ActualCosts jobId={job.id} initial={job} />}
       {job.status === "Completed" && (
