@@ -7,6 +7,7 @@ import type {
 import { requireTenantContext } from "@/lib/auth/tenant";
 import {
   assertFieldJobAccess,
+  addFieldNote,
   confirmFieldCompletion,
   ensureFieldChecklist,
   recordDisposal,
@@ -66,6 +67,10 @@ export async function updateFieldChecklistAction(
     completed,
     notes,
   );
+}
+export async function addFieldNoteAction(jobId:string,note:string){
+  const {tenant,actor}=await context();
+  return addFieldNote(tenant.companyId,jobId,actor,note);
 }
 export async function requestFieldChangeOrderAction(
   jobId: string,
