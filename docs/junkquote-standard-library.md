@@ -26,6 +26,6 @@ The multiplier is applied once to the initial Standard Library. It does not moni
 
 ## Reset behavior
 
-The explicit **Reset Standard Library** action replaces only the company's Item Library. Historical estimate-item snapshots remain unchanged. Profile item overrides can either be cleared or preserved when their category and item name match a Standard Library item.
+The explicit **Apply JunkQuote Standard Library** action previews how many items will be updated, created, and archived, then replaces the active company library after confirmation. Historical estimate-item snapshots and their item references remain unchanged. Profile item overrides can either be cleared or preserved.
 
 Customers, properties, estimates, invoices, analytics, jobs, crews, and Pricing Rules are never reset by this action.

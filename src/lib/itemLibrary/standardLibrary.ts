@@ -23,6 +23,51 @@ export type FirstRunPricingInput = {
   averageCrewSize: number;
 };
 
+type ExistingLibraryItem = {
+  id: string;
+  category: string;
+  name: string;
+  active: boolean;
+  basePrice: number;
+  disposalFee: number;
+  laborHours: number;
+  weightClass: string;
+  estimatedVolume: number;
+  estimateRequired: boolean;
+};
+
+const libraryKey = (item: Pick<ExistingLibraryItem, "category" | "name">) =>
+  `${item.category}\u0000${item.name}`.toLowerCase();
+
+export function calculateStandardLibraryPlan(existing: ExistingLibraryItem[], multiplier = 1) {
+  const standard = buildStandardItemLibrary(multiplier);
+  const existingByKey = new Map<string, ExistingLibraryItem>();
+  for (const row of existing) {
+    const key = libraryKey(row);
+    const selected = existingByKey.get(key);
+    if (!selected || (!selected.active && row.active)) existingByKey.set(key, row);
+  }
+  const standardKeys = new Set(standard.map(libraryKey));
+  const updated = standard.filter((next) => {
+    const current = existingByKey.get(libraryKey(next));
+    return current && (
+      !current.active ||
+      current.basePrice !== next.basePrice ||
+      current.disposalFee !== next.disposalFee ||
+      current.laborHours !== next.laborHours ||
+      current.weightClass !== next.weightClass ||
+      current.estimatedVolume !== next.estimatedVolume ||
+      current.estimateRequired !== Boolean(next.estimateRequired)
+    );
+  }).length;
+  return {
+    updated,
+    created: standard.filter((next) => !existingByKey.has(libraryKey(next))).length,
+    archived: existing.filter((row) => row.active && !standardKeys.has(libraryKey(row))).length,
+    total: standard.length,
+  };
+}
+
 export function validateFirstRunPricing(input: FirstRunPricingInput) {
   if (!input.region.trim()) throw new Error("Business region is required.");
   if (input.region.trim().length > 120) throw new Error("Business region must be 120 characters or fewer.");
@@ -41,44 +86,41 @@ async function replaceLibrary(
   options: StandardLibraryResetOptions,
 ) {
   const items = buildStandardItemLibrary(options.multiplier ?? 1);
-  const preserved = options.clearOverrides
-    ? []
-    : await tx.pricingProfileItemOverride.findMany({
-        where: { pricingProfile: { companyId } },
-        select: {
-          pricingProfileId: true,
-          basePrice: true,
-          disposalFee: true,
-          laborHours: true,
-          crewRequirement: true,
-          itemLibrary: { select: { category: true, name: true } },
-        },
-      });
-
-  await tx.itemLibrary.deleteMany({ where: { companyId } });
-  await tx.itemLibrary.createMany({
-    data: items.map((value) => ({
-      companyId,
-      id: standardItemId(companyId, value),
-      ...value,
-      estimateRequired: value.estimateRequired ?? false,
-    })),
-  });
-
-  if (preserved.length) {
-    const standardKeys = new Map(
-      items.map((value) => [`${value.category}\u0000${value.name}`.toLowerCase(), standardItemId(companyId, value)]),
-    );
-    const restorable = preserved.flatMap(({ itemLibrary, ...override }) => {
-      const itemLibraryId = standardKeys.get(`${itemLibrary.category}\u0000${itemLibrary.name}`.toLowerCase());
-      return itemLibraryId ? [{ ...override, itemLibraryId }] : [];
-    });
-    if (restorable.length) await tx.pricingProfileItemOverride.createMany({ data: restorable });
+  const existing = await tx.itemLibrary.findMany({ where: { companyId }, orderBy: { createdAt: "asc" } });
+  const plan = calculateStandardLibraryPlan(existing, options.multiplier ?? 1);
+  const existingByKey = new Map<string, (typeof existing)[number]>();
+  for (const row of existing) {
+    const key = libraryKey(row);
+    const selected = existingByKey.get(key);
+    if (!selected || (!selected.active && row.active)) existingByKey.set(key, row);
   }
-  return { itemCount: items.length, overrideCount: preserved.length };
+
+  if (options.clearOverrides) {
+    await tx.pricingProfileItemOverride.deleteMany({ where: { pricingProfile: { companyId } } });
+  }
+  await tx.itemLibrary.updateMany({ where: { companyId, active: true }, data: { active: false } });
+  for (const value of items) {
+    const current = existingByKey.get(libraryKey(value));
+    const next = { ...value, active: true, estimateRequired: value.estimateRequired ?? false };
+    if (current) await tx.itemLibrary.update({ where: { id: current.id }, data: next });
+    else await tx.itemLibrary.create({ data: { companyId, id: standardItemId(companyId, value), ...next } });
+  }
+  return { itemCount: items.length, ...plan };
 }
 
-export async function resetToStandardLibrary(
+export async function previewStandardLibrary(companyId: string) {
+  const existing = await prisma.itemLibrary.findMany({
+    where: { companyId },
+    select: {
+      id: true, category: true, name: true, active: true, basePrice: true,
+      disposalFee: true, laborHours: true, weightClass: true, estimatedVolume: true,
+      estimateRequired: true,
+    },
+  });
+  return calculateStandardLibraryPlan(existing);
+}
+
+export async function applyStandardLibrary(
   companyId: string,
   actingUserId: string,
   options: StandardLibraryResetOptions = {},
@@ -100,12 +142,17 @@ export async function resetToStandardLibrary(
           version: STANDARD_LIBRARY_VERSION,
           itemCount: result.itemCount,
           clearOverrides: options.clearOverrides ?? false,
+          updated: result.updated,
+          created: result.created,
+          archived: result.archived,
         },
       },
     });
     return result;
   });
 }
+
+export const resetToStandardLibrary = applyStandardLibrary;
 
 export async function applyFirstRunPricingLibrary(
   companyId: string,

@@ -7,7 +7,7 @@ import {
   exportItemLibrary, importItemLibrary, listEffectiveEstimateItems, listItemLibrary,
   previewItemImport, setItemLibraryActive, updateItemLibraryItem, upsertItemOverride,
 } from "@/lib/itemLibrary/itemLibrary";
-import { resetToStandardLibrary } from "@/lib/itemLibrary/standardLibrary";
+import { applyStandardLibrary, previewStandardLibrary } from "@/lib/itemLibrary/standardLibrary";
 import type { BulkItemUpdate, ItemLibraryInput, ItemLibraryQuery, ItemOverrideInput } from "@/lib/itemLibrary/types";
 
 async function manager() {
@@ -54,9 +54,13 @@ export async function importItemLibraryAction(csv: string) {
 export async function exportItemLibraryAction() {
   const { companyId } = await requireTenantContext(); return exportItemLibrary(companyId);
 }
-export async function resetToStandardLibraryAction(clearOverrides: boolean) {
+export async function previewStandardLibraryAction() {
   const context = await manager();
-  const result = await resetToStandardLibrary(context.companyId, context.userId, { clearOverrides });
+  return previewStandardLibrary(context.companyId);
+}
+export async function applyStandardLibraryAction(clearOverrides: boolean) {
+  const context = await manager();
+  const result = await applyStandardLibrary(context.companyId, context.userId, { clearOverrides });
   refresh();
   return result;
 }

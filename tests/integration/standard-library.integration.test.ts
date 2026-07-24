@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/prisma";
-import { applyFirstRunPricingLibrary, resetToStandardLibrary } from "@/lib/itemLibrary/standardLibrary";
+import { applyFirstRunPricingLibrary, previewStandardLibrary, resetToStandardLibrary } from "@/lib/itemLibrary/standardLibrary";
 import { DEFAULT_ITEM_LIBRARY } from "@/lib/itemLibrary/defaultItems";
 import { resetIntegrationDatabase } from "./fixtures";
 
@@ -50,9 +50,11 @@ describe("JunkQuote Standard Library integration", () => {
     const site = await prisma.jobSite.create({ data: { estimateId: estimate.id, name: "Garage", sortOrder: 0 } });
     const custom = await prisma.itemLibrary.create({ data: { companyId: a.company.id, category: "Custom", name: "Custom Item", basePrice: 99 } });
     const snapshot = await prisma.estimateItem.create({ data: { jobSiteId: site.id, libraryItemId: custom.id, itemId: custom.id, name: "Custom Item", category: "Custom", quantity: 1, basePrice: 99, sortOrder: 0 } });
+    expect(await previewStandardLibrary(a.company.id)).toMatchObject({ updated: 0, created: DEFAULT_ITEM_LIBRARY.length, archived: 1 });
     await resetToStandardLibrary(a.company.id, a.user.id);
     expect(await prisma.customer.count({ where: { companyId: a.company.id } })).toBe(1);
     expect(await prisma.estimate.findUnique({ where: { id: estimate.id } })).toMatchObject({ pricingTotal: 99 });
-    expect(await prisma.estimateItem.findUnique({ where: { id: snapshot.id } })).toMatchObject({ name: "Custom Item", basePrice: 99, libraryItemId: null });
+    expect(await prisma.estimateItem.findUnique({ where: { id: snapshot.id } })).toMatchObject({ name: "Custom Item", basePrice: 99, libraryItemId: custom.id });
+    expect(await prisma.itemLibrary.findUnique({ where: { id: custom.id } })).toMatchObject({ active: false });
   });
 });
