@@ -314,11 +314,37 @@ enum BackgroundJobPriority {
 
 enum CommunicationDeliveryStatus {
   Pending
+  Scheduled
+  Processing
   Sent
   Delivered
   Failed
   Bounced
   Rejected
+  Cancelled
+  Suppressed
+}
+
+enum CommunicationEventStatus {
+  Pending
+  Processing
+  Processed
+  Failed
+  Cancelled
+}
+
+enum CommunicationChannel {
+  Email
+  Sms
+  Internal
+  Portal
+}
+
+enum CommunicationRecipientType {
+  Customer
+  Employee
+  User
+  PortalAccess
 }
 
 enum ReminderType {
@@ -392,6 +418,11 @@ model Company {
   portalAccesses          CustomerPortalAccess[]
   auditEvents             AuditEvent[]
   communicationDeliveries CommunicationDelivery[]
+  communicationTemplates  CommunicationTemplate[]
+  communicationPreference CommunicationPreference?
+  recipientPreferences    CommunicationRecipientPreference[]
+  communicationEvents     CommunicationEvent[]
+  communicationRules      CommunicationAutomationRule[]
   providerWebhookEvents   ProviderWebhookEvent[]
   fleetAssets             FleetAsset[]
   maintenanceRecords      FleetMaintenance[]
@@ -578,6 +609,7 @@ model Customer {
   invoices       Invoice[]
   servicePlans   ServicePlan[]
   portalAccesses CustomerPortalAccess[]
+  communicationPreferences CommunicationRecipientPreference[]
 
   @@index([companyId])
   @@index([lastName])
@@ -1605,6 +1637,7 @@ model Employee {
   assignments            JobAssignment[]
   availabilityRanges     EmployeeAvailability[]
   servicePlanAssignments ServicePlanEmployee[]
+  communicationPreferences CommunicationRecipientPreference[]
   createdAt              DateTime                 @default(now())
   updatedAt              DateTime                 @updatedAt
 
@@ -1911,9 +1944,13 @@ model SystemNotification {
   body      String
   status    String    @default("Pending")
   readAt    DateTime?
+  sourceType String?
+  sourceId   String?
+  link       String?
   createdAt DateTime  @default(now())
 
   @@index([companyId, userId, status, createdAt])
+  @@index([companyId, userId, readAt, createdAt])
   @@map("system_notifications")
 }
 
@@ -2236,6 +2273,15 @@ model CommunicationDelivery {
   provider          String
   channel           String
   recipientHash     String
+  eventId           String?
+  event             CommunicationEvent?         @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  templateId        String?
+  template          CommunicationTemplate?      @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  recipientType     CommunicationRecipientType?
+  recipientId       String?
+  destination       String?
+  subject           String?
+  renderedBody      String?
   status            CommunicationDeliveryStatus @default(Pending)
   providerMessageId String?                     @unique
   requestId         String?
@@ -2245,12 +2291,126 @@ model CommunicationDelivery {
   bouncedAt         DateTime?
   rejectedAt        DateTime?
   lastErrorCode     String?
+  failureReason     String?
+  attemptCount      Int                         @default(0)
+  scheduledFor      DateTime                    @default(now())
+  failureClass      String?
+  delayReason       String?
   createdAt         DateTime                    @default(now())
   updatedAt         DateTime                    @updatedAt
 
   @@unique([companyId, idempotencyKey])
   @@index([companyId, status, createdAt])
+  @@index([companyId, status, scheduledFor])
+  @@index([companyId, recipientType, recipientId, createdAt])
+  @@index([eventId])
   @@map("communication_deliveries")
+}
+
+model CommunicationTemplate {
+  id              String               @id @default(uuid())
+  companyId       String
+  company         Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  eventType       String
+  channel         CommunicationChannel
+  name            String
+  subject         String?
+  body            String
+  active          Boolean              @default(true)
+  defaultTemplate Boolean              @default(false)
+  customerVisible Boolean              @default(true)
+  delayMinutes    Int                  @default(0)
+  deliveries      CommunicationDelivery[]
+  automationRules CommunicationAutomationRule[]
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@unique([companyId, eventType, channel, name])
+  @@index([companyId, eventType, active])
+  @@map("communication_templates")
+}
+
+model CommunicationPreference {
+  id                  String   @id @default(uuid())
+  companyId           String   @unique
+  company             Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  emailEnabled        Boolean  @default(true)
+  smsEnabled          Boolean  @default(false)
+  internalEnabled     Boolean  @default(true)
+  portalEnabled       Boolean  @default(true)
+  quietHoursStart     String?
+  quietHoursEnd       String?
+  timeZone            String   @default("America/New_York")
+  reminderLeadMinutes Int      @default(1440)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("communication_preferences")
+}
+
+model CommunicationRecipientPreference {
+  id            String    @id @default(uuid())
+  companyId     String
+  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customerId    String?
+  customer      Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  employeeId    String?
+  employee      Employee? @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  emailAllowed  Boolean   @default(true)
+  smsAllowed    Boolean   @default(false)
+  portalAllowed Boolean   @default(true)
+  optedOutAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([companyId, customerId])
+  @@unique([companyId, employeeId])
+  @@index([companyId, optedOutAt])
+  @@map("communication_recipient_preferences")
+}
+
+model CommunicationEvent {
+  id          String                   @id @default(uuid())
+  companyId   String
+  company     Company                  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  eventType   String
+  sourceType  String
+  sourceId    String
+  payload     Json
+  occurredAt  DateTime                 @default(now())
+  processedAt DateTime?
+  status      CommunicationEventStatus @default(Pending)
+  dedupeKey   String
+  failureReason String?
+  deliveries  CommunicationDelivery[]
+  createdAt   DateTime                 @default(now())
+
+  @@unique([companyId, dedupeKey])
+  @@index([companyId, eventType, status, occurredAt])
+  @@index([companyId, sourceType, sourceId, occurredAt])
+  @@map("communication_events")
+}
+
+model CommunicationAutomationRule {
+  id                    String               @id @default(uuid())
+  companyId             String
+  company               Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  eventType             String
+  channel               CommunicationChannel
+  templateId            String
+  template              CommunicationTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  recipientType         CommunicationRecipientType @default(Customer)
+  enabled               Boolean              @default(true)
+  delayMinutes          Int                  @default(0)
+  respectQuietHours     Boolean              @default(true)
+  urgent                Boolean              @default(false)
+  cancelOnSourceChange  Boolean              @default(true)
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  @@unique([companyId, eventType, channel, recipientType])
+  @@index([companyId, eventType, enabled])
+  @@map("communication_automation_rules")
 }
 
 model ProviderWebhookEvent {

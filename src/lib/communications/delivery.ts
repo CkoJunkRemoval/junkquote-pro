@@ -29,7 +29,12 @@ export async function beginDelivery(input: {
       requestId: input.requestId,
       status: "Pending",
     },
-    update: { requestId: input.requestId ?? undefined },
+    update: {
+      requestId: input.requestId ?? undefined,
+      backgroundJobId: input.backgroundJobId ?? undefined,
+      attemptCount: { increment: 1 },
+      status: "Processing",
+    },
   });
 }
 export async function markDeliverySent(id: string, providerMessageId: string) {
@@ -54,6 +59,8 @@ export async function markDeliveryFailed(id: string, error: unknown) {
       status: "Failed",
       failedAt: new Date(),
       lastErrorCode: code.slice(0, 100),
+      failureClass: ["INVALID_DESTINATION","OPTED_OUT","UNSUPPORTED_CHANNEL"].includes(code) ? "Permanent" : "Transient",
+      failureReason: code === "PROVIDER_FAILED" ? "The delivery provider could not send this message." : "Delivery failed.",
     },
   });
 }
