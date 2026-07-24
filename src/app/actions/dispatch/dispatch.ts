@@ -11,7 +11,7 @@ import { recordAuditEvent } from "@/lib/audit/audit";
 import { currentRequestId } from "@/lib/audit/requestAudit";
 import { checkRateLimit, ratePolicies } from "@/lib/security/rateLimit";
 import { AppError } from "@/lib/errors/appError";
-import { createEmployeeAvailability, inspectScheduleConflicts, scheduleJob, updateSchedulingStatus } from "@/lib/dispatch/scheduling";
+import { createEmployeeAvailability, inspectScheduleConflicts, scheduleJob, unassignDispatchResources, updateSchedulingStatus } from "@/lib/dispatch/scheduling";
 import type { SchedulingStatus } from "@/generated/prisma/client";
 export async function loadDispatchAction(date: Date) {
   const context = await requireCompanyRole(
@@ -54,6 +54,10 @@ export async function updateSchedulingStatusAction(jobId: string, status: Schedu
 export async function createEmployeeAvailabilityAction(input: Parameters<typeof createEmployeeAvailability>[2]) {
   const context = await scheduler();
   return createEmployeeAvailability(context.companyId, context.user.id, input);
+}
+export async function unassignDispatchResourcesAction(jobId: string, target: "crew" | "vehicle" | "both") {
+  const context = await scheduler();
+  return unassignDispatchResources(context.companyId, context.user.id, jobId, target);
 }
 export async function updateDispatchJobAction(
   jobId: string,

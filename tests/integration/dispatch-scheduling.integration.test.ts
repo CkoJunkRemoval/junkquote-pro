@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { getDispatchData } from "@/lib/dispatch/dispatch";
-import { inspectScheduleConflicts, scheduleJob, updateSchedulingStatus, type ScheduleJobInput } from "@/lib/dispatch/scheduling";
+import { inspectScheduleConflicts, scheduleJob, unassignDispatchResources, updateSchedulingStatus, type ScheduleJobInput } from "@/lib/dispatch/scheduling";
 import { createTenantFixtures, resetIntegrationDatabase } from "./fixtures";
 
 const start = new Date("2026-08-10T13:00:00.000Z");
@@ -30,6 +30,7 @@ describe("dispatch scheduling foundation", () => {
     expect(await prisma.jobAssignment.findFirst({ where: { jobId: a.job.id, employeeId: employee.id } })).toMatchObject({ role: "CrewLead", lead: true });
     expect(await prisma.jobVehicleAssignment.findFirst({ where: { jobId: a.job.id, fleetAssetId: vehicle.id } })).not.toBeNull();
     expect(await prisma.auditEvent.findFirst({ where: { entityId: a.job.id, eventType: "JOB_SCHEDULED" } })).not.toBeNull();
+    expect(await prisma.auditEvent.findFirst({ where: { entityId: a.job.id, eventType: "DISPATCH_ASSIGNMENT_CHANGED" } })).not.toBeNull();
   });
 
   it("reschedules, confirms, and cancels with reasons in history", async () => {
@@ -41,6 +42,18 @@ describe("dispatch scheduling foundation", () => {
     await expect(updateSchedulingStatus(a.company.id, a.user.id, "Owner", a.job.id, "Cancelled")).rejects.toThrow("reason");
     await updateSchedulingStatus(a.company.id, a.user.id, "Owner", a.job.id, "Cancelled", "Customer requested another date");
     expect(await prisma.auditEvent.count({ where: { entityId: a.job.id, eventType: { in: ["JOB_RESCHEDULED", "JOB_CONFIRMED", "JOB_CANCELLED"] } } })).toBe(3);
+    expect(await prisma.auditEvent.findFirst({ where: { entityId: a.job.id, eventType: "JOB_MOVED" } })).not.toBeNull();
+  });
+
+  it("unassigns dispatch resources through a tenant-scoped audited mutation", async () => {
+    const { a, b } = await createTenantFixtures();
+    const { employee, vehicle } = await resources(a.company.id);
+    await scheduleJob(a.company.id, a.user.id, "Owner", a.job.id, input(employee.id, vehicle.id));
+    await expect(unassignDispatchResources(b.company.id, b.user.id, a.job.id, "both")).rejects.toThrow("not found");
+    await unassignDispatchResources(a.company.id, a.user.id, a.job.id, "both");
+    expect(await prisma.jobAssignment.count({ where: { jobId: a.job.id, employeeId: { not: null } } })).toBe(0);
+    expect(await prisma.jobVehicleAssignment.count({ where: { jobId: a.job.id } })).toBe(0);
+    expect(await prisma.auditEvent.findFirst({ where: { entityId: a.job.id, eventType: "DISPATCH_ASSIGNMENT_CHANGED", metadata: { path: ["action"], equals: "unassign" } } })).not.toBeNull();
   });
 
   it("blocks employee and vehicle overlaps and duplicate assignments", async () => {

@@ -2,8 +2,9 @@ import { prisma } from "@/lib/prisma";
 import { assignCrewToJob, assignEmployeeToJob } from "@/lib/crews/assignments";
 import { updateJob } from "@/lib/jobs/updateJob";
 import type { DispatchProgress, JobPriority, SchedulingStatus } from "@/generated/prisma/client";
+import { projectDispatchBoard, type DispatchLaneGrouping, type DispatchSeverity } from "./board";
 
-export type DispatchView = "day" | "week" | "list";
+export type DispatchView = "board" | "day" | "week" | "list";
 export type DispatchFilters = {
   view?: DispatchView;
   status?: SchedulingStatus;
@@ -15,6 +16,14 @@ export type DispatchFilters = {
   serviceArea?: string;
   unscheduledOnly?: boolean;
   conflictOnly?: boolean;
+  grouping?: DispatchLaneGrouping;
+  alertSeverity?: DispatchSeverity;
+  assignment?: "assigned" | "unassigned";
+  highValue?: boolean;
+  delayedOnly?: boolean;
+  startsWithinHours?: number;
+  unscheduledSearch?: string;
+  unscheduledSort?: "oldest" | "newest" | "value" | "duration" | "priority";
   page?: number;
 };
 
@@ -28,7 +37,7 @@ function visibleRange(date: Date, view: DispatchView) {
 }
 
 export async function getDispatchData(companyId: string, date: Date, crewUserId?: string, filters: DispatchFilters = {}) {
-  const view = filters.view === "week" || filters.view === "list" ? filters.view : "day";
+  const view: DispatchView = ["day", "week", "list"].includes(filters.view ?? "") ? filters.view! : "board";
   const { start, end } = visibleRange(date, view);
   const employee = crewUserId ? await prisma.employee.findFirst({ where: { companyId, userId: crewUserId, status: "Active" }, select: { id: true } }) : null;
   const assignedOnly = crewUserId ? { assignments: { some: { employeeId: employee?.id ?? "__unlinked__", status: { not: "Removed" as const } } } } : {};
@@ -36,6 +45,8 @@ export async function getDispatchData(companyId: string, date: Date, crewUserId?
     ...(filters.employeeId ? { assignments: { some: { employeeId: filters.employeeId, status: { not: "Removed" as const } } } } : {}),
     ...(filters.crewLeadId ? { assignments: { some: { employeeId: filters.crewLeadId, lead: true, status: { not: "Removed" as const } } } } : {}),
     ...(filters.vehicleId ? { vehicleAssignments: { some: { fleetAssetId: filters.vehicleId } } } : {}),
+    ...(filters.assignment === "assigned" ? { OR: [{ assignments: { some: { employeeId: { not: null }, status: { not: "Removed" as const } } } }, { vehicleAssignments: { some: {} } }] } : {}),
+    ...(filters.assignment === "unassigned" ? { assignments: { none: { employeeId: { not: null }, status: { not: "Removed" as const } } }, vehicleAssignments: { none: {} } } : {}),
     ...((filters.city || filters.zip || filters.serviceArea) ? { property: {
       ...(filters.city ? { city: { equals: filters.city, mode: "insensitive" as const } } : {}),
       ...(filters.zip ? { zip: filters.zip } : {}),
@@ -45,24 +56,46 @@ export async function getDispatchData(companyId: string, date: Date, crewUserId?
   const include = {
     customer: { select: { firstName: true, lastName: true, phone: true } },
     property: { select: { address: true, city: true, state: true, zip: true } },
-    estimate: { select: { pricingTotal: true, jobSites: { select: { items: { select: { crewRequirement: true, requiresSpecialEquipment: true } } } } } },
+    estimate: { select: { pricingTotal: true, jobSites: { select: { items: { select: { crewRequirement: true, requiresSpecialEquipment: true, estimatedVolume: true } } } } } },
     invoice: { select: { total: true, balanceDue: true, status: true } },
     servicePlan: { select: { id: true, name: true } },
     photos: { select: { category: true } },
     assignments: { where: { status: { not: "Removed" as const } }, include: { employee: { select: { id: true, firstName: true, lastName: true } }, crew: { select: { id: true, name: true, color: true } } } },
-    vehicleAssignments: { include: { fleetAsset: { select: { id: true, name: true, type: true, colorLabel: true } } } },
+    vehicleAssignments: { include: { fleetAsset: { select: { id: true, name: true, type: true, colorLabel: true, capacityCubicYards: true } } } },
   };
   const page = Math.max(1, Math.trunc(filters.page ?? 1));
-  const [jobs, unscheduled, unscheduledCount, crews, employees, vehicles] = await Promise.all([
+  const unscheduledOrder = filters.unscheduledSort === "newest" ? { createdAt: "desc" as const }
+    : filters.unscheduledSort === "value" ? { estimate: { pricingTotal: "desc" as const } }
+    : filters.unscheduledSort === "duration" ? { estimatedDurationMinutes: "asc" as const }
+    : filters.unscheduledSort === "priority" ? { priority: "desc" as const }
+    : { createdAt: "asc" as const };
+  const unscheduledWhere = {
+    companyId, ...assignedOnly, ...resourceWhere,
+    AND: [
+      { OR: [{ scheduledStart: null }, { schedulingStatus: "Unscheduled" as const }] },
+      ...(filters.unscheduledSearch ? [{ OR: [
+        { jobNumber: { contains: filters.unscheduledSearch, mode: "insensitive" as const } },
+        { customer: { OR: [{ firstName: { contains: filters.unscheduledSearch, mode: "insensitive" as const } }, { lastName: { contains: filters.unscheduledSearch, mode: "insensitive" as const } }] } },
+        { property: { OR: [{ city: { contains: filters.unscheduledSearch, mode: "insensitive" as const } }, { zip: { contains: filters.unscheduledSearch } }] } },
+      ] }] : []),
+    ],
+  };
+  const [jobs, unscheduled, unscheduledCount, crews, employees, vehicles, availability] = await Promise.all([
     prisma.job.findMany({
-      where: { companyId, ...assignedOnly, ...resourceWhere, scheduledStart: { gte: start, lt: end }, ...(filters.status ? { schedulingStatus: filters.status } : {}) },
+      where: {
+        companyId, ...assignedOnly, ...resourceWhere, scheduledStart: { gte: start, lt: end },
+        ...(filters.status ? { schedulingStatus: filters.status } : {}),
+        ...(filters.delayedOnly ? { schedulingStatus: "Delayed" as const } : {}),
+        ...(filters.startsWithinHours ? { scheduledStart: { gte: new Date(), lte: new Date(Date.now() + filters.startsWithinHours * 3600000) } } : {}),
+      },
       include, orderBy: [{ scheduledStart: "asc" }, { jobNumber: "asc" }], skip: view === "list" ? (page - 1) * 100 : 0, take: view === "list" ? 100 : 500,
     }),
-    prisma.job.findMany({ where: { companyId, ...assignedOnly, ...resourceWhere, OR: [{ scheduledStart: null }, { schedulingStatus: "Unscheduled" }] }, include, orderBy: { createdAt: "asc" }, skip: (page - 1) * 25, take: 25 }),
-    prisma.job.count({ where: { companyId, ...assignedOnly, ...resourceWhere, OR: [{ scheduledStart: null }, { schedulingStatus: "Unscheduled" }] } }),
+    prisma.job.findMany({ where: unscheduledWhere, include, orderBy: unscheduledOrder, skip: (page - 1) * 25, take: 25 }),
+    prisma.job.count({ where: unscheduledWhere }),
     prisma.crew.findMany({ where: { companyId, active: true }, select: { id: true, name: true, color: true }, orderBy: { name: "asc" } }),
     prisma.employee.findMany({ where: { companyId, status: "Active" }, select: { id: true, firstName: true, lastName: true, role: true }, orderBy: [{ firstName: "asc" }, { lastName: "asc" }] }),
     prisma.fleetAsset.findMany({ where: { companyId, status: "Active" }, select: { id: true, name: true, type: true, colorLabel: true, capacityCubicYards: true }, orderBy: { name: "asc" } }),
+    prisma.employeeAvailability.findMany({ where: { companyId, type: { in: ["Unavailable", "TimeOff"] }, startsAt: { lt: end }, endsAt: { gt: start } }, select: { employeeId: true } }),
   ]);
   const decorate = <T extends (typeof jobs)[number]>(job: T) => {
     const requiredCrewSize = Math.max(1, ...job.estimate.jobSites.flatMap((site) => site.items.map((item) => item.crewRequirement)));
@@ -79,11 +112,26 @@ export async function getDispatchData(companyId: string, date: Date, crewUserId?
     ];
     return { ...job, requiredCrewSize, requiresSpecialEquipment: job.estimate.jobSites.some((site) => site.items.some((item) => item.requiresSpecialEquipment)), conflicts, paymentStatus, notifications };
   };
-  const scheduledRows = jobs.map(decorate);
+  let scheduledRows = jobs.map(decorate);
+  let unscheduledRows = unscheduled.map(decorate);
+  if (filters.highValue) {
+    scheduledRows = scheduledRows.filter((job) => job.estimate.pricingTotal >= 1000);
+    unscheduledRows = unscheduledRows.filter((job) => job.estimate.pricingTotal >= 1000);
+  }
+  const board = projectDispatchBoard({
+    jobs: scheduledRows,
+    unscheduled: unscheduledRows,
+    employees,
+    vehicles,
+    unavailableEmployeeIds: new Set(availability.map((row) => row.employeeId)),
+    grouping: filters.grouping ?? "crewLead",
+  });
+  const filteredAlerts = filters.alertSeverity ? board.alerts.filter((row) => row.severity === filters.alertSeverity) : board.alerts;
   return {
     jobs: filters.unscheduledOnly ? [] : filters.conflictOnly ? scheduledRows.filter((job) => job.conflicts.length) : scheduledRows,
-    unscheduled: unscheduled.map(decorate), unscheduledCount, page,
+    unscheduled: unscheduledRows, unscheduledCount, page,
     crews, employees, vehicles, start, end, view, readOnly: Boolean(crewUserId),
+    grouping: filters.grouping ?? "crewLead", board: { ...board, alerts: filteredAlerts },
     metrics: {
       jobsToday: scheduledRows.length,
       completedJobs: scheduledRows.filter((job) => job.status === "Completed").length,

@@ -84,8 +84,21 @@ export async function scheduleJob(companyId: string, actingUserId: string, role:
     if (!["Owner", "Admin"].includes(role) || !input.overrideReason?.trim()) throw new Error(`${warnings.map((item) => item.message).join(" ")} An Owner or Admin may override with a reason.`);
   }
   if (inspection.scheduleVersion !== input.expectedVersion) throw new Error("This schedule changed while you were editing. Reload and try again.");
-  const previous = await prisma.job.findFirstOrThrow({ where: { id: jobId, companyId }, select: { scheduledStart: true, scheduledEnd: true, schedulingStatus: true } });
+  const previous = await prisma.job.findFirstOrThrow({
+    where: { id: jobId, companyId },
+    select: {
+      scheduledStart: true, scheduledEnd: true, schedulingStatus: true,
+      assignments: { where: { employeeId: { not: null }, status: { not: "Removed" } }, select: { employeeId: true } },
+      vehicleAssignments: { select: { fleetAssetId: true } },
+    },
+  });
   const rescheduled = Boolean(previous.scheduledStart);
+  const previousEmployees = previous.assignments.flatMap((row) => row.employeeId ? [row.employeeId] : []).sort();
+  const nextEmployees = input.employeeAssignments.map((row) => row.employeeId).sort();
+  const previousVehicles = previous.vehicleAssignments.map((row) => row.fleetAssetId).sort();
+  const nextVehicles = [...input.vehicleIds].sort();
+  const assignmentChanged = previousEmployees.join("|") !== nextEmployees.join("|") || previousVehicles.join("|") !== nextVehicles.join("|");
+  const moved = rescheduled && (previous.scheduledStart?.getTime() !== input.scheduledStart.getTime() || previous.scheduledEnd?.getTime() !== input.scheduledEnd.getTime());
   return prisma.$transaction(async (tx) => {
     const updated = await tx.job.update({
       where: { id: jobId },
@@ -116,6 +129,8 @@ export async function scheduleJob(companyId: string, actingUserId: string, role:
       },
     });
     if (input.employeeAssignments.length) await tx.auditEvent.create({ data: { companyId, actingUserId, entityType: "Job", entityId: jobId, eventType: "CREW_ASSIGNED", metadata: { employeeIds: input.employeeAssignments.map((row) => row.employeeId) } } });
+    if (moved) await tx.auditEvent.create({ data: { companyId, actingUserId, entityType: "Job", entityId: jobId, eventType: "JOB_MOVED", metadata: { previous: { start: previous.scheduledStart, end: previous.scheduledEnd }, next: { start: input.scheduledStart, end: input.scheduledEnd } } } });
+    if (assignmentChanged) await tx.auditEvent.create({ data: { companyId, actingUserId, entityType: "Job", entityId: jobId, eventType: "DISPATCH_ASSIGNMENT_CHANGED", metadata: { previousEmployeeIds: previousEmployees, employeeIds: nextEmployees, previousVehicleIds: previousVehicles, vehicleIds: nextVehicles } } });
     return { job: updated, conflicts: inspection.conflicts };
   });
 }
@@ -136,6 +151,29 @@ export async function updateSchedulingStatus(companyId: string, actingUserId: st
     } });
     await tx.auditEvent.create({ data: { companyId, actingUserId, entityType: "Job", entityId: jobId, eventType, metadata: { previous: job.schedulingStatus, next: status, reason: reason?.trim() || null, role } } });
     return updated;
+  });
+}
+
+export async function unassignDispatchResources(
+  companyId: string,
+  actingUserId: string,
+  jobId: string,
+  target: "crew" | "vehicle" | "both",
+) {
+  const job = await prisma.job.findFirst({ where: { id: jobId, companyId }, select: { id: true } });
+  if (!job) throw new Error("Job not found.");
+  return prisma.$transaction(async (tx) => {
+    if (target !== "vehicle") await tx.jobAssignment.deleteMany({ where: { companyId, jobId, employeeId: { not: null } } });
+    if (target !== "crew") await tx.jobVehicleAssignment.deleteMany({ where: { companyId, jobId } });
+    await tx.job.update({ where: { id: jobId }, data: { scheduleVersion: { increment: 1 } } });
+    await tx.auditEvent.create({
+      data: {
+        companyId, actingUserId, entityType: "Job", entityId: jobId,
+        eventType: "DISPATCH_ASSIGNMENT_CHANGED",
+        metadata: { action: "unassign", target },
+      },
+    });
+    return { jobId, target };
   });
 }
 
