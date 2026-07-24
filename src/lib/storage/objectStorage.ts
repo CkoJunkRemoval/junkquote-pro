@@ -65,12 +65,14 @@ const contentTypeFrom = (key: string) =>
   })[key.split(".").pop()?.toLowerCase() ?? ""] ?? "application/octet-stream";
 export class LocalObjectStorage implements PrivateObjectStorage {
   readonly name = "local";
-  constructor(
-    private readonly root = path.resolve(
-      process.env.PRIVATE_ASSET_STORAGE_ROOT ??
+  private readonly root: string;
+  constructor(root?: string) {
+    this.root = path.resolve(
+      root ??
+        process.env.PRIVATE_ASSET_STORAGE_ROOT ??
         path.join(process.cwd(), ".data", "private-assets"),
-    ),
-  ) {}
+    );
+  }
   private target(key: string) {
     const safe = safeObjectKey(...key.split("/"));
     const target = path.resolve(this.root, safe);

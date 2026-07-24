@@ -21,6 +21,7 @@ const statuses: SchedulingStatus[] = ["Unscheduled","Tentative","Scheduled","Con
 const control = "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-3 font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 disabled:opacity-50";
 
 export default function DispatchCenter({ initial, date }: { initial: Data; date: string }) {
+  const referenceTime = new Date(`${date}T12:00:00`).getTime();
   const [editing, setEditing] = useState<{ job: Job; intent?: MoveIntent } | null>(null);
   const [density, setDensity] = usePreference<Density>("dispatch:density", "comfortable");
   const [hideCompleted, setHideCompleted] = usePreference("dispatch:hide-completed", false);
@@ -72,7 +73,7 @@ export default function DispatchCenter({ initial, date }: { initial: Data; date:
 
     <Summary summary={initial.board.summary}/>
     <Filters initial={initial}/>
-    {!initial.readOnly && <UnscheduledPanel data={initial} open={open} setDraggingId={setDraggingId}/>}
+    {!initial.readOnly && <UnscheduledPanel data={initial} referenceTime={referenceTime} open={open} setDraggingId={setDraggingId}/>}
 
     <section className="mt-6 grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
       <div>
@@ -86,11 +87,11 @@ export default function DispatchCenter({ initial, date }: { initial: Data; date:
           </div>
         </div>
         <div className="mt-4 grid gap-3 md:hidden" aria-label="Mobile chronological agenda">
-          {jobs.map((job) => <JobCard key={job.id} job={job} density={density} readOnly={initial.readOnly} onMove={() => open(job)}/>)}
+          {jobs.map((job) => <JobCard key={job.id} job={job} referenceTime={referenceTime} density={density} readOnly={initial.readOnly} onMove={() => open(job)}/>)}
         </div>
         {initial.view === "board"
-          ? <Board data={initial} jobs={jobs} density={density} laneWidth={laneWidth} readOnly={initial.readOnly} onMove={open} setDraggingId={setDraggingId} onDrop={drop}/>
-          : <CalendarView data={initial} jobs={jobs} density={density} onMove={open}/>}
+          ? <Board data={initial} jobs={jobs} referenceTime={referenceTime} density={density} laneWidth={laneWidth} readOnly={initial.readOnly} onMove={open} setDraggingId={setDraggingId} onDrop={drop}/>
+          : <CalendarView data={initial} jobs={jobs} referenceTime={referenceTime} density={density} onMove={open}/>}
         {!jobs.length && <p className="mt-4 rounded-2xl border border-dashed p-8 text-center text-slate-500">No scheduled jobs in this range.</p>}
       </div>
       <AlertsPanel alerts={initial.board.alerts} jobs={jobById} onAction={(job) => open(job)}/>
@@ -114,7 +115,7 @@ function Summary({ summary }: { summary: Data["board"]["summary"] }) {
   </section>;
 }
 
-function Board({ data, jobs, density, laneWidth, readOnly, onMove, setDraggingId, onDrop }: { data: Data; jobs: Job[]; density: Density; laneWidth: "narrow"|"standard"|"wide"; readOnly: boolean; onMove: (job: Job, intent?: MoveIntent) => void; setDraggingId: (id: string | null) => void; onDrop: (laneId: string, grouping: DispatchLaneGrouping) => void }) {
+function Board({ data, jobs, referenceTime, density, laneWidth, readOnly, onMove, setDraggingId, onDrop }: { data: Data; jobs: Job[]; referenceTime:number; density: Density; laneWidth: "narrow"|"standard"|"wide"; readOnly: boolean; onMove: (job: Job, intent?: MoveIntent) => void; setDraggingId: (id: string | null) => void; onDrop: (laneId: string, grouping: DispatchLaneGrouping) => void }) {
   const visible = new Set(jobs.map((job) => job.id));
   const byId = new Map(jobs.map((job) => [job.id, job]));
   return <div className="mt-4 hidden gap-3 overflow-x-auto pb-3 md:flex" aria-label={`Dispatch board grouped by ${title(data.grouping)}`}>
@@ -122,24 +123,24 @@ function Board({ data, jobs, density, laneWidth, readOnly, onMove, setDraggingId
       <header className="border-b pb-3"><div className="flex items-center justify-between gap-2"><h3 className="font-bold">{lane.name}</h3><span className={`rounded-full border px-2 py-1 text-xs ${lane.available ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}`}>{lane.available ? "Available" : "Assigned"}</span></div><p className="mt-1 text-xs">{lane.jobCount} jobs · {lane.scheduledHours.toFixed(1)}h · {money(lane.totalValue)}</p><p className="text-xs">{lane.idleGaps.length} idle gaps · {lane.travelRisks} travel warnings</p>{lane.capacityCubicYards && <p className="text-xs">{lane.estimatedVolume.toFixed(1)} / {lane.capacityCubicYards.toFixed(1)} yd³ estimated capacity</p>}{lane.overbooked && <p className="mt-1 font-semibold text-red-700 dark:text-red-300">Excessive scheduled hours</p>}{lane.capacityRisk && <p className="mt-1 font-semibold text-amber-700 dark:text-amber-300">Vehicle capacity risk</p>}</header>
       <div className="mt-3 space-y-3">{lane.jobs.filter((row) => visible.has(row.id)).map((row) => {
         const job = byId.get(row.id)!;
-        return <div key={job.id} draggable={!readOnly} onDragStart={() => setDraggingId(job.id)} onDragEnd={() => setDraggingId(null)}><JobCard job={job} density={density} readOnly={readOnly} onMove={() => onMove(job)} drag/></div>;
+        return <div key={job.id} draggable={!readOnly} onDragStart={() => setDraggingId(job.id)} onDragEnd={() => setDraggingId(null)}><JobCard job={job} referenceTime={referenceTime} density={density} readOnly={readOnly} onMove={() => onMove(job)} drag/></div>;
       })}</div>
       {!lane.jobs.some((row) => visible.has(row.id)) && <p className="rounded-xl border border-dashed p-5 text-center text-sm text-slate-500">Drop a job here or use Move.</p>}
     </section>)}
   </div>;
 }
 
-function CalendarView({ data, jobs, density, onMove }: { data: Data; jobs: Job[]; density: Density; onMove: (job: Job) => void }) {
+function CalendarView({ data, jobs, referenceTime, density, onMove }: { data: Data; jobs: Job[]; referenceTime:number; density: Density; onMove: (job: Job) => void }) {
   const days = Array.from({ length: data.view === "week" ? 7 : 1 }, (_, index) => { const day = new Date(data.start); day.setDate(day.getDate() + index); return day; });
-  return <div className={`mt-4 hidden gap-3 md:grid ${data.view === "week" ? "grid-cols-7" : "grid-cols-1"}`}>{days.map((day) => <section key={day.toISOString()} className="min-w-0 rounded-2xl border bg-[var(--surface)] p-3"><h3 className="font-semibold">{day.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})}</h3><div className="mt-3 space-y-3">{jobs.filter((job) => job.scheduledStart && new Date(job.scheduledStart).toDateString() === day.toDateString()).map((job) => <JobCard key={job.id} job={job} density={density} readOnly={data.readOnly} onMove={() => onMove(job)}/>)}</div></section>)}</div>;
+  return <div className={`mt-4 hidden gap-3 md:grid ${data.view === "week" ? "grid-cols-7" : "grid-cols-1"}`}>{days.map((day) => <section key={day.toISOString()} className="min-w-0 rounded-2xl border bg-[var(--surface)] p-3"><h3 className="font-semibold">{day.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})}</h3><div className="mt-3 space-y-3">{jobs.filter((job) => job.scheduledStart && new Date(job.scheduledStart).toDateString() === day.toDateString()).map((job) => <JobCard key={job.id} job={job} referenceTime={referenceTime} density={density} readOnly={data.readOnly} onMove={() => onMove(job)}/>)}</div></section>)}</div>;
 }
 
-function UnscheduledPanel({ data, open, setDraggingId }: { data: Data; open: (job: Job) => void; setDraggingId: (id: string | null) => void }) {
+function UnscheduledPanel({ data, referenceTime, open, setDraggingId }: { data: Data; referenceTime:number; open: (job: Job) => void; setDraggingId: (id: string | null) => void }) {
   return <section className="mt-6 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100">
     <div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-xl font-bold">Unscheduled Jobs</h2><p className="text-sm">{data.unscheduledCount} jobs need attention.</p></div>
       <form className="flex flex-wrap gap-2"><input type="hidden" name="view" value="board"/><input aria-label="Search unscheduled jobs" name="unscheduledSearch" placeholder="Search customer, job, city, ZIP" className="min-h-11 rounded-xl border bg-[var(--surface)] px-3 text-[var(--foreground)]"/><select aria-label="Sort unscheduled jobs" name="unscheduledSort" className="min-h-11 rounded-xl border bg-[var(--surface)] px-3 text-[var(--foreground)]"><option value="oldest">Oldest first</option><option value="newest">Newest first</option><option value="value">Highest value</option><option value="duration">Shortest duration</option><option value="priority">Priority</option></select><button className={control}>Apply</button></form>
     </div>
-    <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">{data.unscheduled.map((job) => <div key={job.id} draggable onDragStart={() => setDraggingId(job.id)} onDragEnd={() => setDraggingId(null)}><JobCard job={job} density="comfortable" readOnly={false} onMove={() => open(job)} drag unscheduled/></div>)}</div>
+    <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">{data.unscheduled.map((job) => <div key={job.id} draggable onDragStart={() => setDraggingId(job.id)} onDragEnd={() => setDraggingId(null)}><JobCard job={job} referenceTime={referenceTime} density="comfortable" readOnly={false} onMove={() => open(job)} drag unscheduled/></div>)}</div>
     {!data.unscheduled.length && <p className="mt-3 text-sm">No unscheduled jobs.</p>}
     {data.unscheduledCount > data.unscheduled.length && <div className="mt-3 flex gap-2"><Link className={control} href={href({ page: String(Math.max(1, data.page - 1)) })}>Previous</Link><Link className={control} href={href({ page: String(data.page + 1) })}>Next</Link></div>}
   </section>;
@@ -149,10 +150,10 @@ function AlertsPanel({ alerts, jobs, onAction }: { alerts: Data["board"]["alerts
   return <aside className="rounded-2xl border bg-[var(--surface)] p-4" aria-label="Dispatch alerts"><div className="flex items-center gap-2"><AlertTriangle size={20}/><h2 className="text-xl font-bold">Needs attention</h2></div><div className="mt-3 flex gap-2"><Link className={control} href={href({ alertSeverity: "critical" })}>Critical</Link><Link className={control} href={href({ alertSeverity: "warning" })}>Warnings</Link></div><div className="mt-4 space-y-3">{alerts.map((alert) => <article key={alert.id} className="rounded-xl border p-3"><p className="text-xs font-bold uppercase">{alert.severity} · {alert.jobNumber}</p><p className="mt-1 text-sm">{alert.explanation}</p><p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Recommended: {alert.recommendedAction}</p>{jobs.get(alert.jobId) && <button className={`${control} mt-2 w-full`} onClick={() => onAction(jobs.get(alert.jobId)!)}>Take action</button>}</article>)}</div>{!alerts.length && <p className="mt-4 text-sm text-slate-500">No active alerts for this view.</p>}</aside>;
 }
 
-function JobCard({ job, density, readOnly, onMove, drag, unscheduled }: { job: Job; density: Density; readOnly: boolean; onMove: () => void; drag?: boolean; unscheduled?: boolean }) {
+function JobCard({ job, referenceTime, density, readOnly, onMove, drag, unscheduled }: { job: Job; referenceTime:number; density: Density; readOnly: boolean; onMove: () => void; drag?: boolean; unscheduled?: boolean }) {
   const crew = job.assignments.flatMap((row) => row.employee ? [`${row.employee.firstName} ${row.employee.lastName}`] : row.crew ? [row.crew.name] : []);
   const vehicles = job.vehicleAssignments.map((row) => row.fleetAsset.name);
-  const age = Math.max(0, Math.floor((Date.now() - new Date(job.createdAt).getTime()) / 86400000));
+  const age = Math.max(0, Math.floor((referenceTime - new Date(job.createdAt).getTime()) / 86400000));
   return <article className={`rounded-xl border bg-[var(--surface)] shadow-sm ${density === "compact" ? "p-2" : density === "expanded" ? "p-5" : "p-3"}`}>
     <div className="flex items-start justify-between gap-2"><div className="flex min-w-0 gap-2">{drag && <GripVertical aria-label="Drag job" className="mt-1 shrink-0 cursor-grab" size={18}/>}<div><p className="text-xs font-semibold text-blue-700 dark:text-blue-300">{job.jobNumber ?? `Job ${job.id.slice(0,8)}`}</p><h3 className="font-bold">{job.customer.firstName} {job.customer.lastName}</h3></div></div><span className="rounded-full border px-2 py-1 text-xs">{title(job.schedulingStatus)}</span></div>
     <p className="mt-2 flex gap-2 text-sm"><Clock3 size={16}/>{job.scheduledStart ? windowText(job) : `Unscheduled · ${age}d old`} · {job.estimatedDurationMinutes ?? "?"} min</p>
@@ -211,7 +212,7 @@ function Select({name,label,options}:{name:string;label:string;options:ReadonlyA
 function DateField({label,value,onChange}:{label:string;value:string;onChange:(value:string)=>void}) { return <label className="grid gap-1 font-medium">{label}<input type="datetime-local" className="min-h-11 rounded-xl border px-3" value={value} onChange={(event)=>onChange(event.target.value)}/></label>; }
 function Check({label,checked,onChange}:{label:string;checked:boolean;onChange:(value:boolean)=>void}) { return <label className="flex min-h-11 items-center gap-2 rounded-xl border px-3"><input type="checkbox" checked={checked} onChange={(event)=>onChange(event.target.checked)}/>{label}</label>; }
 function Area({label,value,onChange}:{label:string;value:string;onChange:(value:string)=>void}) { return <label className="grid gap-1 font-medium">{label}<textarea className="min-h-20 rounded-xl border p-3" value={value} onChange={(event)=>onChange(event.target.value)}/></label>; }
-function usePreference<T>(key:string, fallback:T):[T,(value:T)=>void] { const [value,setValue]=useState<T>(fallback); useEffect(()=>{try{const saved=localStorage.getItem(key);if(saved!==null)setValue(JSON.parse(saved) as T)}catch{}},[key]);const update=(next:T)=>{setValue(next);localStorage.setItem(key,JSON.stringify(next))};return[value,update]; }
+function usePreference<T>(key:string, fallback:T):[T,(value:T)=>void] { const [value,setValue]=useState<T>(fallback); useEffect(()=>{let active=true;try{const saved=localStorage.getItem(key);if(saved!==null)queueMicrotask(()=>{if(active)setValue(JSON.parse(saved) as T)})}catch{}return()=>{active=false}},[key]);const update=(next:T)=>{setValue(next);localStorage.setItem(key,JSON.stringify(next))};return[value,update]; }
 const href=(changes:Record<string,string>)=>`/dispatch?${new URLSearchParams(changes)}`;
 const local=(value:Date|string)=>{const date=new Date(value);return new Date(date.getTime()-date.getTimezoneOffset()*60000).toISOString().slice(0,16)};
 const windowText=(job:Job)=>job.arrivalWindowStart&&job.arrivalWindowEnd?`${new Date(job.arrivalWindowStart).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})}–${new Date(job.arrivalWindowEnd).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})} arrival`:job.scheduledStart?`${new Date(job.scheduledStart).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})}–${job.scheduledEnd?new Date(job.scheduledEnd).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}):"?"}`:"Unscheduled";

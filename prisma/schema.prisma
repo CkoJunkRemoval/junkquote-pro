@@ -173,6 +173,25 @@ enum FieldOfflineOperationStatus {
   Failed
 }
 
+enum OfflineMutationStatus {
+  Pending
+  Syncing
+  Synced
+  Conflict
+  FailedRetryable
+  FailedPermanent
+  Cancelled
+}
+
+enum OfflineMutationType {
+  JOB_STATUS_UPDATE
+  JOB_FIELD_NOTE_ADD
+  JOB_CHECKLIST_UPDATE
+  JOB_COMPLETION_STAGE
+  JOB_PHOTO_STAGE
+  JOB_SIGNATURE_STAGE
+}
+
 enum JobPriority {
   Low
   Normal
@@ -437,6 +456,8 @@ model Company {
   fieldSignatures         JobCompletionSignature[]
   fieldTimeEvents         FieldTimeEvent[]
   fieldOfflineOperations  FieldOfflineOperation[]
+  offlinePackages         OfflineFieldPackage[]
+  offlineMutations        OfflineFieldMutation[]
   subscription            CompanySubscription?
   subscriptionHistory     SubscriptionHistory[]
   stripeWebhookEvents     StripeWebhookEvent[]
@@ -566,6 +587,8 @@ model User {
   scheduledJobs            Job[] @relation("JobLastScheduledBy")
   assignedJobAssignments   JobAssignment[] @relation("JobAssignmentAssignedBy")
   assignedJobVehicles      JobVehicleAssignment[] @relation("JobVehicleAssignedBy")
+  offlinePackages          OfflineFieldPackage[]
+  offlineMutations         OfflineFieldMutation[]
 
   @@index([companyId])
   @@map("users")
@@ -1105,6 +1128,8 @@ model Job {
   completionSignature   JobCompletionSignature?
   fieldTimeEvents       FieldTimeEvent[]
   offlineOperations     FieldOfflineOperation[]
+  offlinePackages       OfflineFieldPackage[]
+  offlineMutations      OfflineFieldMutation[]
   pricingHistory        PricingHistory[]
   pricingOutcome        PricingOutcome?
   servicePlanId         String?
@@ -1633,6 +1658,8 @@ model Employee {
   fieldSignatures        JobCompletionSignature[]
   fieldTimeEvents        FieldTimeEvent[]
   fieldOfflineOperations FieldOfflineOperation[]
+  offlinePackages        OfflineFieldPackage[]
+  offlineMutations       OfflineFieldMutation[]
   crewMembers            CrewMember[]
   assignments            JobAssignment[]
   availabilityRanges     EmployeeAvailability[]
@@ -1794,6 +1821,10 @@ model JobCompletionSignature {
   printedName   String
   signatureData String
   signedAt      DateTime  @default(now())
+  deviceSignedAt DateTime?
+  deviceTimeZone String?
+  consentTextSnapshot String?
+  offlineIdempotencyKey String? @unique
   device        String
   notes         String    @default("")
   createdAt     DateTime  @default(now())
@@ -1842,6 +1873,73 @@ model FieldOfflineOperation {
   @@index([companyId, employeeId, status, createdAt])
   @@index([jobId, createdAt])
   @@map("field_offline_operations")
+}
+
+model OfflineFieldPackage {
+  id                    String   @id @default(uuid())
+  companyId             String
+  company               Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId                String
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobId                 String
+  job                   Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  employeeId            String
+  employee              Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  packageVersion        Int      @default(1)
+  schemaVersion         Int      @default(1)
+  authorizationVersion  String
+  sourceRecordVersion   Int
+  downloadedAt          DateTime @default(now())
+  expiresAt             DateTime
+  lastAcknowledgedAt    DateTime?
+  revokedAt             DateTime?
+  revokedByUserId       String?
+  revocationReason      String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  mutations OfflineFieldMutation[]
+
+  @@unique([companyId, userId, jobId])
+  @@index([companyId, userId, expiresAt])
+  @@index([companyId, jobId, revokedAt])
+  @@map("offline_field_packages")
+}
+
+model OfflineFieldMutation {
+  id                    String                @id @default(uuid())
+  companyId             String
+  company               Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId                String
+  user                  User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  employeeId            String
+  employee              Employee              @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  jobId                 String
+  job                   Job                   @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  packageId             String?
+  package               OfflineFieldPackage?  @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  localMutationId       String
+  idempotencyKey        String
+  mutationType          OfflineMutationType
+  payload               Json
+  baseRecordVersion     Int
+  dependencyIds         String[]
+  status                OfflineMutationStatus @default(Pending)
+  attemptCount          Int                   @default(0)
+  lastAttemptAt         DateTime?
+  failureClassification String?
+  failureMessage        String?
+  serverResult          Json?
+  appliedAt             DateTime?
+  acknowledgedAt        DateTime?
+  createdAt             DateTime
+  updatedAt             DateTime              @updatedAt
+
+  @@unique([companyId, idempotencyKey])
+  @@unique([companyId, userId, localMutationId])
+  @@index([companyId, userId, status, createdAt])
+  @@index([companyId, jobId, status])
+  @@map("offline_field_mutations")
 }
 
 model CompanySubscription {

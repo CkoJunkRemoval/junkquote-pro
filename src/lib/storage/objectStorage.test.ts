@@ -1,4 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
+import { mkdtemp, rm } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 vi.mock("server-only", () => ({}));
 import {
   safeObjectKey,
@@ -37,6 +40,22 @@ describe("private object storage", () => {
         vi.fn() as never,
       ).name,
     ).toBe("supabase");
+  });
+  it("normalizes a configured relative local storage root", async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "junkquote-storage-"));
+    const relative = path.relative(process.cwd(), directory);
+    try {
+      const storage = selectObjectStorage({
+        NODE_ENV: "test",
+        PRIVATE_ASSET_STORAGE_DRIVER: "local",
+        PRIVATE_ASSET_STORAGE_ROOT: relative,
+      });
+      await expect(
+        storage.put("job-photos/tenant/job/photo.png", Buffer.from("photo"), "image/png"),
+      ).resolves.toMatchObject({ size: 5 });
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   });
   it("maps private health and missing objects", async () => {
     const fetcher = vi

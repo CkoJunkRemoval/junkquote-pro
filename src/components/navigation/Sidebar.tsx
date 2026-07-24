@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getCompanyBranding } from "@/app/actions/company/branding";
 import { CompanyLogo } from "@/components/company/CompanyLogo";
-import { BarChart3, BriefcaseBusiness, CalendarDays, ChevronLeft, FileText, LayoutDashboard, MapPinned, RadioTower, Repeat, Settings, Tags, Users, X } from "lucide-react";
+import { BarChart3, BriefcaseBusiness, CalendarDays, ChevronLeft, FileText, LayoutDashboard, MapPinned, MessageSquare, RadioTower, Repeat, Settings, Tags, Users, X } from "lucide-react";
 
 const items = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -20,6 +20,7 @@ const items = [
   { label: "Service Plans", href: "/service-plans", icon: Repeat },
   { label: "Schedule", href: "/schedule", icon: CalendarDays },
   { label: "Dispatch", href: "/dispatch", icon: RadioTower },
+  { label: "Communications", href: "/communications", icon: MessageSquare },
   { label: "Pricing", href: "/pricing", icon: Tags },
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
   { label: "Pricing Intelligence", href: "/analytics/pricing", icon: BarChart3 },
@@ -41,7 +42,13 @@ export default function Sidebar({ collapsed, mobileOpen, onClose, onToggle }: { 
           <CompanyLogo src={company?.logoUrl} companyName={company?.displayName} size={36} fallbackClassName="rounded-lg" />
           {!collapsed && <span className="min-w-0"><span className="block truncate text-lg font-bold">{company?.displayName ?? "Your company"}</span><span className="block truncate text-xs text-slate-400">Business workspace</span></span>}
         </Link>
-        <button onClick={onClose} className="lg:hidden"><X size={20} /></button>
+        <button
+          aria-label="Close navigation"
+          onClick={onClose}
+          className="min-h-11 min-w-11 lg:hidden"
+        >
+          <X className="mx-auto" size={20} />
+        </button>
       </div>
       <nav className="flex-1 space-y-1 p-3">
         {items.map(({ label, href, icon: Icon }) => {

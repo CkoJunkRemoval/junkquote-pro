@@ -18,6 +18,9 @@ const COOLDOWN = 14 * 24 * 60 * 60 * 1000;
 
 export async function clearPwaSessionState() {
   localStorage.removeItem(DISMISS_KEY);
+  await import("@/lib/offlineField/store")
+    .then(({ clearAllOfflineFieldData }) => clearAllOfflineFieldData())
+    .catch(() => undefined);
   navigator.serviceWorker?.controller?.postMessage({ type: "CLEAR_CACHES" });
 }
 
@@ -156,7 +159,11 @@ export function PwaManager() {
           {checking
             ? "Checking connection…"
             : "Offline — field uploads remain queued"}
-          <button onClick={() => void probe()} aria-label="Retry connection">
+          <button
+            onClick={() => void probe()}
+            aria-label="Retry connection"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center"
+          >
             <RefreshCw size={15} />
           </button>
         </div>
@@ -178,7 +185,7 @@ export function PwaManager() {
       {canOffer && (
         <button
           onClick={() => void install()}
-          className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-40 flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-lg"
+          className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-40 flex min-h-11 items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-lg"
         >
           <Download size={16} />
           Install JunkQuote Pro

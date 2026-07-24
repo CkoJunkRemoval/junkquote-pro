@@ -44,7 +44,10 @@ export default function Header({
         <DashboardQuickActions canCreateEstimate={dashboard.canCreateEstimate} />
       ) : <GlobalSearch />}
       <div className="ml-auto flex items-center gap-4">
-        <button className="rounded-lg p-2 text-slate-500 hover:bg-slate-100">
+        <button
+          aria-label="Notifications"
+          className="min-h-11 min-w-11 rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+        >
           <Bell size={20} />
         </button>
         <div className="flex items-center gap-2 text-sm">
@@ -63,7 +66,7 @@ export default function Header({
               void signOut({ callbackUrl: "/sign-in" });
             })
           }
-          className="text-sm text-slate-600 hover:underline"
+          className="min-h-11 px-2 text-sm text-slate-600 hover:underline"
         >
           Sign out
         </button>
