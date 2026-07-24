@@ -1,3 +1,12 @@
+/**
+ * Optional local browser gate.
+ *
+ * Install its browser driver without changing package manifests:
+ * npm install --no-save --package-lock=false playwright-core
+ *
+ * Check: npm run typecheck:offline-browser-gate
+ * Run:   npx tsx scripts/offline-browser-release-gate.ts
+ */
 import { chromium, type Page } from "playwright-core";
 import bcrypt from "bcryptjs";
 import { prisma } from "../src/lib/prisma";

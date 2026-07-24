@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { prisma } from "../prisma";
 import { transitionEstimateInTransaction } from "@/lib/estimates/estimateLifecycle";
 import {recordEstimateEventInTransaction} from "@/lib/estimates/estimateEvents";
+import { emitCommunicationEventForSource } from "@/lib/communications/engine";
 
 export interface ScheduleApprovedEstimateInput {
   estimateId: string;
@@ -16,7 +17,7 @@ export async function scheduleApprovedEstimate(companyId: string, input: Schedul
   const start = new Date(input.scheduledStart);
   const end = new Date(input.scheduledEnd);
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) throw new Error("A valid job start and end time are required.");
-  return prisma.$transaction(async (tx) => {
+  const job=await prisma.$transaction(async (tx) => {
     const estimate = await tx.estimate.findFirst({ where: { id: input.estimateId, companyId }, select: { id: true, status: true, companyId: true, customerId: true, propertyId: true } });
     if (!estimate) throw new Error("Estimate not found.");
     if (estimate.status !== "Approved") throw new Error("Only an approved estimate can be scheduled.");
@@ -33,4 +34,6 @@ export async function scheduleApprovedEstimate(companyId: string, input: Schedul
     if(input.crewId)await recordEstimateEventInTransaction(tx,{companyId,estimateId:estimate.id,eventType:"Crew Assigned",category:"Scheduling",actor:{type:"Employee",displayName:"Team member"},summary:"Team member assigned a crew",visibility:"Internal",jobId:job.id,metadata:{jobId:job.id,crewId:input.crewId}});
     return job;
   });
+  await emitCommunicationEventForSource({companyId,eventType:"JOB_SCHEDULED",sourceType:"Job",sourceId:job.id,dedupeKey:`JOB_SCHEDULED:${job.id}`});
+  return job;
 }

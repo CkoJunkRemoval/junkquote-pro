@@ -16,6 +16,19 @@ describe("dispatch board projections", () => {
     expect(projectDispatchBoard({ ...base, grouping: "crewLead" }).lanes[0]).toMatchObject({ id: "employee-1", jobCount: 1, scheduledHours: 2 });
     expect(projectDispatchBoard({ ...base, grouping: "vehicle" }).lanes[0]).toMatchObject({ id: "vehicle-1", jobCount: 1 });
   });
+  it("keeps resource-unassigned jobs visible in the relevant lane", () => {
+    const base = {
+      jobs: [job({ assignments: [] })],
+      unscheduled: [],
+      employees: [{ id: "employee-1", firstName: "Alex", lastName: "Crew" }],
+      vehicles: [{ id: "vehicle-1", name: "Truck", capacityCubicYards: 16 }],
+    };
+    expect(
+      projectDispatchBoard({ ...base, grouping: "crewLead" }).lanes.find(
+        (lane) => lane.id === "unassigned",
+      )?.jobs,
+    ).toHaveLength(1);
+  });
   it("uses transparent deterministic travel estimates", () => {
     expect(estimateTravelGapMinutes({ city: "A", zip: "1" }, { city: "B", zip: "1" })).toBe(15);
     expect(estimateTravelGapMinutes({ city: "A", zip: "1" }, { city: "a", zip: "2" })).toBe(30);

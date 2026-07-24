@@ -510,6 +510,7 @@ model CompanySettings {
   pricingMarket                   String?
   standardLibraryVersion          String?
   standardLibraryInitializedAt    DateTime?
+  routeIntelligenceSettings       Json      @default("{}")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
