@@ -32,21 +32,21 @@ export default function Header({
       .catch(() => undefined);
   }, []);
   return (
-    <header className={`flex items-center gap-4 border-b border-slate-200 bg-white px-4 sm:px-6 ${dashboard ? "min-h-20 flex-wrap md:flex-nowrap" : "h-20"}`}>
+    <header className={`app-header sticky top-0 z-20 flex items-center gap-3 px-4 sm:px-6 ${dashboard ? "min-h-20 flex-wrap md:flex-nowrap" : "h-20"}`}>
       <button
         onClick={onMenu}
         aria-label="Open navigation"
-        className="min-h-11 min-w-11 rounded-lg p-2 text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 lg:hidden"
+        className="min-h-11 min-w-11 rounded-lg p-2 text-slate-200 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 lg:hidden"
       >
         <Menu size={22} />
       </button>
       {dashboard ? (
         <DashboardQuickActions canCreateEstimate={dashboard.canCreateEstimate} />
       ) : <GlobalSearch />}
-      <div className="ml-auto flex items-center gap-4">
+      <div className="ml-auto flex items-center gap-2 sm:gap-3">
         <button
           aria-label="Notifications"
-          className="min-h-11 min-w-11 rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+          className="min-h-11 min-w-11 rounded-lg p-2 text-slate-300 hover:bg-white/10"
         >
           <Bell size={20} />
         </button>
@@ -56,7 +56,7 @@ export default function Header({
             <strong className="block">
               {company?.displayName ?? "Your company"}
             </strong>
-            <span className="text-xs text-slate-500">Business workspace</span>
+            <span className="text-xs text-slate-400">Business workspace</span>
           </span>
         </div>
         <button
@@ -66,7 +66,7 @@ export default function Header({
               void signOut({ callbackUrl: "/sign-in" });
             })
           }
-          className="min-h-11 px-2 text-sm text-slate-600 hover:underline"
+          className="min-h-11 px-2 text-sm text-slate-300 hover:text-white hover:underline"
         >
           Sign out
         </button>

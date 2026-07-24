@@ -12,6 +12,7 @@ import {getEstimateActivityDashboard} from "@/lib/estimates/estimateEvents";
 import { canCreateEstimateForRole } from "@/lib/estimates/permissions";
 import DashboardKpiCards from "@/features/dashboard/DashboardKpiCards";
 import { dashboardPerformanceContent } from "@/features/dashboard/dashboardPresentation";
+import DashboardHero from "@/components/branding/DashboardHero";
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { companyId, role } = await requireCompanyRole(
@@ -28,8 +29,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const performance=dashboardPerformanceContent(analytics);
   return (
     <AppLayout dashboard={{ canCreateEstimate: canCreateEstimateForRole(role) }}>
-      <div className="mx-auto max-w-6xl p-6 sm:p-10">
-        <p className="text-slate-600">Your JunkQuote Pro workspace.</p>
+      <div className="dashboard-page mx-auto max-w-[1500px] p-4 sm:p-6 lg:p-8">
+        <DashboardHero />
         {!onboarding.dismissedAt && <section className="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-bold">{onboarding.completedAt?"Setup complete":"Finish setting up your workspace"}</h2><p className="text-sm text-slate-600">{onboarding.completedSections.length} of {onboardingSections.length} setup sections complete. {onboarding.completedAt?"You’re ready to create estimates.":"Resume anytime without losing progress."}</p></div><div className="flex gap-2"><Link href={onboarding.completedAt?"/estimates":"/onboarding"} className="rounded bg-blue-700 px-4 py-2 text-white">{onboarding.completedAt?"Create Estimate":"Resume setup"}</Link>{onboarding.completedAt&&<form action={async()=>{"use server";const c=await requireCompanyRole("Owner","Admin");await prisma.companyOnboarding.update({where:{companyId:c.companyId},data:{dismissedAt:new Date()}});redirect("/dashboard")}}><button className="rounded border bg-white px-4 py-2">Dismiss</button></form>}</div></div></section>}
         <DashboardKpiCards counts={lifecycle} />
         <section className="mt-7"><h2 className="mb-3 text-lg font-bold text-slate-900">Recent Activity</h2><div className="grid gap-5 lg:grid-cols-3"><Metric title="Pending approvals" value={String(activity.pendingApprovals)}/><Metric title="Today's changes" value={String(activity.todaysChanges)}/><div className="rounded-2xl border bg-white p-6"><h3 className="font-bold">Recent company activity</h3><div className="mt-3 space-y-2">{activity.recentCompanyActivity.slice(0,5).map(event=><Link className="block text-sm" href={`/estimates/${event.estimateId}`} key={event.id}><strong>{event.title}</strong><span className="block text-slate-500">{event.summary}</span></Link>)}{!activity.recentCompanyActivity.length&&<p className="text-sm text-slate-500">No recent activity.</p>}</div></div></div></section>

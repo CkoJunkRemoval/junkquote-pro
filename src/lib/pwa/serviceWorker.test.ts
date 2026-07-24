@@ -18,4 +18,14 @@ describe("service worker", () => {
     expect(source).toContain("!r.redirected");
     expect(source).toContain('r.headers.has("set-cookie")');
   });
+  it("pre-caches a versioned field shell without caching authenticated field responses", () => {
+    expect(source).toContain('const FIELD_OFFLINE_URL="/offline/field"');
+    expect(source).toContain(
+      'html.matchAll(/(?:src|href)="(\\/_next\\/static\\/[^"]+)"/g)',
+    );
+    expect(source).toContain(
+      'const fieldNavigation=url.pathname.startsWith("/field")||url.pathname===FIELD_OFFLINE_URL',
+    );
+    expect(source).toContain("sensitivePath(url.pathname)");
+  });
 });

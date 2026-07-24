@@ -11,10 +11,11 @@ export default function Button({
     <button
       className={`
         rounded-xl
-        bg-blue-700
-        hover:bg-blue-800
+        bg-[var(--brand-orange)]
+        hover:bg-[var(--brand-orange-hover)]
         disabled:bg-slate-400
         disabled:cursor-not-allowed
+        shadow-[0_10px_25px_rgba(242,140,40,0.2)]
         transition
         px-6
         py-3

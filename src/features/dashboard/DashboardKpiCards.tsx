@@ -133,11 +133,11 @@ export default function DashboardKpiCards({
   return (
     <section
       aria-label="Dashboard key performance indicators"
-      className="mt-7 space-y-5"
+      className="dashboard-kpis relative z-10 -mt-5 space-y-5 px-2 sm:-mt-7 sm:px-4"
     >
       {groups.map((group) => (
         <div key={group.title}>
-          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-700">
+          <h2 className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-300">
             {group.title}
           </h2>
           <div className={`grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 ${group.columns===3?"lg:grid-cols-3":"lg:grid-cols-2"}`}>
@@ -146,15 +146,15 @@ export default function DashboardKpiCards({
                 key={key}
                 href={href}
                 aria-label={`${label}: ${counts[key]}. Open filtered view.`}
-                className="group relative flex min-h-32 min-w-0 cursor-pointer flex-col rounded-xl border border-[var(--border-color)] bg-[var(--surface)] p-3 text-[var(--surface-foreground)] shadow-sm transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 motion-reduce:transform-none motion-reduce:transition-none sm:p-4"
+                className="dashboard-kpi group relative flex min-h-32 min-w-0 cursor-pointer flex-col rounded-xl border-[var(--border-color)] bg-[var(--surface)] p-3 text-[var(--surface-foreground)] transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 motion-reduce:transform-none motion-reduce:transition-none sm:p-4"
               >
                 <div className="flex min-h-10 items-start justify-between gap-2">
-                  <h3 className="text-sm font-semibold leading-tight text-slate-700">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-300">
                     {label}
                   </h3>
                   <Icon
                     aria-hidden="true"
-                    className="shrink-0 text-blue-700"
+                    className="dashboard-kpi__icon shrink-0"
                     size={20}
                     strokeWidth={2}
                   />
@@ -163,10 +163,10 @@ export default function DashboardKpiCards({
                   {counts[key]}
                 </p>
                 <div className="mt-auto flex min-h-7 items-end justify-between gap-2 pt-2">
-                  <p className="text-xs font-medium text-slate-600">{helper}</p>
+                  <p className="text-xs font-medium text-slate-400">{helper}</p>
                   <ArrowUpRight
                     aria-hidden="true"
-                    className="shrink-0 text-slate-600 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 motion-reduce:transform-none motion-reduce:transition-none"
+                    className="shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 motion-reduce:transform-none motion-reduce:transition-none"
                     size={16}
                   />
                 </div>

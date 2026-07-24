@@ -70,11 +70,8 @@ export default function DashboardQuickActions({
   return (
     <div
       data-testid="dashboard-header"
-      className="grid w-full gap-3 py-3 md:grid-cols-[auto_minmax(16rem,32rem)_auto] md:items-center md:py-0"
+      className="grid w-full gap-3 py-3 md:grid-cols-[minmax(14rem,1fr)_auto] md:items-center md:py-0"
     >
-      <h1 className="text-2xl font-bold text-slate-900 md:text-3xl">
-        Dashboard
-      </h1>
       <GlobalSearch dashboard />
       {canCreateEstimate && (
         <button
@@ -83,7 +80,7 @@ export default function DashboardQuickActions({
           aria-keyshortcuts="N Control+Shift+N"
           disabled={routing}
           onClick={openNewEstimate}
-          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-blue-700 px-5 py-2.5 font-semibold text-white hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-70 md:w-auto"
+          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[var(--brand-orange)] px-5 py-2.5 font-semibold text-white shadow-[0_8px_24px_rgba(242,140,40,0.2)] hover:bg-[var(--brand-orange-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-70 md:w-auto"
         >
           <Plus aria-hidden="true" size={18} />
           {routing ? "Opening…" : "New Estimate"}
