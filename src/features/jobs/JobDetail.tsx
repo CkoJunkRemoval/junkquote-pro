@@ -96,7 +96,7 @@ export default function JobDetail({
   const availableTransitions =
     jobStatusTransitions[job.status as JobWorkflowStatus];
   return (
-    <div className="mx-auto max-w-6xl p-6 sm:p-10">
+    <div className="contrast-controls mx-auto max-w-6xl p-6 sm:p-10">
       <Link href="/jobs" className="text-sm font-semibold text-blue-700">
         Back to Jobs
       </Link>
@@ -111,9 +111,9 @@ export default function JobDetail({
         </p>
         <p className="mt-1 text-sm text-slate-600">
           {job.customer.phone}
-          {job.customer.email ? ` · ${job.customer.email}` : ""}
+          {job.customer.email ? ` Â· ${job.customer.email}` : ""}
         </p>
-        <a target="_blank" rel="noreferrer" href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${job.property.address}, ${job.property.city}, ${job.property.state} ${job.property.zip}`)}`} className="mt-2 inline-block text-sm font-semibold text-blue-700">Open in Maps</a>
+        <div className="mt-2 flex flex-wrap gap-3"><a target="_blank" rel="noreferrer" href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${job.property.address}, ${job.property.city}, ${job.property.state} ${job.property.zip}`)}`} className="inline-flex min-h-11 items-center text-sm font-semibold text-blue-700">Open in Maps</a><Link href={`/communications?manual=1&sourceType=Job&sourceId=${job.id}&customerId=${job.customer.id}`} className="control-secondary inline-flex min-h-11 items-center rounded-xl border px-4 text-sm font-semibold">Email customer</Link></div>
       </div>
       {error && <p className="mt-4 text-red-600">{error}</p>}
       {message && <p className="mt-4 text-green-700">{message}</p>}
@@ -121,11 +121,11 @@ export default function JobDetail({
         <h2 className="text-xl font-bold">Job schedule and status</h2>
         <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
           <p>Scheduling status: <strong>{labelStatus(job.schedulingStatus)}</strong></p>
-          <p>Arrival window: <strong>{job.arrivalWindowStart&&job.arrivalWindowEnd?`${new Date(job.arrivalWindowStart).toLocaleString()} – ${new Date(job.arrivalWindowEnd).toLocaleTimeString()}`:"Not set"}</strong></p>
+          <p>Arrival window: <strong>{job.arrivalWindowStart&&job.arrivalWindowEnd?`${new Date(job.arrivalWindowStart).toLocaleString()} â€“ ${new Date(job.arrivalWindowEnd).toLocaleTimeString()}`:"Not set"}</strong></p>
           <p>Expected duration: <strong>{job.estimatedDurationMinutes?`${job.estimatedDurationMinutes} minutes`:"Not set"}</strong></p>
           <p>Vehicles: <strong>{job.vehicleAssignments.map(row=>row.fleetAsset.name).join(", ")||"Unassigned"}</strong></p>
         </div>
-        <Link href={`/dispatch?date=${job.scheduledStart?new Date(job.scheduledStart).toISOString().slice(0,10):new Date().toISOString().slice(0,10)}`} className="mt-3 inline-flex min-h-11 items-center rounded-lg border px-4 font-semibold">Open in Dispatch</Link>
+        <Link href={`/dispatch?date=${job.scheduledStart?new Date(job.scheduledStart).toISOString().slice(0,10):new Date().toISOString().slice(0,10)}`} className="control-secondary mt-3 inline-flex min-h-11 items-center rounded-lg border px-4 font-semibold">Open in Dispatch</Link>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <p className="rounded-lg border p-3 text-sm">Scheduled start<br/><strong>{scheduledStart?new Date(scheduledStart).toLocaleString():"Unscheduled"}</strong></p>
           <Field label="Truck" value={truck} onChange={setTruck} type="text" />
@@ -146,7 +146,7 @@ export default function JobDetail({
               type="button"
               disabled={isSaving}
               onClick={() => void save(status)}
-              className="rounded-lg border border-slate-300 px-4 py-2 font-semibold"
+              className={`rounded-lg border border-slate-300 px-4 py-2 font-semibold ${status === "Cancelled" ? "text-red-700" : ""}`}
             >
               Mark {labelStatus(status)}
             </button>
@@ -155,13 +155,13 @@ export default function JobDetail({
         </div>
         <p className="mt-4 text-sm text-slate-600">
           Current status: <strong>{labelStatus(job.status)}</strong>
-          {job.status === "InProgress" && <> · <strong>{job.dispatchProgress === "Arrived" ? "On Site" : job.dispatchProgress === "EnRoute" ? "En Route" : job.dispatchProgress}</strong></>}
+          {job.status === "InProgress" && <> Â· <strong>{job.dispatchProgress === "Arrived" ? "On Site" : job.dispatchProgress === "EnRoute" ? "En Route" : job.dispatchProgress}</strong></>}
         </p>
-        <p className="mt-2 text-sm text-slate-600">Crew: {job.assignments.map((assignment) => assignment.crew?.name || `${assignment.employee?.firstName ?? ""} ${assignment.employee?.lastName ?? ""}`.trim()).filter(Boolean).join(", ") || "Unassigned"} · Truck: {job.truck || "Unassigned"}</p>
+        <p className="mt-2 text-sm text-slate-600">Crew: {job.assignments.map((assignment) => assignment.crew?.name || `${assignment.employee?.firstName ?? ""} ${assignment.employee?.lastName ?? ""}`.trim()).filter(Boolean).join(", ") || "Unassigned"} Â· Truck: {job.truck || "Unassigned"}</p>
       </section>
       <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6">
         <h2 className="text-xl font-bold">Schedule history</h2>
-        <div className="mt-3 space-y-2">{job.company.auditEvents.map(event=><p key={event.id} className="rounded-lg border p-3 text-sm"><strong>{event.eventType.replaceAll("_"," ")}</strong> · {new Date(event.createdAt).toLocaleString()}</p>)}{!job.company.auditEvents.length&&<p className="text-sm text-slate-500">No scheduling history yet.</p>}</div>
+        <div className="mt-3 space-y-2">{job.company.auditEvents.map(event=><p key={event.id} className="rounded-lg border p-3 text-sm"><strong>{event.eventType.replaceAll("_"," ")}</strong> Â· {new Date(event.createdAt).toLocaleString()}</p>)}{!job.company.auditEvents.length&&<p className="text-sm text-slate-500">No scheduling history yet.</p>}</div>
       </section>
       {job.status === "Completed" && <ActualCosts jobId={job.id} initial={job} />}
       {job.status === "Completed" && (
@@ -198,7 +198,7 @@ export default function JobDetail({
       <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6">
         <h2 className="text-xl font-bold">Linked estimate</h2>
         <div className="mt-4 flex flex-wrap gap-4">
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-sm">
+          <span className="status-chip rounded-full px-3 py-1 text-sm">
             {job.estimate.status}
           </span>
           <span className="font-semibold">

@@ -10,7 +10,7 @@ export default async function Page() {
   const billingEnabled = isBillingAvailable();
   return (
     <AppLayout>
-      <main className="mx-auto max-w-6xl p-6 sm:p-10">
+      <main className="contrast-controls mx-auto max-w-6xl p-6 sm:p-10">
         <h1 className="text-4xl font-bold">
           Plans built for junk removal teams
         </h1>
@@ -18,7 +18,7 @@ export default async function Page() {
           Pricing and payment details are shown securely in Stripe Checkout.
         </p>
         {!billingEnabled && (
-          <div className="mt-5 rounded-xl border border-amber-300 bg-amber-50 p-4">
+          <div className="surface-warning mt-5 rounded-xl border border-amber-300 p-4">
             <strong>Online billing is temporarily unavailable.</strong>
             <p>
               Your existing account and application data remain available.

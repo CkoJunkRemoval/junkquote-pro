@@ -103,6 +103,90 @@ body {
   opacity: 0.72;
 }
 
+.contrast-controls :where(button) {
+  min-height: 2.75rem;
+  color: var(--text-on-dark) !important;
+  background: rgba(30, 41, 59, 0.9) !important;
+  border-color: rgba(133, 165, 188, 0.42) !important;
+}
+
+.contrast-controls :where(button):hover:not(:disabled) {
+  background: rgba(51, 65, 85, 0.96) !important;
+  border-color: rgba(242, 140, 40, 0.62) !important;
+}
+
+.contrast-controls :where(button.bg-blue-700, button.bg-slate-900) {
+  color: white !important;
+  background: #1d4ed8 !important;
+  border-color: #3b82f6 !important;
+}
+
+.contrast-controls :where(button.bg-blue-700, button.bg-slate-900):hover:not(:disabled) {
+  background: #1e40af !important;
+}
+
+.contrast-controls button.bg-amber-600 {
+  color: #111827 !important;
+  background: var(--brand-orange) !important;
+  border-color: #ffad58 !important;
+}
+
+.contrast-controls button.text-red-700 {
+  color: #fecaca !important;
+  background: rgba(127, 29, 29, 0.5) !important;
+  border-color: rgba(248, 113, 113, 0.62) !important;
+}
+
+.contrast-controls button.text-amber-800 {
+  color: #fde68a !important;
+  background: rgba(120, 53, 15, 0.48) !important;
+  border-color: rgba(251, 191, 36, 0.58) !important;
+}
+
+.contrast-controls :where(button):disabled {
+  cursor: not-allowed;
+  color: var(--control-disabled-text) !important;
+  background: var(--control-disabled-bg) !important;
+  border-color: rgba(100, 116, 139, 0.48) !important;
+  opacity: 0.72;
+}
+
+.control-secondary {
+  color: var(--text-on-dark) !important;
+  background: rgba(30, 41, 59, 0.9) !important;
+  border-color: rgba(133, 165, 188, 0.42) !important;
+}
+
+.control-secondary:hover {
+  background: rgba(51, 65, 85, 0.96) !important;
+  border-color: rgba(242, 140, 40, 0.62) !important;
+}
+
+.status-chip {
+  color: var(--text-on-dark) !important;
+  background: rgba(51, 65, 85, 0.9) !important;
+  border: 1px solid rgba(133, 165, 188, 0.34);
+}
+
+.status-chip.bg-green-100,
+.status-chip.bg-emerald-900 {
+  color: #dcfce7 !important;
+  background: #14532d !important;
+  border-color: #22c55e;
+}
+
+.status-chip:is(.bg-red-100, .bg-amber-100, .bg-orange-100, .bg-yellow-100) {
+  color: #fef3c7 !important;
+  background: #78350f !important;
+  border-color: #f59e0b;
+}
+
+.status-chip:is(.bg-blue-100, .bg-purple-100, .bg-indigo-100, .bg-teal-100) {
+  color: #dbeafe !important;
+  background: #1e3a8a !important;
+  border-color: #60a5fa;
+}
+
 .filter-pill {
   min-height: 2.75rem;
   color: var(--filter-inactive-text) !important;
