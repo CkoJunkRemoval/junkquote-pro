@@ -32,6 +32,7 @@
   ],
   "exclude": [
     "node_modules",
-    "scripts/offline-browser-release-gate.ts"
+    "scripts/offline-browser-release-gate.ts",
+    "scripts/route-intelligence-browser-review.ts"
   ]
 }

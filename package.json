@@ -10,6 +10,8 @@
     "lint": "eslint",
     "postinstall": "prisma generate",
     "typecheck": "tsc --noEmit --pretty false",
+    "typecheck:offline-browser-gate": "tsc --project tsconfig.offline-browser-gate.json --pretty false",
+    "typecheck:route-intelligence-browser-review": "tsc --project tsconfig.route-intelligence-browser-review.json --pretty false",
     "test": "npm run test:unit",
     "test:unit": "vitest run",
     "test:integration": "vitest run --config vitest.integration.config.ts",

@@ -1,3 +1,12 @@
+/**
+ * Optional local Route Intelligence browser review.
+ *
+ * Install its browser driver without changing package manifests:
+ * npm install --no-save --package-lock=false playwright-core
+ *
+ * Check: npm run typecheck:route-intelligence-browser-review
+ * Run:   npx tsx scripts/route-intelligence-browser-review.ts
+ */
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import bcrypt from "bcryptjs";

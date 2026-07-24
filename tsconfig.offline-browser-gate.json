@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "incremental": false
+  },
+  "include": [
+    "scripts/offline-browser-release-gate.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

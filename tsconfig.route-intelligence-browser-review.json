@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "incremental": false
+  },
+  "include": [
+    "scripts/route-intelligence-browser-review.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}
