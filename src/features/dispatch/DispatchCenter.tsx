@@ -1022,7 +1022,7 @@ function UnscheduledPanel({
   setDraggingId: (id: string | null) => void;
 }) {
   return (
-    <section className="mt-6 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100">
+    <section className="dispatch-unscheduled mt-6 rounded-2xl border p-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold">Unscheduled Jobs</h2>
@@ -1036,12 +1036,12 @@ function UnscheduledPanel({
             aria-label="Search unscheduled jobs"
             name="unscheduledSearch"
             placeholder="Search customer, job, city, ZIP"
-            className="min-h-11 rounded-xl border bg-[var(--surface)] px-3 text-[var(--foreground)]"
+            className="min-h-11 rounded-xl border bg-[var(--input-background)] px-3 text-[var(--input-foreground)]"
           />
           <select
             aria-label="Sort unscheduled jobs"
             name="unscheduledSort"
-            className="min-h-11 rounded-xl border bg-[var(--surface)] px-3 text-[var(--foreground)]"
+            className="min-h-11 rounded-xl border bg-[var(--input-background)] px-3 text-[var(--input-foreground)]"
           >
             <option value="oldest">Oldest first</option>
             <option value="newest">Newest first</option>
@@ -1060,15 +1060,17 @@ function UnscheduledPanel({
             onDragStart={() => setDraggingId(job.id)}
             onDragEnd={() => setDraggingId(null)}
           >
-            <JobCard
-              job={job}
-              referenceTime={referenceTime}
-              density="comfortable"
-              readOnly={false}
-              onMove={() => open(job)}
-              drag
-              unscheduled
-            />
+            <div className="dispatch-unscheduled__job">
+              <JobCard
+                job={job}
+                referenceTime={referenceTime}
+                density="comfortable"
+                readOnly={false}
+                onMove={() => open(job)}
+                drag
+                unscheduled
+              />
+            </div>
           </div>
         ))}
       </div>

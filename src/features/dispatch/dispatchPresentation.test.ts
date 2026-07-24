@@ -41,4 +41,11 @@ describe("dispatch presentation", () => {
     expect(source).toContain("referenceTime");
     expect(source).toContain("queueMicrotask");
   });
+  it("uses the dark glass surface for unscheduled jobs", () => {
+    expect(source).toContain("dispatch-unscheduled");
+    expect(source).toContain("dispatch-unscheduled__job");
+    expect(source).not.toContain(
+      'className="mt-6 rounded-2xl border border-amber-300 bg-amber-50',
+    );
+  });
 });

@@ -68,6 +68,7 @@ export default function SignInForm({
             id="sign-in-email"
             autoComplete="username"
             aria-describedby={error ? "sign-in-error" : undefined}
+            aria-invalid={error ? true : undefined}
             required
             type="email"
             value={email}
@@ -82,6 +83,7 @@ export default function SignInForm({
             id="sign-in-password"
             autoComplete="current-password"
             aria-describedby={error ? "sign-in-error" : undefined}
+            aria-invalid={error ? true : undefined}
             required
             type="password"
             value={password}

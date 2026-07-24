@@ -19,7 +19,7 @@ export default async function Page() {
       <main className="mx-auto max-w-4xl p-6 sm:p-10">
         <h1 className="text-3xl font-bold">Billing & subscription</h1>
         {!billingEnabled && (
-          <div className="mt-5 rounded-xl border border-amber-300 bg-amber-50 p-4">
+          <div className="surface-warning mt-5 rounded-xl border border-amber-300 p-4">
             <strong>Online billing is temporarily unavailable.</strong>
             <p>
               Your current subscription details remain visible. Contact a
@@ -28,7 +28,7 @@ export default async function Page() {
           </div>
         )}
         {!entitlements.allowed && (
-          <div className="mt-5 rounded-xl border border-red-300 bg-red-50 p-4">
+          <div className="surface-warning mt-5 rounded-xl border border-red-300 p-4">
             <strong>Restricted mode</strong>
             <p>
               Existing data remains available to view and export. New estimates,
@@ -37,7 +37,7 @@ export default async function Page() {
           </div>
         )}
         {subscription?.status === "PastDue" && (
-          <div className="mt-5 rounded-xl border border-amber-300 bg-amber-50 p-4">
+          <div className="surface-warning mt-5 rounded-xl border border-amber-300 p-4">
             Payment failed. Update your payment method before the grace period
             ends.
           </div>

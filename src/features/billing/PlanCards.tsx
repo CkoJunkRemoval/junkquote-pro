@@ -42,7 +42,7 @@ export default function PlanCards({
           <form action={startCheckoutAction.bind(null, id)}>
             <button
               disabled={!billingEnabled || current === id}
-              className="mt-6 w-full rounded-lg bg-blue-700 px-4 py-3 font-semibold text-white disabled:bg-slate-300"
+              className="control-disabled mt-6 min-h-11 w-full rounded-lg bg-blue-700 px-4 py-3 font-semibold text-white"
             >
               {!billingEnabled
                 ? "Billing unavailable"
