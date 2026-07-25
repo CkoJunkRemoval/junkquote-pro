@@ -431,6 +431,10 @@ model Company {
   phone                         String?
   email                         String?
   website                       String?
+  dbaName                       String?
+  ein                           String?
+  businessLicense               String?
+  description                   String?
   addressLine1                  String?
   addressLine2                  String?
   city                          String?
@@ -547,6 +551,8 @@ model Company {
   fleetSettings           CompanyFleetSettings?
   taxDocuments            TaxDocument[]
   taxChecklistItems       TaxChecklistItem[]
+  businessLocations       BusinessLocation[]
+  companyDocuments        CompanyDocument[]
 
   @@map("companies")
 }
@@ -584,6 +590,14 @@ model CompanySettings {
   approvalEmailTemplate           String?
   pdfBrandingEnabled              Boolean   @default(true)
   portalBrandingEnabled           Boolean   @default(true)
+  lightLogoUrl                    String?
+  darkLogoUrl                     String?
+  emailBranding                   Json      @default("{}")
+  estimateBranding                Json      @default("{}")
+  invoiceBranding                 Json      @default("{}")
+  operationalDefaults             Json      @default("{}")
+  notificationPreferences         Json      @default("{}")
+  integrationSettings             Json      @default("{}")
   itemLibraryDefaults             Json?
   pricingRegion                   String?
   pricingMarket                   String?
@@ -614,19 +628,69 @@ model CompanyOnboarding {
 }
 
 model ServiceAreaRule {
-  id             String   @id @default(uuid())
+  id             String            @id @default(uuid())
   companyId      String
-  company        Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company        Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
   kind           String
   value          String
   travelZone     String?
-  distanceCharge Float    @default(0)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  distanceCharge Float             @default(0)
+  radiusMiles    Float?
+  available      Boolean           @default(true)
+  locationId     String?
+  location       BusinessLocation? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 
   @@unique([companyId, kind, value])
   @@index([companyId, travelZone])
+  @@index([locationId])
   @@map("service_area_rules")
+}
+
+model BusinessLocation {
+  id            String            @id @default(uuid())
+  companyId     String
+  company       Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name          String
+  addressLine1  String
+  addressLine2  String?
+  city          String
+  state         String
+  postalCode    String
+  phone         String?
+  email         String?
+  managerId     String?
+  hours         Json              @default("{}")
+  active        Boolean           @default(true)
+  fleetAssetIds Json              @default("[]")
+  employeeIds   Json              @default("[]")
+  serviceAreas  ServiceAreaRule[]
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@unique([companyId, name])
+  @@index([companyId, active])
+  @@map("business_locations")
+}
+
+model CompanyDocument {
+  id           String    @id @default(uuid())
+  companyId    String
+  company      Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  category     String
+  name         String
+  objectKey    String
+  contentType  String
+  sizeBytes    Int
+  expiresAt    DateTime?
+  uploadedById String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([companyId, objectKey])
+  @@index([companyId, category, createdAt])
+  @@map("company_documents")
 }
 
 model User {

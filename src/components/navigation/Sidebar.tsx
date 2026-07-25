@@ -32,7 +32,7 @@ const items = [
   { label: "Pricing", href: "/pricing", icon: Tags },
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
   { label: "Pricing Intelligence", href: "/analytics/pricing", icon: BarChart3 },
-  { label: "Settings", href: "/settings", icon: Settings },
+  { label: "Company Hub", href: "/settings/company", icon: Settings },
   { label: "Billing", href: "/settings/billing", icon: FileText },
 ];
 
