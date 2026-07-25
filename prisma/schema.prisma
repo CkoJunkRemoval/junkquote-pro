@@ -545,6 +545,8 @@ model Company {
   assetDocuments          AssetDocument[]
   assetTimelineEvents     AssetTimelineEvent[]
   fleetSettings           CompanyFleetSettings?
+  taxDocuments            TaxDocument[]
+  taxChecklistItems       TaxChecklistItem[]
 
   @@map("companies")
 }
@@ -2912,6 +2914,67 @@ model ExpenseRevision {
   @@unique([expenseId, revisionNumber])
   @@index([companyId, correctedAt])
   @@map("expense_revisions")
+}
+
+enum TaxDocumentCategory {
+  W9
+  W2Copy
+  Form1099Copy
+  BusinessLicense
+  ResaleCertificate
+  InsuranceCertificate
+  CpaCorrespondence
+  IrsCorrespondence
+  StateCorrespondence
+  TaxReturn
+  EstimatedPaymentConfirmation
+  PayrollReport
+  AccountantWorkpaper
+  Other
+}
+
+model TaxDocument {
+  id               String              @id @default(uuid())
+  companyId        String
+  company          Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  taxYear          Int
+  category         TaxDocumentCategory
+  title            String
+  storageKey       String              @unique
+  originalFilename String
+  mimeType         String
+  sizeBytes        Int
+  reviewStatus     String              @default("AwaitingReview")
+  uploadedById     String
+  reviewedById     String?
+  reviewedAt       DateTime?
+  notes            String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  @@index([companyId, taxYear, category])
+  @@index([companyId, reviewStatus, createdAt])
+  @@map("tax_documents")
+}
+
+model TaxChecklistItem {
+  id            String    @id @default(uuid())
+  companyId     String
+  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  taxYear       Int
+  key           String
+  label         String
+  isCustom      Boolean   @default(false)
+  completed     Boolean   @default(false)
+  completedAt   DateTime?
+  completedById String?
+  createdById   String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([companyId, taxYear, key])
+  @@index([companyId, taxYear, completed])
+  @@map("tax_checklist_items")
 }
 
 model EmployeeTimeEntry {

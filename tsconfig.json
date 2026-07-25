@@ -35,6 +35,7 @@
     "scripts/offline-browser-release-gate.ts",
     "scripts/route-intelligence-browser-review.ts",
     "scripts/finance-browser-review.ts",
+    "scripts/tax-center-browser-review.ts",
     ".local-postgres-*",
     ".local-pg-data"
   ]
