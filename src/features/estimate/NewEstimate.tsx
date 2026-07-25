@@ -90,7 +90,7 @@ function ResumeDraftEstimates({
   }
 
   return (
-    <div className="max-w-4xl mx-auto py-12 px-6">
+    <div className="estimate-walkthrough-theme max-w-4xl mx-auto py-12 px-6">
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -144,7 +144,7 @@ function ResumeDraftEstimates({
                     type="button"
                     onClick={() => void deleteDraft(draft.id)}
                     disabled={isDeleting}
-                    className="bg-red-600 hover:bg-red-700"
+                    variant="danger"
                   >
                     {isDeleting ? "Deleting..." : "Delete"}
                   </Button>
@@ -287,7 +287,7 @@ function EstimateWizard({
   const showSidebar = wizardStep <= 5;
 
   return (
-    <div className="max-w-7xl mx-auto py-12 px-6">
+    <div className="estimate-walkthrough-theme max-w-7xl mx-auto py-12 px-6">
 
       <StepHeader
         step={wizardStep}
@@ -305,7 +305,7 @@ function EstimateWizard({
             type="button"
             onClick={() => void deleteCurrentDraft()}
             disabled={isDeleting || isLoadingEstimate}
-            className="bg-red-600 hover:bg-red-700"
+            variant="danger"
           >
             {isDeleting ? "Deleting..." : "Delete Draft"}
           </Button>
@@ -343,6 +343,7 @@ function EstimateWizard({
               <Button
                 onClick={previousStep}
                 disabled={wizardStep === 1 || isLoadingEstimate}
+                variant="secondary"
               >
                 Back
               </Button>

@@ -1,19 +1,19 @@
 import { ButtonHTMLAttributes } from "react";
 
-type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement>;
+type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: "primary" | "secondary" | "danger" | "warning";
+};
 
 export default function Button({
   children,
   className = "",
+  variant = "primary",
   ...props
 }: ButtonProps) {
   return (
     <button
-      className={`
+      className={`ui-button ui-button--${variant}
         rounded-xl
-        bg-[var(--brand-orange)]
-        hover:bg-[var(--brand-orange-hover)]
-        disabled:bg-slate-400
         disabled:cursor-not-allowed
         shadow-[0_10px_25px_rgba(242,140,40,0.2)]
         transition
