@@ -6,17 +6,20 @@ import {
 const valid = {
   NODE_ENV: "production",
   DATABASE_URL: "postgresql://user:pass@db.example.com/junkquote",
+  DIRECT_URL: "postgresql://user:pass@direct.db.example.com/junkquote",
   AUTH_SECRET: "a-secure-random-secret-that-is-over-32-characters",
   AUTH_URL: "https://app.example.com",
   NEXT_PUBLIC_APP_URL: "https://app.example.com",
-  PRIVATE_ASSET_STORAGE_DRIVER: "local",
-  PRIVATE_ASSET_STORAGE_ROOT: "/private/assets",
+  PRIVATE_ASSET_STORAGE_DRIVER: "supabase",
+  SUPABASE_STORAGE_URL: "https://storage.example.com",
+  SUPABASE_SERVICE_ROLE_KEY: "service-role-value",
+  SUPABASE_STORAGE_BUCKET: "private-assets",
   EMAIL_PROVIDER: "resend",
   EMAIL_FROM: "no-reply@example.com",
   RESEND_API_KEY: "re_test_key",
   RESEND_WEBHOOK_SECRET: "whsec_dGVzdC1zZWNyZXQ=",
   BACKGROUND_WORKERS_ENABLED: "true",
-  STRIPE_SECRET_KEY: "sk_test_example",
+  STRIPE_SECRET_KEY: "sk_live_example",
   STRIPE_WEBHOOK_SECRET: "whsec_example",
   STRIPE_PRICE_STARTER: "price_starter",
   STRIPE_PRICE_PROFESSIONAL: "price_professional",
@@ -51,6 +54,28 @@ describe("production environment", () => {
         AUTH_URL: "http://app.example.com",
       }),
     ).toThrow("HTTPS"));
+  it("rejects local storage and Stripe test mode in production", () => {
+    expect(
+      inspectProductionEnvironment({
+        ...valid,
+        PRIVATE_ASSET_STORAGE_DRIVER: "local",
+        STRIPE_SECRET_KEY: "sk_test_example",
+      }).errors,
+    ).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("local is unsafe"),
+        expect.stringContaining("test-mode"),
+      ]),
+    );
+  });
+  it("requires runtime and direct migration URLs to target the same database", () => {
+    expect(
+      inspectProductionEnvironment({
+        ...valid,
+        DIRECT_URL: "postgresql://user:pass@direct.db.example.com/other",
+      }).errors,
+    ).toContain("DATABASE_URL and DIRECT_URL must target the same database.");
+  });
   it("starts with warnings when optional services and a CSP override are absent", () => {
     const optionalNames = [
       "STRIPE_SECRET_KEY",

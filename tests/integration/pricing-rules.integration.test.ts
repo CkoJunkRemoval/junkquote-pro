@@ -46,6 +46,9 @@ describe("pricing rules integration",()=>{
     const [pdf,portal]=await Promise.all([getEstimatePdfData(a.company.id,a.estimate.id),getPortalEstimate(a.company.id,(await prisma.estimate.findUniqueOrThrow({where:{id:a.estimate.id}})).customerId,a.estimate.id)]);
     expect(pdf.breakdown.grandTotal).toBe(175);
     expect(portal?.breakdown.grandTotal).toBe(pdf.breakdown.grandTotal);
-    expect(pdf.breakdown.sections.flatMap(section=>section.lines).some(line=>line.label==="Long Carry")).toBe(true);
+    expect(pdf.breakdown.sections.flatMap(section=>section.lines).some(line=>line.label==="Long Carry")).toBe(false);
+    expect(pdf.breakdown.sections.flatMap(section=>section.lines).some(line=>line.label==="Additional service charges")).toBe(true);
+    expect(portal?.breakdown.sections.flatMap(section=>section.lines).some(line=>line.label==="Long Carry")).toBe(false);
+    expect(portal?.breakdown.sections.flatMap(section=>section.lines).some(line=>line.label==="Additional service charges")).toBe(true);
   });
 });

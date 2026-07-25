@@ -15,6 +15,7 @@
     "typecheck:finance-browser-review": "tsc --project tsconfig.finance-browser-review.json --pretty false",
     "typecheck:tax-center-browser-review": "tsc --project tsconfig.tax-center-browser-review.json --pretty false",
     "typecheck:company-hub-browser-review": "tsc --project tsconfig.company-hub-browser-review.json --pretty false",
+    "typecheck:customer-portal-browser-review": "tsc --project tsconfig.customer-portal-browser-review.json --pretty false",
     "test": "npm run test:unit",
     "test:unit": "vitest run",
     "test:integration": "vitest run --config vitest.integration.config.ts",

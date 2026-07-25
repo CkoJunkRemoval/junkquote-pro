@@ -178,6 +178,26 @@ export default function CompanySettings({
                 onChange={(value) => set("legalName", value)}
               />
               <Input
+                label="DBA"
+                value={draft.dbaName}
+                onChange={(value) => set("dbaName", value)}
+              />
+              <Input
+                label="EIN placeholder"
+                value={draft.ein}
+                onChange={(value) => set("ein", value)}
+              />
+              <Input
+                label="Business license placeholder"
+                value={draft.businessLicense}
+                onChange={(value) => set("businessLicense", value)}
+              />
+              <Input
+                label="Description"
+                value={draft.description}
+                onChange={(value) => set("description", value)}
+              />
+              <Input
                 label="Phone"
                 value={draft.phone}
                 onChange={(value) => set("phone", value)}
@@ -384,6 +404,10 @@ function values(company: Company) {
   return {
     legalName: company.legalName,
     displayName: company.displayName,
+    dbaName: company.dbaName ?? "",
+    ein: company.ein ?? "",
+    businessLicense: company.businessLicense ?? "",
+    description: company.description ?? "",
     email: company.email ?? "",
     phone: company.phone ?? "",
     website: company.website ?? "",
@@ -423,6 +447,10 @@ function sectionData(
     return {
       legalName: draft.legalName,
       displayName: draft.displayName,
+      dbaName: draft.dbaName,
+      ein: draft.ein,
+      businessLicense: draft.businessLicense,
+      description: draft.description,
       email: draft.email,
       phone: draft.phone,
       website: draft.website,

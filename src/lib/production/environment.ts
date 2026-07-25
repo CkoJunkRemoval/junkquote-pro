@@ -37,6 +37,7 @@ export function inspectProductionEnvironment(
   };
 
   const databaseUrl = requireValue("DATABASE_URL");
+  const directUrl = production ? requireValue("DIRECT_URL") : value(env, "DIRECT_URL");
   const stripeNames = [
     "STRIPE_SECRET_KEY",
     "STRIPE_WEBHOOK_SECRET",
@@ -66,7 +67,10 @@ export function inspectProductionEnvironment(
       errors.push("AUTH_URL or NEXTAUTH_URL is required in production.");
     const baseUrl = requireValue("NEXT_PUBLIC_APP_URL");
     const storage = requireValue("PRIVATE_ASSET_STORAGE_DRIVER");
-    if (storage === "local") requireValue("PRIVATE_ASSET_STORAGE_ROOT");
+    if (storage === "local")
+      errors.push(
+        "PRIVATE_ASSET_STORAGE_DRIVER=local is unsafe for production; use supabase.",
+      );
     const email = requireValue("EMAIL_PROVIDER");
     requireValue("EMAIL_FROM");
     requireValue("PLATFORM_ADMIN_EMAIL");
@@ -77,6 +81,12 @@ export function inspectProductionEnvironment(
           ? `Stripe billing is disabled because configuration is incomplete (${stripeNames.filter((name, index) => !stripeValues[index]).join(", ")} missing).`
           : "Stripe billing is disabled because Stripe is not configured.",
       );
+    if (
+      stripeConfigured &&
+      (stripeValues[0]?.startsWith("sk_test_") ||
+        stripeValues.slice(2).some((configured) => configured?.startsWith("price_test_")))
+    )
+      errors.push("Stripe test-mode credentials must not be used in production.");
     if (!redisConfigured)
       warnings.push(
         redisUrl || redisToken
@@ -143,6 +153,25 @@ export function inspectProductionEnvironment(
       /localhost|127\.0\.0\.1|development|_dev(?:\?|$)/i.test(databaseUrl)
     )
       errors.push("DATABASE_URL appears to reference a development database.");
+    if (
+      directUrl &&
+      /localhost|127\.0\.0\.1|development|_dev(?:\?|$)/i.test(directUrl)
+    )
+      errors.push("DIRECT_URL appears to reference a development database.");
+    if (databaseUrl && directUrl) {
+      try {
+        const runtimeDatabase = decodeURIComponent(
+          new URL(databaseUrl).pathname.slice(1),
+        );
+        const migrationDatabase = decodeURIComponent(
+          new URL(directUrl).pathname.slice(1),
+        );
+        if (runtimeDatabase !== migrationDatabase)
+          errors.push("DATABASE_URL and DIRECT_URL must target the same database.");
+      } catch {
+        errors.push("DATABASE_URL and DIRECT_URL must be valid PostgreSQL URLs.");
+      }
+    }
   }
 
   return {

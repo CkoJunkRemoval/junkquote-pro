@@ -31,7 +31,7 @@ export async function createInvoice(companyId: string, input: CreateInvoiceInput
     }
 
     const [latestInvoice, company] = await Promise.all([
-      tx.invoice.findFirst({ orderBy: { invoiceNumber: "desc" }, select: { invoiceNumber: true } }),
+      tx.invoice.findFirst({ where: { companyId }, orderBy: { invoiceNumber: "desc" }, select: { invoiceNumber: true } }),
       tx.company.findUnique({ where: { id: companyId }, select: { invoicePrefix: true, defaultPaymentTermsDays: true, defaultTaxRate: true } }),
     ]);
     if (!company) throw new Error("Company not found.");

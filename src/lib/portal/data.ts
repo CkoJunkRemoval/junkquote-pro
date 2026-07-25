@@ -135,7 +135,6 @@ export async function listPortalEstimates(
       pricingDiscount: true,
       pricingTotal: true,
       updatedAt: true,
-      approvalToken: true,
       approvalTokenExpiresAt: true,
       signerName: true,
       signedAt: true,
@@ -172,14 +171,24 @@ export async function getPortalEstimate(
       appliedPricingRules:{where:{status:"Applied"},orderBy:{displayOrder:"asc"},select:{id:true,name:true,calculatedAmount:true,status:true}},
       jobSites: {
         orderBy: { sortOrder: "asc" },
-        select:{id:true,name:true,customerNotes:true,items: { orderBy: { sortOrder: "asc" },select:{id:true,name:true,quantity:true,basePrice:true,priceOverride:true} } },
+        select:{id:true,name:true,items: { orderBy: { sortOrder: "asc" },select:{id:true,name:true,quantity:true,basePrice:true,priceOverride:true} } },
       },
       revisionPhotos:{where:{customerVisible:true},orderBy:{sortOrder:"asc"},select:{id:true,fileUrl:true,thumbnailUrl:true,fileName:true,caption:true,category:true}},
     },
   });
   if(!estimate)return null;const rootId=estimate.revisionRootId??estimate.id;const revisions=await prisma.estimate.findMany({where:{companyId,customerId,OR:[{id:rootId},{revisionRootId:rootId}]},orderBy:{revisionNumber:"asc"},select:{id:true,displayNumber:true,revisionNumber:true,status:true,createdAt:true}});
   const breakdown=buildPersistedCustomerPricingBreakdown({items:estimate.jobSites.flatMap(site=>site.items),rules:estimate.appliedPricingRules,pricing:{subtotal:estimate.pricingSubtotal,labor:estimate.pricingLabor,disposal:estimate.pricingDisposal,discount:estimate.pricingDiscount,total:estimate.pricingTotal},tax:{enabled:estimate.pricingProfile.taxEnabled,rate:estimate.pricingProfile.taxRate}});
-  return{...estimate,breakdown,revisions};
+  const safeEstimate = { ...estimate };
+  Reflect.deleteProperty(safeEstimate, "appliedPricingRules");
+  return{
+    ...safeEstimate,
+    jobSites:safeEstimate.jobSites.map(site=>({
+      ...site,
+      items:site.items.map(item=>({id:item.id,name:item.name,quantity:item.quantity})),
+    })),
+    breakdown,
+    revisions,
+  };
 }
 export async function listPortalJobs(
   companyId: string,

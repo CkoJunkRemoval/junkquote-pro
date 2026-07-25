@@ -17,6 +17,7 @@ import {
 } from "@/lib/payments/refunds";
 import { recordAuditEvent } from "@/lib/audit/audit";
 import { currentRequestId } from "@/lib/audit/requestAudit";
+import { requireFeature } from "@/lib/billing/entitlements";
 async function authorizedContext() {
   return requireOperationalTenant();
 }
@@ -25,6 +26,7 @@ async function authorizedCompanyId() {
 }
 export async function addPaymentAction(invoiceId: string, input: PaymentInput) {
   const c = await authorizedContext();
+  await requireFeature(c.companyId, "payments");
   const result = await recordPayment(c.companyId, invoiceId, input);
   await recordAuditEvent({
     companyId: c.companyId,

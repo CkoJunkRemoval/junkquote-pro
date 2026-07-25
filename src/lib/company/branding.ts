@@ -38,6 +38,10 @@ export async function getCompanyBranding(companyId: string) {
       name: true,
       legalName: true,
       displayName: true,
+      dbaName: true,
+      ein: true,
+      businessLicense: true,
+      description: true,
       email: true,
       phone: true,
       website: true,
@@ -133,6 +137,14 @@ export async function updateCompanyBranding(
     ...(input.displayName !== undefined
       ? { displayName: text(input.displayName) || "JunkQuote Pro" }
       : {}),
+    ...(input.dbaName !== undefined ? { dbaName: text(input.dbaName) } : {}),
+    ...(input.ein !== undefined ? { ein: text(input.ein) } : {}),
+    ...(input.businessLicense !== undefined
+      ? { businessLicense: text(input.businessLicense) }
+      : {}),
+    ...(input.description !== undefined
+      ? { description: text(input.description) }
+      : {}),
     ...(input.email !== undefined ? { email: text(input.email) } : {}),
     ...(input.phone !== undefined ? { phone: text(input.phone) } : {}),
     ...(input.website !== undefined ? { website: text(input.website) } : {}),
@@ -184,6 +196,10 @@ export async function updateCompanyBranding(
       name: true,
       legalName: true,
       displayName: true,
+      dbaName: true,
+      ein: true,
+      businessLicense: true,
+      description: true,
       email: true,
       phone: true,
       website: true,

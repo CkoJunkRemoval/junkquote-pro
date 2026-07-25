@@ -3,6 +3,7 @@ import { prisma } from "../prisma";
 import { deriveInvoicePaymentState } from "./paymentRecalculation";
 import { syncPricingOutcomeForInvoice } from "@/lib/smartPricing/outcomes";
 import {recordEstimateEventInTransaction} from "@/lib/estimates/estimateEvents";
+import {emitCommunicationEventForSource} from "@/lib/communications/engine";
 
 export interface PaymentInput { amount: number; method: PaymentMethod; referenceNumber?: string; paymentDate: Date; notes?: string; }
 export type UpdatePaymentInput = PaymentInput;
@@ -34,6 +35,7 @@ export async function recordPayment(companyId: string, invoiceId: string, input:
     return { payment, invoiceState };
   });
   await syncPricingOutcomeForInvoice(companyId, invoiceId);
+  await emitCommunicationEventForSource({companyId,eventType:"PAYMENT_RECEIVED",sourceType:"Payment",sourceId:result.payment.id,dedupeKey:`PAYMENT_RECEIVED:${result.payment.id}`});
   return result;
 }
 

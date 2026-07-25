@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { sendOrEnqueueCommunication } from "@/lib/communications/queueCommunication";
+import { emitCommunicationEventForSource } from "@/lib/communications/engine";
 export async function configureArReminder(
   companyId: string,
   input: {
@@ -68,18 +68,7 @@ export async function dispatchDueArReminders(
     });
     for (const invoice of invoices) {
       if (!invoice.customer.email) continue;
-      await sendOrEnqueueCommunication(companyId, {
-        channel: "email",
-        to: invoice.customer.email,
-        subject: policy.subject.replaceAll(
-          "{{invoice}}",
-          invoice.displayNumber ?? String(invoice.invoiceNumber),
-        ),
-        body: policy.body
-          .replaceAll("{{customer}}", invoice.customer.firstName)
-          .replaceAll("{{balance}}", invoice.balanceDue.toFixed(2)),
-        idempotencyKey: `ar:${policy.id}:${invoice.id}:${now.toISOString().slice(0, 10)}`,
-      });
+      await emitCommunicationEventForSource({companyId,eventType:"INVOICE_OVERDUE",sourceType:"Invoice",sourceId:invoice.id,dedupeKey:`INVOICE_OVERDUE:${policy.id}:${invoice.id}:${now.toISOString().slice(0,10)}`});
       sent.push(invoice.id);
     }
   }

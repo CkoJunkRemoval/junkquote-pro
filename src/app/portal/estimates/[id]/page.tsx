@@ -45,16 +45,17 @@ export default async function Page({
       <p className="mt-2 text-sm text-slate-600">
         Expires {row.approvalTokenExpiresAt?.toLocaleString() ?? "—"}
       </p>
+      <Link
+        className="mt-4 inline-flex min-h-11 items-center rounded border border-slate-300 bg-white px-4 font-semibold"
+        href={`/api/portal/estimates/${row.id}/pdf`}
+      >
+        Download estimate PDF
+      </Link>
       <div className="mt-5 space-y-3">
         {row.jobSites.flatMap((site) =>
           site.items.map((item) => (
             <div key={item.id} className="rounded border bg-white p-3">
               {item.quantity} × {item.name}
-              <span className="float-right">
-                {item.priceOverride !== null
-                  ? money(item.priceOverride * item.quantity)
-                  : "Included"}
-              </span>
             </div>
           )),
         )}
@@ -117,21 +118,16 @@ export default async function Page({
             <h2 className="font-bold">Approve estimate</h2>
             <input type="hidden" name="response" value="approve" />
             <input
-              className="mt-3 w-full rounded border p-2"
+              className="mt-3 min-h-11 w-full rounded border p-2"
               name="customerName"
               placeholder="Your full name"
               required
             />
-            <textarea
-              className="mt-3 w-full rounded border p-2"
-              name="signatureData"
-              placeholder="Typed signature (optional)"
-            />
-            <label className="mt-3 flex gap-2 text-sm">
+            <label className="mt-3 flex min-h-11 items-center gap-2 text-sm">
               <input type="checkbox" name="consent" required />I consent to the
               work and portal terms v1.
             </label>
-            <button className="mt-4 rounded bg-green-700 px-4 py-2 text-white">
+            <button className="mt-4 min-h-11 rounded bg-green-700 px-4 py-2 text-white">
               Approve
             </button>
           </form>
@@ -142,17 +138,17 @@ export default async function Page({
             <h2 className="font-bold">Decline estimate</h2>
             <input type="hidden" name="response" value="decline" />
             <input
-              className="mt-3 w-full rounded border p-2"
+              className="mt-3 min-h-11 w-full rounded border p-2"
               name="customerName"
               placeholder="Your full name"
               required
             />
             <textarea
-              className="mt-3 w-full rounded border p-2"
+              className="mt-3 min-h-11 w-full rounded border p-2"
               name="declineReason"
               placeholder="Reason (optional)"
             />
-            <button className="mt-4 rounded border border-red-300 px-4 py-2 text-red-700">
+            <button className="mt-4 min-h-11 rounded border border-red-300 px-4 py-2 text-red-700">
               Decline
             </button>
           </form>
@@ -164,17 +160,17 @@ export default async function Page({
       >
         <h2 className="font-bold">Message the company</h2>
         <input
-          className="mt-3 w-full rounded border p-2"
+          className="mt-3 min-h-11 w-full rounded border p-2"
           name="subject"
           placeholder="Subject"
         />
         <textarea
-          className="mt-3 w-full rounded border p-2"
+          className="mt-3 min-h-11 w-full rounded border p-2"
           name="body"
           placeholder="Your message"
           required
         />
-        <button className="mt-3 rounded bg-blue-700 px-4 py-2 text-white">
+        <button className="mt-3 min-h-11 rounded bg-blue-700 px-4 py-2 text-white">
           Send message
         </button>
       </form>

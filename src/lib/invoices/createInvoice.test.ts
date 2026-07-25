@@ -13,6 +13,7 @@ describe("createInvoice", () => {
   it("creates an invoice with snapshotted historical totals", async () => {
     transactionMock(); mocks.findEstimate.mockResolvedValue(approvedEstimate); mocks.findInvoice.mockResolvedValue(null); mocks.findLatest.mockResolvedValue({ invoiceNumber: 7 }); mocks.findCompany.mockResolvedValue({ invoicePrefix: "INV", defaultPaymentTermsDays: 30 }); mocks.createInvoice.mockResolvedValue({ id: "invoice-1" });
     await createInvoice(approvedEstimate.companyId, { estimateId: "estimate-1" });
+    expect(mocks.findLatest).toHaveBeenCalledWith(expect.objectContaining({ where: { companyId: approvedEstimate.companyId } }));
     expect(mocks.createInvoice).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ invoiceNumber: 8, displayNumber: "INV-8", subtotal: 135, tax: 0, discounts: 5, total: 130, balanceDue: 130 }) }));
   });
   it("prevents a duplicate invoice for an estimate", async () => {

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 export {ESTIMATE_STATUSES,estimateTransitions,isEstimateEditable,canDeleteEstimate,canTransitionEstimateStatus,ESTIMATE_READ_ONLY_MESSAGE,ESTIMATE_DELETE_MESSAGE,estimateStatusBadges} from "./lifecyclePolicy";
 import {canTransitionEstimateStatus,estimateStatusBadges} from "./lifecyclePolicy";
 import {queryEstimateEvents,recordEstimateEventInTransaction} from "./estimateEvents";
+import {emitCommunicationEventForSource} from "@/lib/communications/engine";
 
 export type EstimateWorkflowStatus = EstimateStatus;
 
@@ -29,8 +30,11 @@ export async function transitionEstimateInTransaction(tx: Tx, companyId: string,
   return updated;
 }
 
-export function transitionEstimate(companyId:string,estimateId:string,nextStatus:EstimateStatus,options?:TransitionOptions) {
-  return prisma.$transaction(tx=>transitionEstimateInTransaction(tx,companyId,estimateId,nextStatus,options));
+export async function transitionEstimate(companyId:string,estimateId:string,nextStatus:EstimateStatus,options?:TransitionOptions) {
+  const result=await prisma.$transaction(tx=>transitionEstimateInTransaction(tx,companyId,estimateId,nextStatus,options));
+  const eventType=nextStatus==="Sent"?"ESTIMATE_SENT":nextStatus==="Approved"?"ESTIMATE_APPROVED":nextStatus==="Declined"?"ESTIMATE_DECLINED":null;
+  if(eventType)await emitCommunicationEventForSource({companyId,eventType,sourceType:"Estimate",sourceId:estimateId,dedupeKey:`${eventType}:${estimateId}:${result.updatedAt.toISOString()}`});
+  return result;
 }
 
 export async function listEstimateActivity(companyId:string,estimateId:string) { return (await queryEstimateEvents(companyId,{audience:"employee",estimateId,limit:100})).events.map(e=>({...e,message:e.summary,createdAt:e.timestamp})); }
