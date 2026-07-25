@@ -25,5 +25,5 @@ export default function SignaturePad({ onChange }: { onChange: (signature: strin
   function finish() { if (!drawingRef.current) return; drawingRef.current = false; onChange(canvasRef.current!.toDataURL("image/png")); }
   function clear() { const canvas = canvasRef.current!; canvas.getContext("2d")!.clearRect(0, 0, canvas.width, canvas.height); onChange(""); }
 
-  return <div className="space-y-2"><canvas ref={canvasRef} width={700} height={180} onPointerDown={start} onPointerMove={draw} onPointerUp={finish} onPointerLeave={finish} className="h-40 w-full touch-none rounded-xl border border-slate-300 bg-white" aria-label="Draw your signature" /><button type="button" onClick={clear} className="text-sm font-medium text-blue-700">Clear Signature</button></div>;
+  return <div className="space-y-2"><canvas ref={canvasRef} width={700} height={180} onPointerDown={start} onPointerMove={draw} onPointerUp={finish} onPointerLeave={finish} className="h-40 w-full touch-none rounded-xl border border-slate-300 bg-white" aria-label="Draw your signature" /><button type="button" onClick={clear} className="min-h-11 text-sm font-medium text-blue-700">Clear Signature</button></div>;
 }

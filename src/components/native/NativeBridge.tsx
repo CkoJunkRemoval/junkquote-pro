@@ -33,9 +33,14 @@ export function NativeBridge() {
           if (canGoBack) history.back();
           else void App.minimizeApp();
         });
+        const appState = await App.addListener("appStateChange", ({ isActive }) => {
+          if (isActive)
+            window.dispatchEvent(new CustomEvent("junkquote:app-resume"));
+        });
         removers.push(
           () => link.remove(),
           () => back.remove(),
+          () => appState.remove(),
         );
         const launch = await App.getLaunchUrl();
         if (launch?.url) navigate(launch.url);

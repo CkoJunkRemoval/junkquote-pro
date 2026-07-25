@@ -18,6 +18,13 @@ export function buildPublicEstimatePdf(estimate: PublicEstimateApproval): Estima
     total: `$${estimate.pricing.total.toFixed(2)}`,
     status: estimate.status,
     branding: estimate.company,
-    signature: estimate.signature ? { signerName: estimate.signature.signerName, signedAt: estimate.signature.signedAt.toLocaleString(), method: estimate.signature.method, image: estimate.signature.data } : undefined,
+    signature: estimate.signature ? {
+      signerName: estimate.signature.signerName,
+      signedAt: estimate.signature.signedAt.toLocaleString(),
+      method: estimate.signature.method,
+      image: /^data:image\/png;base64,[A-Za-z0-9+/]+=*$/.test(estimate.signature.data)
+        ? estimate.signature.data
+        : undefined,
+    } : undefined,
   };
 }

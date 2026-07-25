@@ -1,8 +1,11 @@
 /** @param {Record<string, string | undefined>} environment */
 export function productionDatabaseUrl(environment = process.env) {
-  const value = environment.DATABASE_URL;
+  const value = environment.DIRECT_URL;
   if (!value)
-    throw new Error("DATABASE_URL is required for a production deployment.");
+    throw new Error("DIRECT_URL is required for production migration deployment.");
+  const runtimeValue = environment.DATABASE_URL;
+  if (!runtimeValue)
+    throw new Error("DATABASE_URL is required for production runtime.");
   if (environment.DATABASE_URL_TEST && value === environment.DATABASE_URL_TEST)
     throw new Error(
       "Refusing to deploy migrations: DATABASE_URL equals DATABASE_URL_TEST.",
@@ -11,6 +14,11 @@ export function productionDatabaseUrl(environment = process.env) {
   if (!["postgres:", "postgresql:"].includes(parsed.protocol))
     throw new Error("DATABASE_URL must use PostgreSQL.");
   const database = decodeURIComponent(parsed.pathname.slice(1)).toLowerCase();
+  const runtimeDatabase = decodeURIComponent(
+    new URL(runtimeValue).pathname.slice(1),
+  ).toLowerCase();
+  if (runtimeDatabase !== database)
+    throw new Error("DATABASE_URL and DIRECT_URL must target the same database.");
   const disposableVerification =
     environment.VERCEL_BUILD_DISPOSABLE_VERIFY === "true" &&
     environment.VERCEL !== "1" &&

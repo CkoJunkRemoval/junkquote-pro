@@ -122,10 +122,13 @@ export function buildPersistedCustomerPricingBreakdown(input:{
   tax?:{enabled:boolean;rate:number};
 }):CustomerPricingBreakdown {
   const itemLines=input.items.map(item=>({id:`item:${item.id}`,label:item.name,quantity:item.quantity,amount:(item.priceOverride??item.basePrice)*item.quantity}));
-  const ruleLines=input.rules.filter(rule=>rule.status==="Applied"&&rule.calculatedAmount>0).map(rule=>({id:`rule:${rule.id}`,label:rule.name,amount:rule.calculatedAmount}));
+  const positiveRuleTotal=input.rules.filter(rule=>rule.status==="Applied"&&rule.calculatedAmount>0).reduce((sum,rule)=>sum+rule.calculatedAmount,0);
+  const ruleLines=positiveRuleTotal?[{id:"charges:additional",label:"Additional service charges",amount:positiveRuleTotal}]:[];
   const discountLines=[
     ...(input.pricing.discount?[{id:"discount:manual",label:"Discount",amount:-input.pricing.discount}]:[]),
-    ...input.rules.filter(rule=>rule.status==="Applied"&&rule.calculatedAmount<0).map(rule=>({id:`discount:${rule.id}`,label:rule.name,amount:rule.calculatedAmount})),
+    ...(input.rules.some(rule=>rule.status==="Applied"&&rule.calculatedAmount<0)
+      ? [{id:"discount:pricing",label:"Discount",amount:input.rules.filter(rule=>rule.status==="Applied"&&rule.calculatedAmount<0).reduce((sum,rule)=>sum+rule.calculatedAmount,0)}]
+      : []),
   ];
   const itemTotal=itemLines.reduce((sum,row)=>sum+row.amount,0),ruleTotal=ruleLines.reduce((sum,row)=>sum+row.amount,0),discountTotal=discountLines.reduce((sum,row)=>sum+row.amount,0);
   const estimatedTax=input.tax?.enabled?Math.round(Math.max(0,input.pricing.subtotal+input.pricing.labor+ruleTotal+discountTotal)*input.tax.rate)/100:0;

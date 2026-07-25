@@ -18,6 +18,14 @@ export async function renderEstimatePdf(estimate: EstimatePdf) {
   });
   pdf.setTextColor(...branding.primary); pdf.setFont("helvetica", "bold"); pdf.setFontSize(18); pdf.text(`Estimated Total: ${estimate.total}`, 20, y); pdf.setTextColor(0, 0, 0); y += 15;
   pdf.setFontSize(12); pdf.text(`Status: ${estimate.status ?? "Unsigned"}`, 20, y); y += 10;
-  if (estimate.signature) { pdf.text(`Signer: ${estimate.signature.signerName}`, 20, y); y += 7; pdf.text(`Signed: ${estimate.signature.signedAt}`, 20, y); y += 7; pdf.text(`Method: ${estimate.signature.method}`, 20, y); y += 10; pdf.addImage(estimate.signature.image, "PNG", 20, y, 80, 25); } else pdf.text("Customer Signature: Not yet signed", 20, y);
+  if (estimate.signature) {
+    pdf.text(`Signer: ${estimate.signature.signerName}`, 20, y); y += 7;
+    pdf.text(`Signed: ${estimate.signature.signedAt}`, 20, y); y += 7;
+    pdf.text(`Method: ${estimate.signature.method}`, 20, y); y += 10;
+    if (estimate.signature.image)
+      pdf.addImage(estimate.signature.image, "PNG", 20, y, 80, 25);
+    else
+      pdf.text("Electronic consent recorded.", 20, y);
+  } else pdf.text("Customer Signature: Not yet signed", 20, y);
   return Buffer.from(pdf.output("arraybuffer")).toString("base64");
 }

@@ -105,8 +105,12 @@ export async function generateEstimatePdf(
     pdf.text(`Signer: ${estimate.signature.signerName}`, 20, y); y += 7;
     pdf.text(`Signed: ${estimate.signature.signedAt}`, 20, y); y += 7;
     pdf.text(`Method: ${estimate.signature.method}`, 20, y); y += 10;
-    const signatureImage = await signaturePngToJpeg(estimate.signature.image);
-    pdf.addImage(signatureImage, "JPEG", 20, y, 80, 25);
+    if (estimate.signature.image) {
+      const signatureImage = await signaturePngToJpeg(estimate.signature.image);
+      pdf.addImage(signatureImage, "JPEG", 20, y, 80, 25);
+    } else {
+      pdf.text("Electronic consent recorded.", 20, y);
+    }
   } else {
     pdf.text("Customer Signature: Not yet signed", 20, y);
   }
