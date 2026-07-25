@@ -69,7 +69,7 @@ describe("finance visual and security contracts", () => {
 
   it("keeps browser-only tooling outside the production graph", () => {
     const tsconfig = read("tsconfig.json");
-    expect(tsconfig).toContain("route-intelligence-browser-review");
+    expect(tsconfig).toContain('scripts/*browser-review*.ts');
     expect(tsconfig).toContain("offline-browser-release-gate");
   });
 });
