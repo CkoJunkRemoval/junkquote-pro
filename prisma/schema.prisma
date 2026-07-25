@@ -517,6 +517,14 @@ model Company {
   workforceCredentials    WorkforceCredential[]
   workforceDocuments      WorkforceDocument[]
   workforceOnboarding     WorkforceOnboardingItem[]
+  timekeepingSettings     CompanyTimekeepingSettings?
+  timeClockEvents         TimeClockEvent[]
+  workSessions            WorkSession[]
+  workSessionAllocations  WorkSessionAllocation[]
+  timeCorrectionRequests  TimeCorrectionRequest[]
+  payPeriods              PayPeriod[]
+  timesheets              Timesheet[]
+  timesheetApprovalEvents TimesheetApprovalEvent[]
 
   @@map("companies")
 }
@@ -527,33 +535,33 @@ model CompanySettings {
   companyId String  @unique
   company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
-  timezone                        String  @default("America/New_York")
-  currency                        String  @default("USD")
+  timezone                        String    @default("America/New_York")
+  currency                        String    @default("USD")
   businessHours                   String?
-  taxRate                         Float   @default(0)
-  smartPricingEnabled             Boolean @default(false)
-  smartPricingMinimumSampleSize   Int     @default(5)
-  smartPricingConfidenceThreshold Int     @default(60)
-  smartPricingUseLaborHistory     Boolean @default(true)
-  smartPricingUseDisposalHistory  Boolean @default(true)
-  smartPricingUseTravelHistory    Boolean @default(false)
-  portalShowAssignedCrew          Boolean @default(false)
-  serviceRadiusMiles              Float   @default(25)
-  defaultLaborRate                Float   @default(0)
-  defaultDumpFee                  Float   @default(0)
-  heavyItemSurcharge              Float   @default(0)
-  appliancePrice                  Float   @default(0)
-  yardDebrisPrice                 Float   @default(0)
-  constructionDebrisPrice         Float   @default(0)
-  approvalExpirationDays          Int     @default(30)
-  dateFormat                      String  @default("MM/DD/YYYY")
+  taxRate                         Float     @default(0)
+  smartPricingEnabled             Boolean   @default(false)
+  smartPricingMinimumSampleSize   Int       @default(5)
+  smartPricingConfidenceThreshold Int       @default(60)
+  smartPricingUseLaborHistory     Boolean   @default(true)
+  smartPricingUseDisposalHistory  Boolean   @default(true)
+  smartPricingUseTravelHistory    Boolean   @default(false)
+  portalShowAssignedCrew          Boolean   @default(false)
+  serviceRadiusMiles              Float     @default(25)
+  defaultLaborRate                Float     @default(0)
+  defaultDumpFee                  Float     @default(0)
+  heavyItemSurcharge              Float     @default(0)
+  appliancePrice                  Float     @default(0)
+  yardDebrisPrice                 Float     @default(0)
+  constructionDebrisPrice         Float     @default(0)
+  approvalExpirationDays          Int       @default(30)
+  dateFormat                      String    @default("MM/DD/YYYY")
   communicationSenderName         String?
   communicationReplyTo            String?
   estimateEmailTemplate           String?
   invoiceEmailTemplate            String?
   approvalEmailTemplate           String?
-  pdfBrandingEnabled              Boolean @default(true)
-  portalBrandingEnabled           Boolean @default(true)
+  pdfBrandingEnabled              Boolean   @default(true)
+  portalBrandingEnabled           Boolean   @default(true)
   itemLibraryDefaults             Json?
   pricingRegion                   String?
   pricingMarket                   String?
@@ -626,22 +634,28 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  memberships              CompanyMembership[]
-  createdBackgroundJobs    BackgroundJob[]
-  createdReminderSchedules ReminderSchedule[]
-  smartPricingDecisions    SmartPricingDecision[]
-  createdRefunds           Refund[]
-  createdServicePlans      ServicePlan[]
-  employee                 Employee?
-  auditEvents              AuditEvent[]
-  scheduledJobs            Job[] @relation("JobLastScheduledBy")
-  assignedJobAssignments   JobAssignment[] @relation("JobAssignmentAssignedBy")
-  assignedJobVehicles      JobVehicleAssignment[] @relation("JobVehicleAssignedBy")
-  offlinePackages          OfflineFieldPackage[]
-  offlineMutations         OfflineFieldMutation[]
-  compensationCreated      WorkforceCompensation[]     @relation("WorkforceCompensationCreator")
+  memberships                CompanyMembership[]
+  createdBackgroundJobs      BackgroundJob[]
+  createdReminderSchedules   ReminderSchedule[]
+  smartPricingDecisions      SmartPricingDecision[]
+  createdRefunds             Refund[]
+  createdServicePlans        ServicePlan[]
+  employee                   Employee?
+  auditEvents                AuditEvent[]
+  scheduledJobs              Job[]                     @relation("JobLastScheduledBy")
+  assignedJobAssignments     JobAssignment[]           @relation("JobAssignmentAssignedBy")
+  assignedJobVehicles        JobVehicleAssignment[]    @relation("JobVehicleAssignedBy")
+  offlinePackages            OfflineFieldPackage[]
+  offlineMutations           OfflineFieldMutation[]
+  compensationCreated        WorkforceCompensation[]   @relation("WorkforceCompensationCreator")
   workforceDocumentsUploaded WorkforceDocument[]       @relation("WorkforceDocumentUploader")
-  onboardingItemsCompleted WorkforceOnboardingItem[]   @relation("WorkforceOnboardingCompleter")
+  onboardingItemsCompleted   WorkforceOnboardingItem[] @relation("WorkforceOnboardingCompleter")
+  createdTimeClockEvents     TimeClockEvent[]          @relation("TimeClockEventCreator")
+  correctedTimeClockEvents   TimeClockEvent[]          @relation("TimeClockEventCorrector")
+  requestedTimeCorrections   TimeCorrectionRequest[]   @relation("TimeCorrectionRequester")
+  reviewedTimeCorrections    TimeCorrectionRequest[]   @relation("TimeCorrectionReviewer")
+  timesheetApprovalActions   TimesheetApprovalEvent[]  @relation("TimesheetApprovalActor")
+  lockedPayPeriods           PayPeriod[]               @relation("PayPeriodLocker")
 
   @@index([companyId])
   @@map("users")
@@ -679,12 +693,12 @@ model Customer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  properties     Property[]
-  estimates      Estimate[]
-  jobs           Job[]
-  invoices       Invoice[]
-  servicePlans   ServicePlan[]
-  portalAccesses CustomerPortalAccess[]
+  properties               Property[]
+  estimates                Estimate[]
+  jobs                     Job[]
+  invoices                 Invoice[]
+  servicePlans             ServicePlan[]
+  portalAccesses           CustomerPortalAccess[]
   communicationPreferences CommunicationRecipientPreference[]
 
   @@index([companyId])
@@ -706,7 +720,7 @@ model Property {
   city              String
   state             String
   zip               String
-  country           String   @default("US")
+  country           String  @default("US")
   normalizedAddress String?
   latitude          Float?
   longitude         Float?
@@ -719,8 +733,8 @@ model Property {
   serviceArea   String?
   dangerousPets String?
   hoaNotes      String?
-  active         Boolean  @default(true)
-  archivedAt     DateTime?
+  active        Boolean   @default(true)
+  archivedAt    DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -837,7 +851,7 @@ model PricingProfile {
 }
 
 model ItemLibrary {
-  id        String @id @default(uuid())
+  id        String  @id @default(uuid())
   companyId String
   company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
@@ -847,14 +861,14 @@ model ItemLibrary {
   active       Boolean @default(true)
   displayOrder Int     @default(0)
 
-  basePrice       Float @default(0)
-  disposalFee     Float @default(0)
-  laborHours      Float @default(0.25)
+  basePrice       Float  @default(0)
+  disposalFee     Float  @default(0)
+  laborHours      Float  @default(0.25)
   weightClass     String @default("Medium")
-  estimatedVolume Float @default(0)
+  estimatedVolume Float  @default(0)
 
-  recyclable        Boolean @default(false)
-  donationEligible  Boolean @default(false)
+  recyclable         Boolean @default(false)
+  donationEligible   Boolean @default(false)
   hazardous          Boolean @default(false)
   refrigerant        Boolean @default(false)
   electronics        Boolean @default(false)
@@ -884,11 +898,11 @@ model ItemLibrary {
 }
 
 model PricingProfileItemOverride {
-  id               String @id @default(uuid())
+  id               String         @id @default(uuid())
   pricingProfileId String
   pricingProfile   PricingProfile @relation(fields: [pricingProfileId], references: [id], onDelete: Cascade)
   itemLibraryId    String
-  itemLibrary      ItemLibrary @relation(fields: [itemLibraryId], references: [id], onDelete: Cascade)
+  itemLibrary      ItemLibrary    @relation(fields: [itemLibraryId], references: [id], onDelete: Cascade)
 
   basePrice       Float?
   disposalFee     Float?
@@ -905,9 +919,9 @@ model PricingProfileItemOverride {
 }
 
 model PricingRule {
-  id               String @id @default(uuid())
+  id               String          @id @default(uuid())
   companyId        String
-  company          Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company          Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
   pricingProfileId String?
   pricingProfile   PricingProfile? @relation(fields: [pricingProfileId], references: [id], onDelete: Cascade)
 
@@ -926,8 +940,8 @@ model PricingRule {
 
   conditions        RuleCondition[]
   estimateSnapshots EstimatePricingRule[]
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
 
   @@index([companyId])
   @@index([companyId, active, priority])
@@ -936,40 +950,40 @@ model PricingRule {
 }
 
 model RuleCondition {
-  id            String @id @default(uuid())
-  pricingRuleId String
-  pricingRule   PricingRule @relation(fields: [pricingRuleId], references: [id], onDelete: Cascade)
-  field         String
-  operator      String @default("equals")
-  value         String
+  id             String      @id @default(uuid())
+  pricingRuleId  String
+  pricingRule    PricingRule @relation(fields: [pricingRuleId], references: [id], onDelete: Cascade)
+  field          String
+  operator       String      @default("equals")
+  value          String
   secondaryValue String?
-  displayOrder  Int @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  displayOrder   Int         @default(0)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 
   @@index([pricingRuleId, displayOrder])
   @@map("rule_conditions")
 }
 
 model EstimatePricingRule {
-  id                String @id @default(uuid())
-  estimateId        String
-  estimate          Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
-  pricingRuleId     String?
-  pricingRule       PricingRule? @relation(fields: [pricingRuleId], references: [id], onDelete: SetNull)
-  name              String
-  category          String
-  calculationType   String
-  value             Float
-  calculatedAmount  Float
-  taxable           Boolean @default(true)
-  displayOrder      Int @default(0)
-  source            String @default("Automatic")
-  status            String @default("Applied")
-  reason            String?
-  manuallyAdjusted  Boolean @default(false)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id               String       @id @default(uuid())
+  estimateId       String
+  estimate         Estimate     @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+  pricingRuleId    String?
+  pricingRule      PricingRule? @relation(fields: [pricingRuleId], references: [id], onDelete: SetNull)
+  name             String
+  category         String
+  calculationType  String
+  value            Float
+  calculatedAmount Float
+  taxable          Boolean      @default(true)
+  displayOrder     Int          @default(0)
+  source           String       @default("Automatic")
+  status           String       @default("Applied")
+  reason           String?
+  manuallyAdjusted Boolean      @default(false)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
 
   @@index([estimateId, displayOrder])
   @@index([pricingRuleId])
@@ -1071,6 +1085,71 @@ enum TimeEntryType {
   PTO
 }
 
+enum TimeClockEventType {
+  ClockIn
+  ClockOut
+  BreakStart
+  BreakEnd
+}
+
+enum TimeEntrySource {
+  Mobile
+  Desktop
+  Manual
+  Import
+  System
+}
+
+enum TimesheetStatus {
+  Open
+  Submitted
+  Approved
+  Rejected
+  Locked
+}
+
+enum PayPeriodStatus {
+  Open
+  Review
+  Approved
+  Exported
+  Locked
+}
+
+enum PayPeriodFrequency {
+  Weekly
+  Biweekly
+  Semimonthly
+  Monthly
+  Custom
+}
+
+enum TimeAllocationCategory {
+  Job
+  Shop
+  Travel
+  DumpRun
+  Maintenance
+  Training
+  Admin
+  Other
+}
+
+enum TimeCorrectionStatus {
+  Pending
+  Approved
+  Rejected
+  Applied
+}
+
+enum TimesheetApprovalAction {
+  Submitted
+  Approved
+  Rejected
+  Locked
+  Unlocked
+}
+
 enum SubscriptionPlan {
   Starter
   Professional
@@ -1127,67 +1206,69 @@ model Job {
   propertyId String
   property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 
-  status                JobStatus               @default(Unscheduled)
-  dispatchProgress      DispatchProgress        @default(NotStarted)
-  fieldStage            FieldJobStage           @default(Scheduled)
-  fieldVersion          Int                     @default(0)
-  priority              JobPriority             @default(Normal)
-  enRouteAt             DateTime?
-  arrivedAt             DateTime?
-  completedAt           DateTime?
-  departureLatitude     Float?
-  departureLongitude    Float?
-  arrivalLatitude       Float?
-  arrivalLongitude      Float?
-  completionLatitude    Float?
-  completionLongitude   Float?
-  travelDurationMinutes Int?
-  crewConfirmedAt       DateTime?
-  scheduledStart        DateTime?
-  scheduledEnd          DateTime?
-  arrivalWindowStart    DateTime?
-  arrivalWindowEnd      DateTime?
+  status                   JobStatus               @default(Unscheduled)
+  dispatchProgress         DispatchProgress        @default(NotStarted)
+  fieldStage               FieldJobStage           @default(Scheduled)
+  fieldVersion             Int                     @default(0)
+  priority                 JobPriority             @default(Normal)
+  enRouteAt                DateTime?
+  arrivedAt                DateTime?
+  completedAt              DateTime?
+  departureLatitude        Float?
+  departureLongitude       Float?
+  arrivalLatitude          Float?
+  arrivalLongitude         Float?
+  completionLatitude       Float?
+  completionLongitude      Float?
+  travelDurationMinutes    Int?
+  crewConfirmedAt          DateTime?
+  scheduledStart           DateTime?
+  scheduledEnd             DateTime?
+  arrivalWindowStart       DateTime?
+  arrivalWindowEnd         DateTime?
   estimatedDurationMinutes Int?
-  schedulingStatus      SchedulingStatus @default(Unscheduled)
-  dispatchNotes         String @default("")
-  internalAccessNotes   String @default("")
-  customerInstructions  String @default("")
-  allDay                Boolean @default(false)
-  timeZone              String @default("America/New_York")
-  scheduleVersion       Int @default(0)
-  lastScheduledAt       DateTime?
-  lastScheduledById     String?
-  lastScheduledBy       User? @relation("JobLastScheduledBy", fields: [lastScheduledById], references: [id], onDelete: SetNull)
-  truck                 String?
-  crewNotes             String                  @default("")
-  customerNotes         String                  @default("")
-  completionNotes       String                  @default("")
-  actualLaborHours      Float?
-  actualLaborCost       Float?
-  actualDisposalCost    Float?
-  actualTravelCost      Float?
-  otherActualCost       Float?
-  actualCostNotes       String                  @default("")
-  finalInvoiceAmount    Float?
-  assignedFleetAssetId  String?
-  assignedFleetAsset    FleetAsset?             @relation(fields: [assignedFleetAssetId], references: [id], onDelete: SetNull)
-  disposalRecords       DisposalRecord[]
-  invoice               Invoice?
-  photos                JobPhoto[]
-  assignments           JobAssignment[]
-  vehicleAssignments    JobVehicleAssignment[]
-  fieldChecklistItems   FieldChecklistItem[]
-  fieldChangeOrders     FieldChangeOrder[]
-  completionSignature   JobCompletionSignature?
-  fieldTimeEvents       FieldTimeEvent[]
-  offlineOperations     FieldOfflineOperation[]
-  offlinePackages       OfflineFieldPackage[]
-  offlineMutations      OfflineFieldMutation[]
-  pricingHistory        PricingHistory[]
-  pricingOutcome        PricingOutcome?
-  servicePlanId         String?
-  servicePlan           ServicePlan?            @relation(fields: [servicePlanId], references: [id], onDelete: SetNull)
-  servicePlanOccurrence DateTime?
+  schedulingStatus         SchedulingStatus        @default(Unscheduled)
+  dispatchNotes            String                  @default("")
+  internalAccessNotes      String                  @default("")
+  customerInstructions     String                  @default("")
+  allDay                   Boolean                 @default(false)
+  timeZone                 String                  @default("America/New_York")
+  scheduleVersion          Int                     @default(0)
+  lastScheduledAt          DateTime?
+  lastScheduledById        String?
+  lastScheduledBy          User?                   @relation("JobLastScheduledBy", fields: [lastScheduledById], references: [id], onDelete: SetNull)
+  truck                    String?
+  crewNotes                String                  @default("")
+  customerNotes            String                  @default("")
+  completionNotes          String                  @default("")
+  actualLaborHours         Float?
+  actualLaborCost          Float?
+  actualDisposalCost       Float?
+  actualTravelCost         Float?
+  otherActualCost          Float?
+  actualCostNotes          String                  @default("")
+  finalInvoiceAmount       Float?
+  assignedFleetAssetId     String?
+  assignedFleetAsset       FleetAsset?             @relation(fields: [assignedFleetAssetId], references: [id], onDelete: SetNull)
+  disposalRecords          DisposalRecord[]
+  invoice                  Invoice?
+  photos                   JobPhoto[]
+  assignments              JobAssignment[]
+  vehicleAssignments       JobVehicleAssignment[]
+  fieldChecklistItems      FieldChecklistItem[]
+  fieldChangeOrders        FieldChangeOrder[]
+  completionSignature      JobCompletionSignature?
+  fieldTimeEvents          FieldTimeEvent[]
+  offlineOperations        FieldOfflineOperation[]
+  offlinePackages          OfflineFieldPackage[]
+  offlineMutations         OfflineFieldMutation[]
+  timeClockEvents          TimeClockEvent[]
+  timeAllocations          WorkSessionAllocation[]
+  pricingHistory           PricingHistory[]
+  pricingOutcome           PricingOutcome?
+  servicePlanId            String?
+  servicePlan              ServicePlan?            @relation(fields: [servicePlanId], references: [id], onDelete: SetNull)
+  servicePlanOccurrence    DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1685,70 +1766,75 @@ model CustomerPortalSession {
 }
 
 model Employee {
-  id                     String                   @id @default(uuid())
-  companyId              String
-  company                Company                  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  userId                 String?                  @unique
-  user                   User?                    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  firstName              String
-  middleName             String?
-  lastName               String
-  preferredName          String?
-  employeeNumber         String?
-  email                  String?
-  phone                  String?
-  addressLine1           String?
-  addressLine2           String?
-  city                   String?
-  state                  String?
-  postalCode             String?
-  role                   EmployeeRole
-  workerType             WorkerType               @default(Employee)
-  status                 EmployeeStatus           @default(Active)
-  jobTitle               String?
-  department             String?
-  hireDate               DateTime?
-  terminationDate        DateTime?
-  terminationReason      String?
-  managerId              String?
-  manager                Employee?                @relation("EmployeeManager", fields: [managerId], references: [id], onDelete: SetNull)
-  directReports          Employee[]               @relation("EmployeeManager")
-  defaultCrewId          String?
-  defaultCrew            Crew?                    @relation("DefaultWorkforceCrew", fields: [defaultCrewId], references: [id], onDelete: SetNull)
-  authorizedDriver       Boolean                  @default(false)
-  driverLicenseState     String?
-  driverLicenseExpiresAt DateTime?
-  driverLicenseClass     String?
-  drivingRestrictions    String?
-  hourlyRate             Float?
-  color                  String?
-  notes                  String?
-  availability           String?
-  certifications         String[]
-  invitationStatus       String                   @default("NotInvited")
-  invitationSentAt       DateTime?
-  assignedTruckId        String?
-  assignedTruck          FleetAsset?              @relation(fields: [assignedTruckId], references: [id], onDelete: SetNull)
-  timeEntries            EmployeeTimeEntry[]
-  fieldChecklistItems    FieldChecklistItem[]
-  fieldChangeOrders      FieldChangeOrder[]
-  fieldSignatures        JobCompletionSignature[]
-  fieldTimeEvents        FieldTimeEvent[]
-  fieldOfflineOperations FieldOfflineOperation[]
-  offlinePackages        OfflineFieldPackage[]
-  offlineMutations       OfflineFieldMutation[]
-  crewMembers            CrewMember[]
-  assignments            JobAssignment[]
-  availabilityRanges     EmployeeAvailability[]
-  servicePlanAssignments ServicePlanEmployee[]
+  id                       String                             @id @default(uuid())
+  companyId                String
+  company                  Company                            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId                   String?                            @unique
+  user                     User?                              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  firstName                String
+  middleName               String?
+  lastName                 String
+  preferredName            String?
+  employeeNumber           String?
+  email                    String?
+  phone                    String?
+  addressLine1             String?
+  addressLine2             String?
+  city                     String?
+  state                    String?
+  postalCode               String?
+  role                     EmployeeRole
+  workerType               WorkerType                         @default(Employee)
+  status                   EmployeeStatus                     @default(Active)
+  jobTitle                 String?
+  department               String?
+  hireDate                 DateTime?
+  terminationDate          DateTime?
+  terminationReason        String?
+  managerId                String?
+  manager                  Employee?                          @relation("EmployeeManager", fields: [managerId], references: [id], onDelete: SetNull)
+  directReports            Employee[]                         @relation("EmployeeManager")
+  defaultCrewId            String?
+  defaultCrew              Crew?                              @relation("DefaultWorkforceCrew", fields: [defaultCrewId], references: [id], onDelete: SetNull)
+  authorizedDriver         Boolean                            @default(false)
+  driverLicenseState       String?
+  driverLicenseExpiresAt   DateTime?
+  driverLicenseClass       String?
+  drivingRestrictions      String?
+  hourlyRate               Float?
+  color                    String?
+  notes                    String?
+  availability             String?
+  certifications           String[]
+  invitationStatus         String                             @default("NotInvited")
+  invitationSentAt         DateTime?
+  assignedTruckId          String?
+  assignedTruck            FleetAsset?                        @relation(fields: [assignedTruckId], references: [id], onDelete: SetNull)
+  timeEntries              EmployeeTimeEntry[]
+  fieldChecklistItems      FieldChecklistItem[]
+  fieldChangeOrders        FieldChangeOrder[]
+  fieldSignatures          JobCompletionSignature[]
+  fieldTimeEvents          FieldTimeEvent[]
+  fieldOfflineOperations   FieldOfflineOperation[]
+  offlinePackages          OfflineFieldPackage[]
+  offlineMutations         OfflineFieldMutation[]
+  crewMembers              CrewMember[]
+  assignments              JobAssignment[]
+  availabilityRanges       EmployeeAvailability[]
+  servicePlanAssignments   ServicePlanEmployee[]
   communicationPreferences CommunicationRecipientPreference[]
-  compensationHistory     WorkforceCompensation[]
-  emergencyContacts       WorkforceEmergencyContact[]
-  workforceCredentials    WorkforceCredential[]
-  workforceDocuments      WorkforceDocument[]
-  onboardingItems         WorkforceOnboardingItem[]
-  createdAt              DateTime                 @default(now())
-  updatedAt              DateTime                 @updatedAt
+  compensationHistory      WorkforceCompensation[]
+  emergencyContacts        WorkforceEmergencyContact[]
+  workforceCredentials     WorkforceCredential[]
+  workforceDocuments       WorkforceDocument[]
+  onboardingItems          WorkforceOnboardingItem[]
+  timeClockEvents          TimeClockEvent[]
+  workSessions             WorkSession[]
+  timeAllocations          WorkSessionAllocation[]
+  timeCorrectionRequests   TimeCorrectionRequest[]
+  timesheets               Timesheet[]
+  createdAt                DateTime                           @default(now())
+  updatedAt                DateTime                           @updatedAt
 
   @@unique([companyId, employeeNumber])
   @@index([companyId])
@@ -1819,8 +1905,8 @@ model WorkforceCredential {
   status              WorkforceCredentialStatus @default(Valid)
   notes               String?
   document            WorkforceDocument?        @relation("CredentialDocument")
-  createdAt           DateTime                   @default(now())
-  updatedAt           DateTime                   @updatedAt
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
 
   @@index([companyId, status])
   @@index([companyId, expirationDate])
@@ -1881,12 +1967,12 @@ model WorkforceOnboardingItem {
 }
 
 model FleetAsset {
-  id                    String             @id @default(uuid())
+  id                    String                 @id @default(uuid())
   companyId             String
-  company               Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company               Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
   type                  FleetAssetType
   name                  String
-  status                FleetAssetStatus   @default(Active)
+  status                FleetAssetStatus       @default(Active)
   vin                   String?
   licensePlate          String?
   insuranceExpiresAt    DateTime?
@@ -1894,15 +1980,15 @@ model FleetAsset {
   odometer              Int?
   oilChangeDueAt        Int?
   tireServiceDueAt      Int?
-  notes                 String             @default("")
+  notes                 String                 @default("")
   capacityCubicYards    Float?
   colorLabel            String?
   employees             Employee[]
   jobs                  Job[]
   jobVehicleAssignments JobVehicleAssignment[]
   maintenance           FleetMaintenance[]
-  createdAt             DateTime           @default(now())
-  updatedAt             DateTime           @updatedAt
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
 
   @@index([companyId, status])
   @@map("fleet_assets")
@@ -1969,6 +2055,217 @@ model EmployeeTimeEntry {
   @@map("employee_time_entries")
 }
 
+model CompanyTimekeepingSettings {
+  id                             String             @id @default(uuid())
+  companyId                      String             @unique
+  company                        Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  timezone                       String             @default("America/New_York")
+  payPeriodFrequency             PayPeriodFrequency @default(Biweekly)
+  workweekStartDay               Int                @default(0)
+  overtimeThresholdMinutes       Int                @default(2400)
+  openBreakWarningMinutes        Int                @default(60)
+  automaticBreakDeductionMinutes Int?
+  createdAt                      DateTime           @default(now())
+  updatedAt                      DateTime           @updatedAt
+
+  @@map("company_timekeeping_settings")
+}
+
+model TimeClockEvent {
+  id                     String                  @id @default(uuid())
+  companyId              String
+  company                Company                 @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId             String
+  employee               Employee                @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  eventType              TimeClockEventType
+  eventTimestamp         DateTime
+  timezone               String
+  source                 TimeEntrySource
+  jobId                  String?
+  job                    Job?                    @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  crewId                 String?
+  crew                   Crew?                   @relation(fields: [crewId], references: [id], onDelete: SetNull)
+  latitude               Float?
+  longitude              Float?
+  locationAccuracyMeters Float?
+  notes                  String?
+  createdById            String
+  createdBy              User                    @relation("TimeClockEventCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  correctionReason       String?
+  originalEventId        String?
+  originalEvent          TimeClockEvent?         @relation("CorrectedTimeClockEvent", fields: [originalEventId], references: [id], onDelete: Restrict)
+  correctionEvents       TimeClockEvent[]        @relation("CorrectedTimeClockEvent")
+  correctionRequests     TimeCorrectionRequest[]
+  correctedById          String?
+  correctedBy            User?                   @relation("TimeClockEventCorrector", fields: [correctedById], references: [id], onDelete: Restrict)
+  correctedAt            DateTime?
+  voidedAt               DateTime?
+  idempotencyKey         String?
+  deviceTimestamp        DateTime?
+  syncedAt               DateTime?
+  syncFailure            String?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+
+  @@unique([companyId, idempotencyKey])
+  @@index([companyId, employeeId, eventTimestamp])
+  @@index([companyId, eventType, eventTimestamp])
+  @@index([jobId, eventTimestamp])
+  @@index([crewId, eventTimestamp])
+  @@index([originalEventId])
+  @@map("time_clock_events")
+}
+
+model WorkSession {
+  id                 String                  @id @default(uuid())
+  companyId          String
+  company            Company                 @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId         String
+  employee           Employee                @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  clockInEventId     String                  @unique
+  clockOutEventId    String?                 @unique
+  clockInAt          DateTime
+  clockOutAt         DateTime?
+  timezone           String
+  source             TimeEntrySource
+  crewId             String?
+  crew               Crew?                   @relation(fields: [crewId], references: [id], onDelete: SetNull)
+  unpaidBreakMinutes Int                     @default(0)
+  paidBreakMinutes   Int                     @default(0)
+  grossMinutes       Int                     @default(0)
+  payableMinutes     Int                     @default(0)
+  regularMinutes     Int                     @default(0)
+  overtimeMinutes    Int                     @default(0)
+  manuallyAdjusted   Boolean                 @default(false)
+  approvalStatus     TimesheetStatus         @default(Open)
+  notes              String?
+  allocations        WorkSessionAllocation[]
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+
+  @@index([companyId, employeeId, clockInAt])
+  @@index([companyId, approvalStatus, clockInAt])
+  @@index([crewId, clockInAt])
+  @@map("work_sessions")
+}
+
+model WorkSessionAllocation {
+  id               String                 @id @default(uuid())
+  companyId        String
+  company          Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId       String
+  employee         Employee               @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  workSessionId    String
+  workSession      WorkSession            @relation(fields: [workSessionId], references: [id], onDelete: Cascade)
+  jobId            String?
+  job              Job?                   @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  category         TimeAllocationCategory
+  allocatedMinutes Int
+  notes            String?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  @@index([companyId, employeeId, createdAt])
+  @@index([workSessionId])
+  @@index([jobId])
+  @@map("work_session_allocations")
+}
+
+model TimeCorrectionRequest {
+  id                 String               @id @default(uuid())
+  companyId          String
+  company            Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId         String
+  employee           Employee             @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  eventId            String?
+  event              TimeClockEvent?      @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  requestedEventType TimeClockEventType?
+  requestedTimestamp DateTime?
+  requestedJobId     String?
+  reason             String
+  status             TimeCorrectionStatus @default(Pending)
+  requestedById      String
+  requestedBy        User                 @relation("TimeCorrectionRequester", fields: [requestedById], references: [id], onDelete: Restrict)
+  reviewedById       String?
+  reviewedBy         User?                @relation("TimeCorrectionReviewer", fields: [reviewedById], references: [id], onDelete: Restrict)
+  reviewedAt         DateTime?
+  reviewNote         String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  @@index([companyId, status, createdAt])
+  @@index([companyId, employeeId, createdAt])
+  @@map("time_correction_requests")
+}
+
+model PayPeriod {
+  id         String          @id @default(uuid())
+  companyId  String
+  company    Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  startDate  DateTime
+  endDate    DateTime
+  timezone   String
+  status     PayPeriodStatus @default(Open)
+  exportedAt DateTime?
+  lockedAt   DateTime?
+  lockedById String?
+  lockedBy   User?           @relation("PayPeriodLocker", fields: [lockedById], references: [id], onDelete: Restrict)
+  timesheets Timesheet[]
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@unique([companyId, startDate, endDate])
+  @@index([companyId, status, startDate])
+  @@map("pay_periods")
+}
+
+model Timesheet {
+  id                 String                   @id @default(uuid())
+  companyId          String
+  company            Company                  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId         String
+  employee           Employee                 @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  payPeriodId        String
+  payPeriod          PayPeriod                @relation(fields: [payPeriodId], references: [id], onDelete: Restrict)
+  status             TimesheetStatus          @default(Open)
+  regularMinutes     Int                      @default(0)
+  overtimeMinutes    Int                      @default(0)
+  unpaidBreakMinutes Int                      @default(0)
+  jobLaborMinutes    Int                      @default(0)
+  nonJobLaborMinutes Int                      @default(0)
+  exceptionFlags     String[]
+  employeeNotes      String?
+  managerNotes       String?
+  submittedAt        DateTime?
+  approvedAt         DateTime?
+  rejectedAt         DateTime?
+  lockedAt           DateTime?
+  approvalEvents     TimesheetApprovalEvent[]
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+
+  @@unique([employeeId, payPeriodId])
+  @@index([companyId, payPeriodId, status])
+  @@index([companyId, employeeId, createdAt])
+  @@map("timesheets")
+}
+
+model TimesheetApprovalEvent {
+  id          String                  @id @default(uuid())
+  companyId   String
+  company     Company                 @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  timesheetId String
+  timesheet   Timesheet               @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
+  action      TimesheetApprovalAction
+  actorUserId String
+  actor       User                    @relation("TimesheetApprovalActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  note        String?
+  createdAt   DateTime                @default(now())
+
+  @@index([companyId, timesheetId, createdAt])
+  @@map("timesheet_approval_events")
+}
+
 model FieldChecklistItem {
   id                    String    @id @default(uuid())
   companyId             String
@@ -2019,23 +2316,23 @@ model FieldChangeOrder {
 }
 
 model JobCompletionSignature {
-  id            String    @id @default(uuid())
-  companyId     String
-  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  jobId         String    @unique
-  job           Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  employeeId    String?
-  employee      Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
-  printedName   String
-  signatureData String
-  signedAt      DateTime  @default(now())
-  deviceSignedAt DateTime?
-  deviceTimeZone String?
-  consentTextSnapshot String?
-  offlineIdempotencyKey String? @unique
-  device        String
-  notes         String    @default("")
-  createdAt     DateTime  @default(now())
+  id                    String    @id @default(uuid())
+  companyId             String
+  company               Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  jobId                 String    @unique
+  job                   Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  employeeId            String?
+  employee              Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  printedName           String
+  signatureData         String
+  signedAt              DateTime  @default(now())
+  deviceSignedAt        DateTime?
+  deviceTimeZone        String?
+  consentTextSnapshot   String?
+  offlineIdempotencyKey String?   @unique
+  device                String
+  notes                 String    @default("")
+  createdAt             DateTime  @default(now())
 
   @@index([companyId, signedAt])
   @@map("job_completion_signatures")
@@ -2084,27 +2381,27 @@ model FieldOfflineOperation {
 }
 
 model OfflineFieldPackage {
-  id                    String   @id @default(uuid())
-  companyId             String
-  company               Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  userId                String
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  jobId                 String
-  job                   Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  employeeId            String
-  employee              Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  packageVersion        Int      @default(1)
-  schemaVersion         Int      @default(1)
-  authorizationVersion  String
-  sourceRecordVersion   Int
-  downloadedAt          DateTime @default(now())
-  expiresAt             DateTime
-  lastAcknowledgedAt    DateTime?
-  revokedAt             DateTime?
-  revokedByUserId       String?
-  revocationReason      String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                   String    @id @default(uuid())
+  companyId            String
+  company              Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId               String
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobId                String
+  job                  Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  employeeId           String
+  employee             Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  packageVersion       Int       @default(1)
+  schemaVersion        Int       @default(1)
+  authorizationVersion String
+  sourceRecordVersion  Int
+  downloadedAt         DateTime  @default(now())
+  expiresAt            DateTime
+  lastAcknowledgedAt   DateTime?
+  revokedAt            DateTime?
+  revokedByUserId      String?
+  revocationReason     String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   mutations OfflineFieldMutation[]
 
@@ -2241,19 +2538,19 @@ model SystemErrorEvent {
 }
 
 model SystemNotification {
-  id        String    @id @default(uuid())
-  companyId String
-  company   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  userId    String?
-  channel   String
-  title     String
-  body      String
-  status    String    @default("Pending")
-  readAt    DateTime?
+  id         String    @id @default(uuid())
+  companyId  String
+  company    Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId     String?
+  channel    String
+  title      String
+  body       String
+  status     String    @default("Pending")
+  readAt     DateTime?
   sourceType String?
   sourceId   String?
   link       String?
-  createdAt DateTime  @default(now())
+  createdAt  DateTime  @default(now())
 
   @@index([companyId, userId, status, createdAt])
   @@index([companyId, userId, readAt, createdAt])
@@ -2330,18 +2627,20 @@ model AdminPasswordResetToken {
 }
 
 model Crew {
-  id           String          @id @default(uuid())
-  companyId    String
-  company      Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  name         String
-  color        String?
-  active       Boolean         @default(true)
-  members      CrewMember[]
-  defaultWorkforceMembers Employee[] @relation("DefaultWorkforceCrew")
-  assignments  JobAssignment[]
-  servicePlans ServicePlan[]
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  id                      String           @id @default(uuid())
+  companyId               String
+  company                 Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name                    String
+  color                   String?
+  active                  Boolean          @default(true)
+  members                 CrewMember[]
+  defaultWorkforceMembers Employee[]       @relation("DefaultWorkforceCrew")
+  assignments             JobAssignment[]
+  servicePlans            ServicePlan[]
+  timeClockEvents         TimeClockEvent[]
+  workSessions            WorkSession[]
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
 
   @@index([companyId])
   @@map("crews")
@@ -2413,24 +2712,24 @@ model CrewMember {
 }
 
 model JobAssignment {
-  id         String    @id @default(uuid())
-  companyId  String
-  company    Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  jobId      String
-  job        Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  employeeId String?
-  employee   Employee? @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  crewId     String?
-  crew       Crew?     @relation(fields: [crewId], references: [id], onDelete: Cascade)
-  assignedAt DateTime  @default(now())
+  id           String              @id @default(uuid())
+  companyId    String
+  company      Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  jobId        String
+  job          Job                 @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  employeeId   String?
+  employee     Employee?           @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  crewId       String?
+  crew         Crew?               @relation(fields: [crewId], references: [id], onDelete: Cascade)
+  assignedAt   DateTime            @default(now())
   assignedById String?
-  assignedBy User? @relation("JobAssignmentAssignedBy", fields: [assignedById], references: [id], onDelete: SetNull)
-  role JobAssignmentRole @default(Helper)
-  lead Boolean @default(false)
-  status JobAssignmentStatus @default(Assigned)
-  notes      String?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  assignedBy   User?               @relation("JobAssignmentAssignedBy", fields: [assignedById], references: [id], onDelete: SetNull)
+  role         JobAssignmentRole   @default(Helper)
+  lead         Boolean             @default(false)
+  status       JobAssignmentStatus @default(Assigned)
+  notes        String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
 
   @@unique([jobId, employeeId])
   @@unique([jobId, crewId])
@@ -2439,16 +2738,16 @@ model JobAssignment {
 }
 
 model JobVehicleAssignment {
-  id           String @id @default(uuid())
+  id           String     @id @default(uuid())
   companyId    String
-  company      Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company      Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
   jobId        String
-  job          Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  job          Job        @relation(fields: [jobId], references: [id], onDelete: Cascade)
   fleetAssetId String
   fleetAsset   FleetAsset @relation(fields: [fleetAssetId], references: [id], onDelete: Cascade)
-  assignedAt   DateTime @default(now())
+  assignedAt   DateTime   @default(now())
   assignedById String?
-  assignedBy   User? @relation("JobVehicleAssignedBy", fields: [assignedById], references: [id], onDelete: SetNull)
+  assignedBy   User?      @relation("JobVehicleAssignedBy", fields: [assignedById], references: [id], onDelete: SetNull)
 
   @@unique([jobId, fleetAssetId])
   @@index([companyId])
@@ -2457,18 +2756,18 @@ model JobVehicleAssignment {
 }
 
 model EmployeeAvailability {
-  id         String @id @default(uuid())
-  companyId  String
-  company    Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  employeeId String
-  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  type       EmployeeAvailabilityType
-  startsAt   DateTime
-  endsAt     DateTime
+  id                 String                   @id @default(uuid())
+  companyId          String
+  company            Company                  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId         String
+  employee           Employee                 @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  type               EmployeeAvailabilityType
+  startsAt           DateTime
+  endsAt             DateTime
   recurringDayOfWeek Int?
-  notes      String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  notes              String?
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
 
   @@index([companyId, startsAt, endsAt])
   @@index([employeeId, startsAt, endsAt])
@@ -2505,34 +2804,34 @@ model EstimateItem {
   jobSiteId String
   jobSite   JobSite @relation(fields: [jobSiteId], references: [id], onDelete: Cascade)
 
-  itemId        String
-  libraryItemId String?
-  libraryItem   ItemLibrary? @relation(fields: [libraryItemId], references: [id], onDelete: SetNull)
-  name          String
-  category      String
-  quantity      Int    @default(1)
-  notes         String @default("")
-  priceOverride Float?
-  basePrice       Float   @default(0)
-  disposalFee     Float   @default(0)
-  laborHours      Float   @default(0)
-  weightClass     String  @default("Medium")
-  estimatedVolume Float  @default(0)
-  crewRequirement Int    @default(1)
-  recyclable        Boolean @default(false)
-  donationEligible  Boolean @default(false)
-  hazardous          Boolean @default(false)
-  refrigerant        Boolean @default(false)
-  electronics        Boolean @default(false)
-  mattress           Boolean @default(false)
-  tire               Boolean @default(false)
-  appliance          Boolean @default(false)
-  constructionDebris Boolean @default(false)
-  yardWaste          Boolean @default(false)
-  requiresDisassembly      Boolean @default(false)
-  requiresSpecialEquipment Boolean @default(false)
-  pricingManuallyEdited    Boolean @default(false)
-  sortOrder     Int
+  itemId                   String
+  libraryItemId            String?
+  libraryItem              ItemLibrary? @relation(fields: [libraryItemId], references: [id], onDelete: SetNull)
+  name                     String
+  category                 String
+  quantity                 Int          @default(1)
+  notes                    String       @default("")
+  priceOverride            Float?
+  basePrice                Float        @default(0)
+  disposalFee              Float        @default(0)
+  laborHours               Float        @default(0)
+  weightClass              String       @default("Medium")
+  estimatedVolume          Float        @default(0)
+  crewRequirement          Int          @default(1)
+  recyclable               Boolean      @default(false)
+  donationEligible         Boolean      @default(false)
+  hazardous                Boolean      @default(false)
+  refrigerant              Boolean      @default(false)
+  electronics              Boolean      @default(false)
+  mattress                 Boolean      @default(false)
+  tire                     Boolean      @default(false)
+  appliance                Boolean      @default(false)
+  constructionDebris       Boolean      @default(false)
+  yardWaste                Boolean      @default(false)
+  requiresDisassembly      Boolean      @default(false)
+  requiresSpecialEquipment Boolean      @default(false)
+  pricingManuallyEdited    Boolean      @default(false)
+  sortOrder                Int
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2615,22 +2914,22 @@ model CommunicationDelivery {
 }
 
 model CommunicationTemplate {
-  id              String               @id @default(uuid())
+  id              String                        @id @default(uuid())
   companyId       String
-  company         Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company         Company                       @relation(fields: [companyId], references: [id], onDelete: Cascade)
   eventType       String
   channel         CommunicationChannel
   name            String
   subject         String?
   body            String
-  active          Boolean              @default(true)
-  defaultTemplate Boolean              @default(false)
-  customerVisible Boolean              @default(true)
-  delayMinutes    Int                  @default(0)
+  active          Boolean                       @default(true)
+  defaultTemplate Boolean                       @default(false)
+  customerVisible Boolean                       @default(true)
+  delayMinutes    Int                           @default(0)
   deliveries      CommunicationDelivery[]
   automationRules CommunicationAutomationRule[]
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
+  createdAt       DateTime                      @default(now())
+  updatedAt       DateTime                      @updatedAt
 
   @@unique([companyId, eventType, channel, name])
   @@index([companyId, eventType, active])
@@ -2677,20 +2976,20 @@ model CommunicationRecipientPreference {
 }
 
 model CommunicationEvent {
-  id          String                   @id @default(uuid())
-  companyId   String
-  company     Company                  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  eventType   String
-  sourceType  String
-  sourceId    String
-  payload     Json
-  occurredAt  DateTime                 @default(now())
-  processedAt DateTime?
-  status      CommunicationEventStatus @default(Pending)
-  dedupeKey   String
+  id            String                   @id @default(uuid())
+  companyId     String
+  company       Company                  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  eventType     String
+  sourceType    String
+  sourceId      String
+  payload       Json
+  occurredAt    DateTime                 @default(now())
+  processedAt   DateTime?
+  status        CommunicationEventStatus @default(Pending)
+  dedupeKey     String
   failureReason String?
-  deliveries  CommunicationDelivery[]
-  createdAt   DateTime                 @default(now())
+  deliveries    CommunicationDelivery[]
+  createdAt     DateTime                 @default(now())
 
   @@unique([companyId, dedupeKey])
   @@index([companyId, eventType, status, occurredAt])
@@ -2699,21 +2998,21 @@ model CommunicationEvent {
 }
 
 model CommunicationAutomationRule {
-  id                    String               @id @default(uuid())
-  companyId             String
-  company               Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  eventType             String
-  channel               CommunicationChannel
-  templateId            String
-  template              CommunicationTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
-  recipientType         CommunicationRecipientType @default(Customer)
-  enabled               Boolean              @default(true)
-  delayMinutes          Int                  @default(0)
-  respectQuietHours     Boolean              @default(true)
-  urgent                Boolean              @default(false)
-  cancelOnSourceChange  Boolean              @default(true)
-  createdAt             DateTime             @default(now())
-  updatedAt             DateTime             @updatedAt
+  id                   String                     @id @default(uuid())
+  companyId            String
+  company              Company                    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  eventType            String
+  channel              CommunicationChannel
+  templateId           String
+  template             CommunicationTemplate      @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  recipientType        CommunicationRecipientType @default(Customer)
+  enabled              Boolean                    @default(true)
+  delayMinutes         Int                        @default(0)
+  respectQuietHours    Boolean                    @default(true)
+  urgent               Boolean                    @default(false)
+  cancelOnSourceChange Boolean                    @default(true)
+  createdAt            DateTime                   @default(now())
+  updatedAt            DateTime                   @updatedAt
 
   @@unique([companyId, eventType, channel, recipientType])
   @@index([companyId, eventType, enabled])

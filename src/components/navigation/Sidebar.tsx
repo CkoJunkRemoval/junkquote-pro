@@ -15,6 +15,10 @@ const items = [
   { label: "Accounts Receivable", href: "/accounts-receivable", icon: BarChart3 },
   { label: "Customers", href: "/customers", icon: Users },
   { label: "Team", href: "/team", icon: Users },
+  { label: "My Time", href: "/team/time", icon: CalendarDays },
+  { label: "Team Timesheets", href: "/team/timesheets", icon: FileText },
+  { label: "Pay Periods", href: "/team/pay-periods", icon: CalendarDays },
+  { label: "Time Exceptions", href: "/team/time-exceptions", icon: RadioTower },
   { label: "Properties", href: "/properties", icon: MapPinned },
   { label: "Jobs", href: "/jobs", icon: BriefcaseBusiness },
   { label: "Crew App", href: "/field", icon: MapPinned },
@@ -39,7 +43,7 @@ export default function Sidebar({ collapsed, mobileOpen, onClose, onToggle }: { 
     {mobileOpen && <button aria-label="Close navigation" onClick={onClose} className="fixed inset-0 z-30 bg-slate-950/75 backdrop-blur-sm lg:hidden" />}
     <aside className={`app-sidebar fixed inset-y-0 left-0 z-40 flex w-64 -translate-x-full flex-col text-white transition-[width,transform] lg:static lg:translate-x-0 ${width} ${mobileOpen ? "translate-x-0" : ""}`}>
       <div className="flex h-20 items-center justify-between border-b border-white/10 px-5">
-        <Link href="/dashboard" onClick={onClose} className="flex min-w-0 items-center gap-3">
+        <Link href="/dashboard" onClick={onClose} className="flex min-h-11 min-w-0 items-center gap-3">
           <CompanyLogo src={company?.logoUrl} companyName={company?.displayName} size={36} fallbackClassName="rounded-lg !bg-[var(--brand-orange)]" />
           {!collapsed && <span className="min-w-0"><span className="block truncate text-base font-bold">{company?.displayName ?? "Your company"}</span><span className="block truncate text-[11px] uppercase tracking-[0.16em] text-slate-400">JunkQuote Pro</span></span>}
         </Link>
