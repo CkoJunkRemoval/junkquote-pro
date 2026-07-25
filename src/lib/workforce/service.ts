@@ -243,7 +243,7 @@ export async function linkApplicationUser(
       tx.companyMembership.findFirst({
         where: { companyId, userId, status: "Active" },
       }),
-      tx.employee.findFirst({ where: { userId } }),
+      tx.employee.findFirst({ where: { companyId, userId } }),
     ]);
     if (!member || !membership) throw new Error("Workforce member or company user not found.");
     if (duplicate && duplicate.id !== member.id)
@@ -519,7 +519,7 @@ export async function listWorkforceOnboardingOverview(companyId: string) {
 
 export async function listLinkableCompanyUsers(companyId: string) {
   return prisma.user.findMany({
-    where: { memberships: { some: { companyId, status: "Active" } }, employee: null },
+    where: { memberships: { some: { companyId, status: "Active" } }, employees: { none: { companyId } } },
     select: { id: true, email: true, firstName: true, lastName: true, memberships: { where: { companyId }, select: { role: true } } },
     orderBy: { email: "asc" },
   });

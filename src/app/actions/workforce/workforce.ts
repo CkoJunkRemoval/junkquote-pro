@@ -10,11 +10,11 @@ import type {
   WorkforceDocumentCategory,
 } from "@/generated/prisma/client";
 import { requireTenantContext } from "@/lib/auth/tenant";
-import { createNotification } from "@/lib/notifications/service";
 import { prisma } from "@/lib/prisma";
 import { saveWorkforceDocument } from "@/lib/storage/workforceDocumentStorage";
 import { requireWorkforceCapability, type WorkforceCapability } from "@/lib/workforce/permissions";
 import * as workforce from "@/lib/workforce/service";
+import { createTeamInvitation } from "@/lib/teamInvitations/service";
 
 async function context(capability: WorkforceCapability) {
   const value = await requireTenantContext();
@@ -162,25 +162,19 @@ export async function unlinkApplicationUserAction(employeeId: string) {
 export async function prepareWorkforceInvitationAction(employeeId: string, form: FormData) {
   const c = await context("workforce.manage");
   const role = text(form, "role") as MembershipRole;
-  if (!["Manager", "Office", "Crew"].includes(role))
-    throw new Error("Invitations cannot grant elevated owner or administrator access.");
   const member = await prisma.employee.findFirst({
     where: { id: employeeId, companyId: c.companyId },
-    select: { id: true, email: true, firstName: true },
+    select: { email: true, firstName: true, lastName: true },
   });
   if (!member?.email) throw new Error("An email address is required before preparing access.");
-  const duplicate = await prisma.user.findUnique({ where: { email: member.email } });
-  if (duplicate) throw new Error("This email already belongs to an application user. Link that user instead.");
-  await prisma.$transaction([
-    prisma.employee.update({ where: { id: member.id }, data: { invitationStatus: `Prepared:${role}`, invitationSentAt: new Date() } }),
-    prisma.auditEvent.create({ data: { companyId: c.companyId, actingUserId: c.user.id, eventType: "workforce.application_invitation_prepared", entityType: "Employee", entityId: member.id, metadata: { role } } }),
-  ]);
-  await createNotification({
+  await createTeamInvitation({
     companyId: c.companyId,
-    channel: "email",
-    to: member.email,
-    title: `JunkQuote Pro access prepared for ${member.firstName}`,
-    body: `Your company prepared ${role} access. An administrator must complete account activation; no elevated permissions were granted automatically.`,
+    actingUserId: c.user.id,
+    actorRole: c.role,
+    firstName: member.firstName,
+    lastName: member.lastName,
+    email: member.email,
+    role,
   });
   refresh(employeeId);
 }
@@ -221,4 +215,3 @@ export async function uploadWorkforceDocumentAction(employeeId: string, form: Fo
   });
   refresh(employeeId);
 }
-

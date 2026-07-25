@@ -17,7 +17,7 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
     active: query.active === "true" ? true : query.active === "false" ? false : undefined,
   });
   return <AppLayout><main className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-10">
-    <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm font-semibold uppercase tracking-[.18em] text-[var(--brand-orange)]">Team & Workforce</p><h1 className="text-3xl font-bold">Team directory</h1><p className="mt-2 text-slate-400">Employment records stay separate from application login access.</p></div><div className="flex flex-wrap gap-2"><Link href="/team/onboarding" className="ui-button ui-button--secondary rounded-xl px-4 py-3 font-semibold">Onboarding</Link><Link href="/team/credentials" className="ui-button ui-button--secondary rounded-xl px-4 py-3 font-semibold">Expiring credentials</Link><Link href="/team/new" className="ui-button ui-button--primary rounded-xl px-4 py-3 font-semibold">Add team member</Link></div></div>
+    <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm font-semibold uppercase tracking-[.18em] text-[var(--brand-orange)]">Team & Workforce</p><h1 className="text-3xl font-bold">Team directory</h1><p className="mt-2 text-slate-400">Employment records stay separate from application login access.</p></div><div className="flex flex-wrap gap-2">{["Owner","Admin"].includes(c.role) && <Link href="/team/invitations" className="ui-button ui-button--secondary rounded-xl px-4 py-3 font-semibold">Team invitations</Link>}<Link href="/team/onboarding" className="ui-button ui-button--secondary rounded-xl px-4 py-3 font-semibold">Onboarding</Link><Link href="/team/credentials" className="ui-button ui-button--secondary rounded-xl px-4 py-3 font-semibold">Expiring credentials</Link><Link href="/team/new" className="ui-button ui-button--primary rounded-xl px-4 py-3 font-semibold">Add team member</Link></div></div>
     <form className="glass-card mt-6 grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-5">
       <input name="q" defaultValue={query.q} placeholder="Search team" className="min-h-11 rounded-xl border px-3" />
       <select name="status" defaultValue={query.status ?? ""} className="min-h-11 rounded-xl border px-3"><option value="">All statuses</option>{["Onboarding","Active","Leave","Suspended","Terminated","Inactive"].map(x=><option key={x}>{x}</option>)}</select>
@@ -34,4 +34,3 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
     {!members.length && <div className="glass-card mt-6 p-10 text-center text-slate-400">No team members match these filters.</div>}
   </main></AppLayout>;
 }
-

@@ -8,6 +8,7 @@ export const authConfig = {
         "/approve",
         "/sign-in",
         "/sign-up",
+        "/join",
         "/reset-password",
         "/api/auth",
         "/api/health",

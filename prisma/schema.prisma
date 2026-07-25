@@ -29,6 +29,13 @@ enum MembershipStatus {
   Suspended
 }
 
+enum TeamInvitationStatus {
+  Pending
+  Accepted
+  Revoked
+  Expired
+}
+
 enum EstimateStatus {
   Draft
   Sent
@@ -459,6 +466,7 @@ model Company {
   settings                CompanySettings?
   users                   User[]
   memberships             CompanyMembership[]
+  teamInvitations         TeamInvitation[]
   customers               Customer[]
   estimates               Estimate[]
   estimateTimelineEvents  EstimateTimelineEvent[]
@@ -721,12 +729,14 @@ model User {
   updatedAt DateTime @updatedAt
 
   memberships                CompanyMembership[]
+  createdTeamInvitations     TeamInvitation[]          @relation("CreatedTeamInvitation")
+  acceptedTeamInvitations    TeamInvitation[]          @relation("AcceptedTeamInvitation")
   createdBackgroundJobs      BackgroundJob[]
   createdReminderSchedules   ReminderSchedule[]
   smartPricingDecisions      SmartPricingDecision[]
   createdRefunds             Refund[]
   createdServicePlans        ServicePlan[]
-  employee                   Employee?
+  employees                  Employee[]
   auditEvents                AuditEvent[]
   scheduledJobs              Job[]                     @relation("JobLastScheduledBy")
   assignedJobAssignments     JobAssignment[]           @relation("JobAssignmentAssignedBy")
@@ -770,6 +780,32 @@ model CompanyMembership {
   @@unique([userId, companyId])
   @@index([companyId, status])
   @@map("company_memberships")
+}
+
+model TeamInvitation {
+  id              String               @id @default(uuid())
+  companyId       String
+  company         Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId      String
+  employee        Employee             @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  email           String
+  role            MembershipRole
+  tokenHash       String               @unique
+  status          TeamInvitationStatus @default(Pending)
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  revokedAt       DateTime?
+  createdByUserId String
+  createdByUser   User                 @relation("CreatedTeamInvitation", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  acceptedById    String?
+  acceptedBy      User?                @relation("AcceptedTeamInvitation", fields: [acceptedById], references: [id], onDelete: SetNull)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@index([companyId, status, createdAt])
+  @@index([companyId, email])
+  @@index([employeeId, status])
+  @@map("team_invitations")
 }
 
 model Customer {
@@ -2025,6 +2061,7 @@ model Employee {
   certifications           String[]
   invitationStatus         String                             @default("NotInvited")
   invitationSentAt         DateTime?
+  invitations              TeamInvitation[]
   assignedTruckId          String?
   assignedTruck            FleetAsset?                        @relation(fields: [assignedTruckId], references: [id], onDelete: SetNull)
   timeEntries              EmployeeTimeEntry[]
@@ -2061,6 +2098,7 @@ model Employee {
   expenseAllocations       ExpenseAllocation[]
 
   @@unique([companyId, employeeNumber])
+  @@unique([companyId, userId])
   @@index([companyId])
   @@index([companyId, status])
   @@index([companyId, workerType])
