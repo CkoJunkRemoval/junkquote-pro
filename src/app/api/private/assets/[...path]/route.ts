@@ -4,7 +4,9 @@ import { prisma } from "@/lib/prisma";
 import { localCompanyLogoStorage } from "@/lib/storage/companyLogoStorage";
 import { localJobPhotoStorage } from "@/lib/storage/jobPhotoStorage";
 import { readWorkforceDocument } from "@/lib/storage/workforceDocumentStorage";
+import { readAssetDocument } from "@/lib/storage/assetDocumentStorage";
 import { hasWorkforceCapability } from "@/lib/workforce/permissions";
+import { hasFleetCapability } from "@/lib/fleet/permissions";
 import { createRequestId } from "@/lib/observability/requestId";
 import { checkRateLimit, ratePolicies } from "@/lib/security/rateLimit";
 import { logger } from "@/lib/observability/logger";
@@ -183,6 +185,41 @@ export async function GET(
         eventType: "workforce.document_accessed",
         entityType: "Employee",
         entityId: employeeId,
+        metadata: { documentId: document.id },
+      },
+    });
+    return new Response(new Uint8Array(object.data), {
+      headers: {
+        "Content-Type": object.metadata.contentType ?? "application/octet-stream",
+        "Content-Length": String(object.data.length),
+        "Cache-Control": "private, no-store, max-age=0",
+        "X-Content-Type-Options": "nosniff",
+        "Content-Disposition": `attachment; filename="${document.displayFilename.replaceAll('"', "")}"`,
+      },
+    });
+  }
+  if (segments.length === 4 && segments[0] === "asset-documents") {
+    if (!staffCompanyId || portal) return new Response("Not found", { status: 404 });
+    const [, assetCompanyId, assetId, fileName] = segments;
+    if (assetCompanyId !== companyId) return new Response("Not found", { status: 404 });
+    const tenant = await requireTenantContext();
+    if (!hasFleetCapability(tenant.role, "fleet.documents.view"))
+      return new Response("Not found", { status: 404 });
+    const storageKey = `asset-documents/${assetCompanyId}/${assetId}/${fileName}`;
+    const document = await prisma.assetDocument.findFirst({
+      where: { companyId: assetCompanyId, assetId, storageKey },
+      select: { id: true, displayFilename: true },
+    });
+    if (!document) return new Response("Not found", { status: 404 });
+    const object = await readAssetDocument(storageKey);
+    if (!object) return new Response("Not found", { status: 404 });
+    await prisma.auditEvent.create({
+      data: {
+        companyId,
+        actingUserId: tenant.user.id,
+        eventType: "fleet.document_accessed",
+        entityType: "FleetAsset",
+        entityId: assetId,
         metadata: { documentId: document.id },
       },
     });

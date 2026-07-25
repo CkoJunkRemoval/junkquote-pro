@@ -525,6 +525,17 @@ model Company {
   payPeriods              PayPeriod[]
   timesheets              Timesheet[]
   timesheetApprovalEvents TimesheetApprovalEvent[]
+  assetAssignments        AssetAssignment[]
+  assetMileageEntries     AssetMileageEntry[]
+  fuelEntries             FuelEntry[]
+  maintenanceSchedules    MaintenanceSchedule[]
+  assetMaintenanceRecords AssetMaintenanceRecord[]
+  inspectionTemplates     InspectionTemplate[]
+  inspectionRecords       InspectionRecord[]
+  inspectionDefects       InspectionDefect[]
+  assetDocuments          AssetDocument[]
+  assetTimelineEvents     AssetTimelineEvent[]
+  fleetSettings           CompanyFleetSettings?
 
   @@map("companies")
 }
@@ -656,6 +667,14 @@ model User {
   reviewedTimeCorrections    TimeCorrectionRequest[]   @relation("TimeCorrectionReviewer")
   timesheetApprovalActions   TimesheetApprovalEvent[]  @relation("TimesheetApprovalActor")
   lockedPayPeriods           PayPeriod[]               @relation("PayPeriodLocker")
+  assetAssignmentsCreated    AssetAssignment[]         @relation("AssetAssignmentCreator")
+  assetAssignmentsReturned   AssetAssignment[]         @relation("AssetAssignmentReturner")
+  mileageEntriesCreated      AssetMileageEntry[]       @relation("AssetMileageCreator")
+  mileageCorrectionsCreated  AssetMileageEntry[]       @relation("AssetMileageCorrector")
+  fuelEntriesCreated         FuelEntry[]               @relation("FuelEntryCreator")
+  maintenanceRecordsCreated  AssetMaintenanceRecord[]  @relation("AssetMaintenanceCreator")
+  assetDocumentsUploaded     AssetDocument[]           @relation("AssetDocumentUploader")
+  assetTimelineEventsCreated AssetTimelineEvent[]      @relation("AssetTimelineCreator")
 
   @@index([companyId])
   @@map("users")
@@ -1066,9 +1085,126 @@ enum FleetAssetType {
 
 enum FleetAssetStatus {
   Active
+  Available
+  Assigned
+  InService
   Maintenance
   OutOfService
+  Repair
   Retired
+  Sold
+  Lost
+  Stolen
+}
+
+enum AssetCategory {
+  Vehicle
+  Trailer
+  PoweredEquipment
+  NonPoweredEquipment
+  Tool
+  SafetyEquipment
+  Electronics
+  Container
+  Other
+}
+
+enum AssetOwnershipType {
+  Owned
+  Financed
+  Leased
+  Rented
+}
+
+enum AssetCondition {
+  Excellent
+  Good
+  Fair
+  Poor
+  Damaged
+  Unknown
+}
+
+enum AssetAssignmentType {
+  Employee
+  Crew
+  ParentAsset
+  Job
+}
+
+enum AssetMileageSource {
+  Daily
+  Weekly
+  Fuel
+  Service
+  Job
+  Manual
+  Import
+  System
+}
+
+enum MaintenanceTriggerType {
+  Mileage
+  Date
+  EngineHours
+  UsageCount
+  CombinedMileageOrDate
+}
+
+enum AssetInspectionResult {
+  Passed
+  PassedWithDefects
+  Failed
+}
+
+enum InspectionItemResult {
+  Pass
+  Fail
+  NotApplicable
+}
+
+enum InspectionDefectStatus {
+  Open
+  Resolved
+  Deferred
+}
+
+enum AssetTimelineEventType {
+  Created
+  Purchased
+  Assigned
+  Returned
+  Transferred
+  MileageRecorded
+  Fueled
+  ServiceScheduled
+  ServiceCompleted
+  InspectionCompleted
+  DefectReported
+  StatusChanged
+  DocumentAdded
+  AccidentReported
+  Sold
+  Retired
+  Lost
+  Stolen
+}
+
+enum AssetDocumentCategory {
+  PurchaseReceipt
+  Title
+  Registration
+  Insurance
+  Inspection
+  ServiceInvoice
+  FuelReceipt
+  Warranty
+  Financing
+  Lease
+  RentalAgreement
+  AccidentReport
+  Photo
+  Other
 }
 
 enum DisposalCategory {
@@ -1264,6 +1400,9 @@ model Job {
   offlineMutations         OfflineFieldMutation[]
   timeClockEvents          TimeClockEvent[]
   timeAllocations          WorkSessionAllocation[]
+  assetAssignments         AssetAssignment[]
+  assetMileageEntries      AssetMileageEntry[]
+  fuelEntries              FuelEntry[]
   pricingHistory           PricingHistory[]
   pricingOutcome           PricingOutcome?
   servicePlanId            String?
@@ -1833,6 +1972,12 @@ model Employee {
   timeAllocations          WorkSessionAllocation[]
   timeCorrectionRequests   TimeCorrectionRequest[]
   timesheets               Timesheet[]
+  assignedAssets           FleetAsset[]                       @relation("AssetAssignedEmployee")
+  assetAssignments         AssetAssignment[]
+  assetMileageEntries      AssetMileageEntry[]
+  fuelEntries              FuelEntry[]
+  maintenancePerformed     AssetMaintenanceRecord[]           @relation("AssetMaintenancePerformer")
+  inspectionsPerformed     InspectionRecord[]
   createdAt                DateTime                           @default(now())
   updatedAt                DateTime                           @updatedAt
 
@@ -1967,31 +2112,425 @@ model WorkforceOnboardingItem {
 }
 
 model FleetAsset {
-  id                    String                 @id @default(uuid())
+  id                    String                   @id @default(uuid())
   companyId             String
-  company               Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company               Company                  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   type                  FleetAssetType
   name                  String
-  status                FleetAssetStatus       @default(Active)
+  assetNumber           String?
+  category              AssetCategory            @default(Other)
+  subtype               String?
+  status                FleetAssetStatus         @default(Active)
+  condition             AssetCondition           @default(Unknown)
+  ownershipType         AssetOwnershipType       @default(Owned)
+  make                  String?
+  model                 String?
+  modelYear             Int?
+  serialNumber          String?
   vin                   String?
   licensePlate          String?
+  assignedEmployeeId    String?
+  assignedEmployee      Employee?                @relation("AssetAssignedEmployee", fields: [assignedEmployeeId], references: [id], onDelete: SetNull)
+  assignedCrewId        String?
+  assignedCrew          Crew?                    @relation("AssetAssignedCrew", fields: [assignedCrewId], references: [id], onDelete: SetNull)
+  parentAssetId         String?
+  parentAsset           FleetAsset?              @relation("AssetParent", fields: [parentAssetId], references: [id], onDelete: SetNull)
+  childAssets           FleetAsset[]             @relation("AssetParent")
+  purchaseDate          DateTime?
+  purchasePriceCents    Int?
+  replacementValueCents Int?
+  warrantyExpiresAt     DateTime?
   insuranceExpiresAt    DateTime?
   registrationExpiresAt DateTime?
   odometer              Int?
   oilChangeDueAt        Int?
   tireServiceDueAt      Int?
-  notes                 String                 @default("")
+  notes                 String                   @default("")
   capacityCubicYards    Float?
   colorLabel            String?
   employees             Employee[]
   jobs                  Job[]
   jobVehicleAssignments JobVehicleAssignment[]
   maintenance           FleetMaintenance[]
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
+  vehicleProfile        VehicleProfile?
+  trailerProfile        TrailerProfile?
+  assignments           AssetAssignment[]        @relation("AssignedAsset")
+  assignmentParents     AssetAssignment[]        @relation("AssignmentParentAsset")
+  mileageEntries        AssetMileageEntry[]
+  fuelEntries           FuelEntry[]
+  maintenanceSchedules  MaintenanceSchedule[]
+  maintenanceRecords    AssetMaintenanceRecord[]
+  inspectionRecords     InspectionRecord[]
+  inspectionDefects     InspectionDefect[]
+  documents             AssetDocument[]
+  timelineEvents        AssetTimelineEvent[]
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
 
+  @@unique([companyId, assetNumber])
   @@index([companyId, status])
+  @@index([companyId, category, status])
+  @@index([companyId, vin])
+  @@index([companyId, serialNumber])
+  @@index([assignedEmployeeId])
+  @@index([assignedCrewId])
+  @@index([parentAssetId])
   @@map("fleet_assets")
+}
+
+model CompanyFleetSettings {
+  id                     String   @id @default(uuid())
+  companyId              String   @unique
+  company                Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  missingMileageDays     Int      @default(7)
+  unusualMpgVariancePct  Int      @default(35)
+  documentWarningDays    Int      @default(30)
+  maintenanceWarningDays Int      @default(30)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@map("company_fleet_settings")
+}
+
+model VehicleProfile {
+  id                             String     @id @default(uuid())
+  assetId                        String     @unique
+  asset                          FleetAsset @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  plateState                     String?
+  titleStatus                    String?
+  trim                           String?
+  fuelType                       String?
+  tankCapacityGallons            Float?
+  grossVehicleWeightRatingPounds Int?
+  towingCapacityPounds           Int?
+  initialOdometerMiles           Int?
+  serviceMileageBaseline         Int?
+  purchaseMileage                Int?
+  registrationExpiration         DateTime?
+  insuranceExpiration            DateTime?
+  annualInspectionExpiration     DateTime?
+  emissionsExpiration            DateTime?
+  vehicleClass                   String?
+  dotRequired                    Boolean    @default(false)
+  outOfServiceReason             String?
+  createdAt                      DateTime   @default(now())
+  updatedAt                      DateTime   @updatedAt
+
+  @@index([registrationExpiration])
+  @@map("vehicle_profiles")
+}
+
+model TrailerProfile {
+  id                             String     @id @default(uuid())
+  assetId                        String     @unique
+  asset                          FleetAsset @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  registrationExpiration         DateTime?
+  trailerType                    String?
+  axleCount                      Int?
+  emptyWeightPounds              Int?
+  grossVehicleWeightRatingPounds Int?
+  payloadCapacityPounds          Int?
+  bedLengthFeet                  Float?
+  bedWidthFeet                   Float?
+  cubicYardCapacity              Float?
+  brakeType                      String?
+  inspectionExpiration           DateTime?
+  createdAt                      DateTime   @default(now())
+  updatedAt                      DateTime   @updatedAt
+
+  @@index([registrationExpiration])
+  @@index([inspectionExpiration])
+  @@map("trailer_profiles")
+}
+
+model AssetAssignment {
+  id                    String              @id @default(uuid())
+  companyId             String
+  company               Company             @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  assetId               String
+  asset                 FleetAsset          @relation("AssignedAsset", fields: [assetId], references: [id], onDelete: Restrict)
+  assigneeType          AssetAssignmentType
+  employeeId            String?
+  employee              Employee?           @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  crewId                String?
+  crew                  Crew?               @relation(fields: [crewId], references: [id], onDelete: Restrict)
+  parentAssetId         String?
+  parentAsset           FleetAsset?         @relation("AssignmentParentAsset", fields: [parentAssetId], references: [id], onDelete: Restrict)
+  jobId                 String?
+  job                   Job?                @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  assignedAt            DateTime            @default(now())
+  returnedAt            DateTime?
+  assignedById          String
+  assignedBy            User                @relation("AssetAssignmentCreator", fields: [assignedById], references: [id], onDelete: Restrict)
+  returnedById          String?
+  returnedBy            User?               @relation("AssetAssignmentReturner", fields: [returnedById], references: [id], onDelete: Restrict)
+  startingCondition     AssetCondition
+  returnCondition       AssetCondition?
+  startingOdometerMiles Int?
+  endingOdometerMiles   Int?
+  notes                 String?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  @@index([companyId, assetId, returnedAt])
+  @@index([companyId, employeeId, returnedAt])
+  @@index([companyId, crewId, returnedAt])
+  @@index([companyId, parentAssetId, returnedAt])
+  @@index([companyId, jobId, returnedAt])
+  @@map("asset_assignments")
+}
+
+model AssetMileageEntry {
+  id                  String              @id @default(uuid())
+  companyId           String
+  company             Company             @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  assetId             String
+  asset               FleetAsset          @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  odometerMiles       Int
+  recordedAt          DateTime
+  source              AssetMileageSource
+  employeeId          String?
+  employee            Employee?           @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  jobId               String?
+  job                 Job?                @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  fuelEntryId         String?             @unique
+  maintenanceRecordId String?             @unique
+  notes               String?
+  createdById         String
+  createdBy           User                @relation("AssetMileageCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  originalEntryId     String?
+  originalEntry       AssetMileageEntry?  @relation("CorrectedMileage", fields: [originalEntryId], references: [id], onDelete: Restrict)
+  corrections         AssetMileageEntry[] @relation("CorrectedMileage")
+  correctionReason    String?
+  correctedById       String?
+  correctedBy         User?               @relation("AssetMileageCorrector", fields: [correctedById], references: [id], onDelete: Restrict)
+  correctedAt         DateTime?
+  voidedAt            DateTime?
+  createdAt           DateTime            @default(now())
+
+  fuelEntry         FuelEntry?              @relation(fields: [fuelEntryId], references: [id], onDelete: Restrict)
+  maintenanceRecord AssetMaintenanceRecord? @relation(fields: [maintenanceRecordId], references: [id], onDelete: Restrict)
+
+  @@index([companyId, assetId, recordedAt])
+  @@index([companyId, odometerMiles])
+  @@index([originalEntryId])
+  @@map("asset_mileage_entries")
+}
+
+model FuelEntry {
+  id                  String             @id @default(uuid())
+  companyId           String
+  company             Company            @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  assetId             String
+  asset               FleetAsset         @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  employeeId          String?
+  employee            Employee?          @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  transactionAt       DateTime
+  odometerMiles       Int?
+  gallons             Float
+  totalCostCents      Int
+  pricePerGallonCents Int
+  fuelType            String?
+  vendor              String?
+  paymentMethod       String?
+  jobId               String?
+  job                 Job?               @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  fullTank            Boolean            @default(false)
+  notes               String?
+  createdById         String
+  createdBy           User               @relation("FuelEntryCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  mileageEntry        AssetMileageEntry?
+  documents           AssetDocument[]
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  @@index([companyId, assetId, transactionAt])
+  @@index([companyId, employeeId, transactionAt])
+  @@index([companyId, jobId, transactionAt])
+  @@map("fuel_entries")
+}
+
+model MaintenanceSchedule {
+  id                    String                   @id @default(uuid())
+  companyId             String
+  company               Company                  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  assetId               String
+  asset                 FleetAsset               @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  serviceType           String
+  triggerType           MaintenanceTriggerType
+  intervalMiles         Int?
+  intervalDays          Int?
+  dueOdometerMiles      Int?
+  dueDate               DateTime?
+  lastCompletedAt       DateTime?
+  lastCompletedOdometer Int?
+  warningLeadMiles      Int                      @default(500)
+  warningLeadDays       Int                      @default(30)
+  active                Boolean                  @default(true)
+  notes                 String?
+  maintenanceRecords    AssetMaintenanceRecord[]
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+
+  @@index([companyId, active, dueDate])
+  @@index([companyId, active, dueOdometerMiles])
+  @@index([assetId, serviceType])
+  @@map("maintenance_schedules")
+}
+
+model AssetMaintenanceRecord {
+  id                    String               @id @default(uuid())
+  companyId             String
+  company               Company              @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  assetId               String
+  asset                 FleetAsset           @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  scheduleId            String?
+  schedule              MaintenanceSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+  serviceType           String
+  serviceDate           DateTime
+  odometerMiles         Int?
+  vendor                String?
+  description           String
+  laborCostCents        Int                  @default(0)
+  partsCostCents        Int                  @default(0)
+  taxCostCents          Int                  @default(0)
+  totalCostCents        Int                  @default(0)
+  performedByEmployeeId String?
+  performedByEmployee   Employee?            @relation("AssetMaintenancePerformer", fields: [performedByEmployeeId], references: [id], onDelete: Restrict)
+  warrantyWork          Boolean              @default(false)
+  downtimeStartedAt     DateTime?
+  downtimeEndedAt       DateTime?
+  invoiceNumber         String?
+  notes                 String?
+  createdById           String
+  createdBy             User                 @relation("AssetMaintenanceCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  mileageEntry          AssetMileageEntry?
+  documents             AssetDocument[]
+  defectsResolved       InspectionDefect[]
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  @@index([companyId, assetId, serviceDate])
+  @@index([companyId, scheduleId])
+  @@map("asset_maintenance_records")
+}
+
+model InspectionTemplate {
+  id             String             @id @default(uuid())
+  companyId      String
+  company        Company            @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  name           String
+  category       AssetCategory?
+  inspectionType String
+  sections       Json
+  active         Boolean            @default(true)
+  records        InspectionRecord[]
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@index([companyId, active])
+  @@map("inspection_templates")
+}
+
+model InspectionRecord {
+  id                  String                @id @default(uuid())
+  companyId           String
+  company             Company               @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  assetId             String
+  asset               FleetAsset            @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  templateId          String?
+  template            InspectionTemplate?   @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  inspectorEmployeeId String
+  inspectorEmployee   Employee              @relation(fields: [inspectorEmployeeId], references: [id], onDelete: Restrict)
+  inspectedAt         DateTime
+  odometerMiles       Int?
+  result              AssetInspectionResult
+  checklistResults    Json
+  notes               String?
+  acknowledgedAt      DateTime?
+  defects             InspectionDefect[]
+  documents           AssetDocument[]
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+
+  @@index([companyId, assetId, inspectedAt])
+  @@index([companyId, result, inspectedAt])
+  @@map("inspection_records")
+}
+
+model InspectionDefect {
+  id                  String                  @id @default(uuid())
+  companyId           String
+  company             Company                 @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  inspectionRecordId  String
+  inspectionRecord    InspectionRecord        @relation(fields: [inspectionRecordId], references: [id], onDelete: Restrict)
+  assetId             String
+  asset               FleetAsset              @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  checklistItemKey    String
+  description         String
+  severity            String
+  outOfServiceTrigger Boolean                 @default(false)
+  status              InspectionDefectStatus  @default(Open)
+  resolvedAt          DateTime?
+  resolutionNotes     String?
+  maintenanceRecordId String?
+  maintenanceRecord   AssetMaintenanceRecord? @relation(fields: [maintenanceRecordId], references: [id], onDelete: SetNull)
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+
+  @@index([companyId, assetId, status])
+  @@index([inspectionRecordId])
+  @@map("inspection_defects")
+}
+
+model AssetDocument {
+  id                  String                  @id @default(uuid())
+  companyId           String
+  company             Company                 @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  assetId             String
+  asset               FleetAsset              @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  category            AssetDocumentCategory
+  storageKey          String                  @unique
+  displayFilename     String
+  mimeType            String
+  sizeBytes           Int
+  effectiveDate       DateTime?
+  expirationDate      DateTime?
+  fuelEntryId         String?
+  fuelEntry           FuelEntry?              @relation(fields: [fuelEntryId], references: [id], onDelete: SetNull)
+  maintenanceRecordId String?
+  maintenanceRecord   AssetMaintenanceRecord? @relation(fields: [maintenanceRecordId], references: [id], onDelete: SetNull)
+  inspectionRecordId  String?
+  inspectionRecord    InspectionRecord?       @relation(fields: [inspectionRecordId], references: [id], onDelete: SetNull)
+  uploadedById        String
+  uploadedBy          User                    @relation("AssetDocumentUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+  notes               String?
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+
+  @@index([companyId, assetId, category])
+  @@index([companyId, expirationDate])
+  @@map("asset_documents")
+}
+
+model AssetTimelineEvent {
+  id          String                 @id @default(uuid())
+  companyId   String
+  company     Company                @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  assetId     String
+  asset       FleetAsset             @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  eventType   AssetTimelineEventType
+  sourceType  String
+  sourceId    String
+  occurredAt  DateTime
+  createdById String?
+  createdBy   User?                  @relation("AssetTimelineCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  metadata    Json?
+  createdAt   DateTime               @default(now())
+
+  @@unique([companyId, sourceType, sourceId, eventType])
+  @@index([companyId, assetId, occurredAt])
+  @@map("asset_timeline_events")
 }
 
 model FleetMaintenance {
@@ -2627,20 +3166,22 @@ model AdminPasswordResetToken {
 }
 
 model Crew {
-  id                      String           @id @default(uuid())
+  id                      String            @id @default(uuid())
   companyId               String
-  company                 Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company                 Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
   name                    String
   color                   String?
-  active                  Boolean          @default(true)
+  active                  Boolean           @default(true)
   members                 CrewMember[]
-  defaultWorkforceMembers Employee[]       @relation("DefaultWorkforceCrew")
+  defaultWorkforceMembers Employee[]        @relation("DefaultWorkforceCrew")
   assignments             JobAssignment[]
   servicePlans            ServicePlan[]
   timeClockEvents         TimeClockEvent[]
   workSessions            WorkSession[]
-  createdAt               DateTime         @default(now())
-  updatedAt               DateTime         @updatedAt
+  assignedAssets          FleetAsset[]      @relation("AssetAssignedCrew")
+  assetAssignments        AssetAssignment[]
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
 
   @@index([companyId])
   @@map("crews")
