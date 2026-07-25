@@ -19,7 +19,7 @@ export async function getEstimateManagementDetail(companyId: string, estimateId:
       pricingTotal: true,
       createdAt: true,
       updatedAt: true,
-      customer: { select: { firstName: true, lastName: true } },
+      customer: { select: { id: true, firstName: true, lastName: true } },
       property: { select: { address: true, city: true, state: true, zip: true } },
       jobSites: {
         orderBy: { sortOrder: "asc" },
