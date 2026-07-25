@@ -3,6 +3,8 @@ import { getCustomerPortalContext } from "@/lib/portal/context";
 import { prisma } from "@/lib/prisma";
 import { localCompanyLogoStorage } from "@/lib/storage/companyLogoStorage";
 import { localJobPhotoStorage } from "@/lib/storage/jobPhotoStorage";
+import { readWorkforceDocument } from "@/lib/storage/workforceDocumentStorage";
+import { hasWorkforceCapability } from "@/lib/workforce/permissions";
 import { createRequestId } from "@/lib/observability/requestId";
 import { checkRateLimit, ratePolicies } from "@/lib/security/rateLimit";
 import { logger } from "@/lib/observability/logger";
@@ -153,6 +155,46 @@ export async function GET(
     });
     if (!photo) return new Response("Not found", { status: 404 });
     return assetResponse(await localJobPhotoStorage.readDataUrl(fileUrl));
+  }
+  if (segments.length === 4 && segments[0] === "workforce-documents") {
+    if (!staffCompanyId || portal) return new Response("Not found", { status: 404 });
+    const [, assetCompanyId, employeeId, fileName] = segments;
+    if (assetCompanyId !== companyId) return new Response("Not found", { status: 404 });
+    const tenant = await requireTenantContext();
+    if (!hasWorkforceCapability(tenant.role, "workforce.documents.view"))
+      return new Response("Not found", { status: 404 });
+    const storageKey = `workforce-documents/${assetCompanyId}/${employeeId}/${fileName}`;
+    const document = await prisma.workforceDocument.findFirst({
+      where: { companyId: assetCompanyId, employeeId, storageKey },
+      select: { id: true, category: true, displayFilename: true },
+    });
+    if (!document) return new Response("Not found", { status: 404 });
+    if (
+      ["Payroll", "Tax"].includes(document.category) &&
+      !hasWorkforceCapability(tenant.role, "workforce.compensation.view")
+    )
+      return new Response("Not found", { status: 404 });
+    const object = await readWorkforceDocument(storageKey);
+    if (!object) return new Response("Not found", { status: 404 });
+    await prisma.auditEvent.create({
+      data: {
+        companyId,
+        actingUserId: tenant.user.id,
+        eventType: "workforce.document_accessed",
+        entityType: "Employee",
+        entityId: employeeId,
+        metadata: { documentId: document.id },
+      },
+    });
+    return new Response(new Uint8Array(object.data), {
+      headers: {
+        "Content-Type": object.metadata.contentType ?? "application/octet-stream",
+        "Content-Length": String(object.data.length),
+        "Cache-Control": "private, no-store, max-age=0",
+        "X-Content-Type-Options": "nosniff",
+        "Content-Disposition": `attachment; filename="${document.displayFilename.replaceAll('"', "")}"`,
+      },
+    });
   }
   return new Response("Not found", { status: 404 });
 }

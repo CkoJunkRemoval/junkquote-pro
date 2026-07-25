@@ -270,8 +270,52 @@ enum EmployeeRole {
 }
 
 enum EmployeeStatus {
+  Onboarding
   Active
+  Leave
+  Suspended
+  Terminated
   Inactive
+}
+
+enum WorkerType {
+  Employee
+  Contractor
+  Owner
+}
+
+enum CompensationType {
+  Hourly
+  Salary
+  Commission
+  Mixed
+  OwnerDraw
+  Unpaid
+}
+
+enum WorkforceCredentialStatus {
+  Valid
+  ExpiringSoon
+  Expired
+  Missing
+}
+
+enum WorkforceDocumentCategory {
+  Onboarding
+  PolicyAcknowledgment
+  Certification
+  DriverDocument
+  Payroll
+  Tax
+  Performance
+  Disciplinary
+  Other
+}
+
+enum WorkforceOnboardingStatus {
+  Pending
+  Completed
+  Waived
 }
 
 enum BackgroundJobType {
@@ -468,6 +512,11 @@ model Company {
   impersonations          AdminImpersonation[]
   onboarding              CompanyOnboarding?
   serviceAreaRules        ServiceAreaRule[]
+  workforceCompensation   WorkforceCompensation[]
+  workforceContacts       WorkforceEmergencyContact[]
+  workforceCredentials    WorkforceCredential[]
+  workforceDocuments      WorkforceDocument[]
+  workforceOnboarding     WorkforceOnboardingItem[]
 
   @@map("companies")
 }
@@ -590,6 +639,9 @@ model User {
   assignedJobVehicles      JobVehicleAssignment[] @relation("JobVehicleAssignedBy")
   offlinePackages          OfflineFieldPackage[]
   offlineMutations         OfflineFieldMutation[]
+  compensationCreated      WorkforceCompensation[]     @relation("WorkforceCompensationCreator")
+  workforceDocumentsUploaded WorkforceDocument[]       @relation("WorkforceDocumentUploader")
+  onboardingItemsCompleted WorkforceOnboardingItem[]   @relation("WorkforceOnboardingCompleter")
 
   @@index([companyId])
   @@map("users")
@@ -1639,11 +1691,35 @@ model Employee {
   userId                 String?                  @unique
   user                   User?                    @relation(fields: [userId], references: [id], onDelete: SetNull)
   firstName              String
+  middleName             String?
   lastName               String
+  preferredName          String?
+  employeeNumber         String?
   email                  String?
   phone                  String?
+  addressLine1           String?
+  addressLine2           String?
+  city                   String?
+  state                  String?
+  postalCode             String?
   role                   EmployeeRole
+  workerType             WorkerType               @default(Employee)
   status                 EmployeeStatus           @default(Active)
+  jobTitle               String?
+  department             String?
+  hireDate               DateTime?
+  terminationDate        DateTime?
+  terminationReason      String?
+  managerId              String?
+  manager                Employee?                @relation("EmployeeManager", fields: [managerId], references: [id], onDelete: SetNull)
+  directReports          Employee[]               @relation("EmployeeManager")
+  defaultCrewId          String?
+  defaultCrew            Crew?                    @relation("DefaultWorkforceCrew", fields: [defaultCrewId], references: [id], onDelete: SetNull)
+  authorizedDriver       Boolean                  @default(false)
+  driverLicenseState     String?
+  driverLicenseExpiresAt DateTime?
+  driverLicenseClass     String?
+  drivingRestrictions    String?
   hourlyRate             Float?
   color                  String?
   notes                  String?
@@ -1666,11 +1742,142 @@ model Employee {
   availabilityRanges     EmployeeAvailability[]
   servicePlanAssignments ServicePlanEmployee[]
   communicationPreferences CommunicationRecipientPreference[]
+  compensationHistory     WorkforceCompensation[]
+  emergencyContacts       WorkforceEmergencyContact[]
+  workforceCredentials    WorkforceCredential[]
+  workforceDocuments      WorkforceDocument[]
+  onboardingItems         WorkforceOnboardingItem[]
   createdAt              DateTime                 @default(now())
   updatedAt              DateTime                 @updatedAt
 
+  @@unique([companyId, employeeNumber])
   @@index([companyId])
+  @@index([companyId, status])
+  @@index([companyId, workerType])
+  @@index([companyId, authorizedDriver])
+  @@index([managerId])
+  @@index([defaultCrewId])
   @@map("employees")
+}
+
+model WorkforceCompensation {
+  id                 String           @id @default(uuid())
+  companyId          String
+  company            Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId         String
+  employee           Employee         @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  compensationType   CompensationType
+  hourlyRateCents    Int?
+  annualSalaryCents  Int?
+  commissionConfig   Json?
+  effectiveStartDate DateTime
+  effectiveEndDate   DateTime?
+  overtimeEligible   Boolean          @default(false)
+  notes              String?
+  createdByUserId    String
+  createdByUser      User             @relation("WorkforceCompensationCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@index([companyId, employeeId, effectiveStartDate])
+  @@index([companyId, effectiveEndDate])
+  @@map("workforce_compensation")
+}
+
+model WorkforceEmergencyContact {
+  id             String   @id @default(uuid())
+  companyId      String
+  company        Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId     String
+  employee       Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  name           String
+  relationship   String
+  phone          String
+  alternatePhone String?
+  priority       Int      @default(1)
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([employeeId, priority])
+  @@index([companyId, employeeId])
+  @@map("workforce_emergency_contacts")
+}
+
+model WorkforceCredential {
+  id                  String                    @id @default(uuid())
+  companyId           String
+  company             Company                   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId          String
+  employee            Employee                  @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  type                String
+  title               String
+  identifier          String?
+  issuingOrganization String?
+  issuedDate          DateTime?
+  expirationDate      DateTime?
+  status              WorkforceCredentialStatus @default(Valid)
+  notes               String?
+  document            WorkforceDocument?        @relation("CredentialDocument")
+  createdAt           DateTime                   @default(now())
+  updatedAt           DateTime                   @updatedAt
+
+  @@index([companyId, status])
+  @@index([companyId, expirationDate])
+  @@index([employeeId])
+  @@map("workforce_credentials")
+}
+
+model WorkforceDocument {
+  id               String                    @id @default(uuid())
+  companyId        String
+  company          Company                   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId       String
+  employee         Employee                  @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  category         WorkforceDocumentCategory
+  storageKey       String                    @unique
+  displayFilename  String
+  mimeType         String
+  sizeBytes        Int
+  uploadedByUserId String
+  uploadedBy       User                      @relation("WorkforceDocumentUploader", fields: [uploadedByUserId], references: [id], onDelete: Restrict)
+  effectiveDate    DateTime?
+  expirationDate   DateTime?
+  notes            String?
+  credentialId     String?                   @unique
+  credential       WorkforceCredential?      @relation("CredentialDocument", fields: [credentialId], references: [id], onDelete: SetNull)
+  onboardingItems  WorkforceOnboardingItem[]
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+
+  @@index([companyId, employeeId, category])
+  @@index([companyId, expirationDate])
+  @@map("workforce_documents")
+}
+
+model WorkforceOnboardingItem {
+  id                String                    @id @default(uuid())
+  companyId         String
+  company           Company                   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId        String
+  employee          Employee                  @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  title             String
+  category          String
+  required          Boolean                   @default(true)
+  dueDate           DateTime?
+  status            WorkforceOnboardingStatus @default(Pending)
+  completedAt       DateTime?
+  completedByUserId String?
+  completedBy       User?                     @relation("WorkforceOnboardingCompleter", fields: [completedByUserId], references: [id], onDelete: SetNull)
+  documentId        String?
+  document          WorkforceDocument?        @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  notes             String?
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+
+  @@index([companyId, employeeId, status])
+  @@index([companyId, dueDate])
+  @@map("workforce_onboarding_items")
 }
 
 model FleetAsset {
@@ -2130,6 +2337,7 @@ model Crew {
   color        String?
   active       Boolean         @default(true)
   members      CrewMember[]
+  defaultWorkforceMembers Employee[] @relation("DefaultWorkforceCrew")
   assignments  JobAssignment[]
   servicePlans ServicePlan[]
   createdAt    DateTime        @default(now())

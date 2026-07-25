@@ -14,6 +14,7 @@ const items = [
   { label: "Invoices", href: "/invoices", icon: FileText },
   { label: "Accounts Receivable", href: "/accounts-receivable", icon: BarChart3 },
   { label: "Customers", href: "/customers", icon: Users },
+  { label: "Team", href: "/team", icon: Users },
   { label: "Properties", href: "/properties", icon: MapPinned },
   { label: "Jobs", href: "/jobs", icon: BriefcaseBusiness },
   { label: "Crew App", href: "/field", icon: MapPinned },
