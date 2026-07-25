@@ -13,6 +13,10 @@
 # testing
 /coverage
 /.data/
+/.local-pg-data/
+/.local-pg.log
+/.local-postgres-*/
+/.local-postgres-*.zip
 
 # next.js
 /.next/

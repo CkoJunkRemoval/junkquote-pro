@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getCompanyBranding } from "@/app/actions/company/branding";
 import { CompanyLogo } from "@/components/company/CompanyLogo";
-import { BarChart3, BriefcaseBusiness, CalendarDays, ChevronLeft, FileText, LayoutDashboard, MapPinned, MessageSquare, RadioTower, Repeat, Settings, Tags, Truck, Users, X } from "lucide-react";
+import { BarChart3, BriefcaseBusiness, CalendarDays, ChevronLeft, CircleDollarSign, FileText, LayoutDashboard, MapPinned, MessageSquare, RadioTower, Repeat, Settings, Tags, Truck, Users, X } from "lucide-react";
 
 const items = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -14,6 +14,7 @@ const items = [
   { label: "Estimates", href: "/estimates", icon: FileText },
   { label: "Invoices", href: "/invoices", icon: FileText },
   { label: "Accounts Receivable", href: "/accounts-receivable", icon: BarChart3 },
+  { label: "Finance", href: "/finance", icon: CircleDollarSign },
   { label: "Customers", href: "/customers", icon: Users },
   { label: "Team", href: "/team", icon: Users },
   { label: "My Time", href: "/team/time", icon: CalendarDays },

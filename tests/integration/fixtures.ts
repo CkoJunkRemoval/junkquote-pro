@@ -4,6 +4,15 @@ import { retryTransientCleanup } from "./cleanup";
 export async function resetIntegrationDatabase() {
   await retryTransientCleanup(async () => {
     await prisma.$transaction([
+      prisma.financeDocument.deleteMany(),
+      prisma.expenseAllocation.deleteMany(),
+      prisma.expenseRevision.deleteMany(),
+      prisma.businessExpense.deleteMany(),
+      prisma.recurringExpense.deleteMany(),
+      prisma.vendor.deleteMany(),
+      prisma.expenseCategory.deleteMany(),
+      prisma.manualIncomeAdjustment.deleteMany(),
+      prisma.financialPeriod.deleteMany(),
       prisma.providerWebhookEvent.deleteMany(),
       prisma.auditEvent.deleteMany(),
       prisma.customerMessageThread.deleteMany(),

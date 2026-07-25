@@ -33,6 +33,9 @@
   "exclude": [
     "node_modules",
     "scripts/offline-browser-release-gate.ts",
-    "scripts/route-intelligence-browser-review.ts"
+    "scripts/route-intelligence-browser-review.ts",
+    "scripts/finance-browser-review.ts",
+    ".local-postgres-*",
+    ".local-pg-data"
   ]
 }

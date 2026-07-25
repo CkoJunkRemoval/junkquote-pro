@@ -58,20 +58,21 @@ describe("dispatch real database", () => {
   });
   it("includes recurring, invoice, payment, and alert data", async () => {
     const { a } = await createTenantFixtures();
-    const now = new Date();
-    const plan = await prisma.servicePlan.create({ data: { companyId: a.company.id, customerId: a.customer.id, propertyId: a.property.id, name: "Recurring", recurrenceType: "CustomInterval", interval: 30, daysOfWeek: [], startDate: now, createdByUserId: a.user.id } });
+    const anchor = new Date();
+    anchor.setHours(12, 0, 0, 0);
+    const plan = await prisma.servicePlan.create({ data: { companyId: a.company.id, customerId: a.customer.id, propertyId: a.property.id, name: "Recurring", recurrenceType: "CustomInterval", interval: 30, daysOfWeek: [], startDate: anchor, createdByUserId: a.user.id } });
     await prisma.job.update({
       where: { id: a.job.id },
       data: {
         status: "Completed",
-        scheduledStart: new Date(now.getTime() - 7200000),
-        scheduledEnd: new Date(now.getTime() - 3600000),
-        completedAt: now,
+        scheduledStart: new Date(anchor.getTime() - 7200000),
+        scheduledEnd: new Date(anchor.getTime() - 3600000),
+        completedAt: anchor,
         servicePlanId: plan.id,
-        servicePlanOccurrence: new Date(now.getTime() - 7200000),
+        servicePlanOccurrence: new Date(anchor.getTime() - 7200000),
       },
     });
-    const data = await getDispatchData(a.company.id, now);
+    const data = await getDispatchData(a.company.id, anchor);
     const job = data.jobs.find((row) => row.id === a.job.id);
     expect(job).toMatchObject({ paymentStatus: "Partial", servicePlan: { name: "Recurring" } });
     expect(data.metrics.completedJobs).toBe(1);

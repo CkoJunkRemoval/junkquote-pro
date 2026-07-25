@@ -505,6 +505,15 @@ model Company {
   subscription            CompanySubscription?
   subscriptionHistory     SubscriptionHistory[]
   stripeWebhookEvents     StripeWebhookEvent[]
+  expenseCategories       ExpenseCategory[]
+  vendors                 Vendor[]
+  businessExpenses        BusinessExpense[]
+  expenseAllocations      ExpenseAllocation[]
+  financeDocuments        FinanceDocument[]
+  recurringExpenses       RecurringExpense[]
+  manualIncomeAdjustments ManualIncomeAdjustment[]
+  financialPeriods        FinancialPeriod[]
+  expenseRevisions        ExpenseRevision[]
   featureFlags            FeatureFlag[]
   systemErrors            SystemErrorEvent[]
   notifications           SystemNotification[]
@@ -719,6 +728,7 @@ model Customer {
   servicePlans             ServicePlan[]
   portalAccesses           CustomerPortalAccess[]
   communicationPreferences CommunicationRecipientPreference[]
+  expenseAllocations       ExpenseAllocation[]
 
   @@index([companyId])
   @@index([lastName])
@@ -1408,6 +1418,8 @@ model Job {
   servicePlanId            String?
   servicePlan              ServicePlan?            @relation(fields: [servicePlanId], references: [id], onDelete: SetNull)
   servicePlanOccurrence    DateTime?
+  expenseAllocations       ExpenseAllocation[]
+  financeDocuments         FinanceDocument[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1980,6 +1992,7 @@ model Employee {
   inspectionsPerformed     InspectionRecord[]
   createdAt                DateTime                           @default(now())
   updatedAt                DateTime                           @updatedAt
+  expenseAllocations       ExpenseAllocation[]
 
   @@unique([companyId, employeeNumber])
   @@index([companyId])
@@ -2166,6 +2179,9 @@ model FleetAsset {
   timelineEvents        AssetTimelineEvent[]
   createdAt             DateTime                 @default(now())
   updatedAt             DateTime                 @updatedAt
+  expenseAllocations    ExpenseAllocation[]
+  financeDocuments      FinanceDocument[]
+  recurringExpenses     RecurringExpense[]
 
   @@unique([companyId, assetNumber])
   @@index([companyId, status])
@@ -2341,6 +2357,7 @@ model FuelEntry {
   createdBy           User               @relation("FuelEntryCreator", fields: [createdById], references: [id], onDelete: Restrict)
   mileageEntry        AssetMileageEntry?
   documents           AssetDocument[]
+  expenses            BusinessExpense[]
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
 
@@ -2406,6 +2423,7 @@ model AssetMaintenanceRecord {
   createdBy             User                 @relation("AssetMaintenanceCreator", fields: [createdById], references: [id], onDelete: Restrict)
   mileageEntry          AssetMileageEntry?
   documents             AssetDocument[]
+  expenses              BusinessExpense[]
   defectsResolved       InspectionDefect[]
   createdAt             DateTime             @default(now())
   updatedAt             DateTime             @updatedAt
@@ -2575,6 +2593,325 @@ model DisposalRecord {
 
   @@index([companyId, jobId])
   @@map("disposal_records")
+}
+
+enum ExpenseReviewStatus {
+  Draft
+  NeedsReview
+  Approved
+  Rejected
+  Voided
+}
+
+enum ExpenseSourceType {
+  Manual
+  Fuel
+  Maintenance
+  AssetPurchase
+  DumpFee
+  Subscription
+  Import
+  System
+}
+
+enum ExpenseAllocationTarget {
+  Job
+  Customer
+  Employee
+  Crew
+  Asset
+  Location
+  Department
+  AccountingClass
+}
+
+enum ExpenseDocumentCategory {
+  Receipt
+  Invoice
+  CreditMemo
+  Statement
+  Contract
+  Warranty
+  TaxDocument
+  PaymentConfirmation
+  Other
+}
+
+enum RecurringExpenseCadence {
+  Weekly
+  Biweekly
+  Monthly
+  Quarterly
+  Semiannually
+  Annually
+  Custom
+}
+
+enum FinancialPeriodStatus {
+  Open
+  Review
+  Locked
+}
+
+model ExpenseCategory {
+  id        String             @id @default(uuid())
+  companyId String
+  company   Company            @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  name      String
+  code      String
+  isSystem  Boolean            @default(false)
+  active    Boolean            @default(true)
+  parentId  String?
+  parent    ExpenseCategory?   @relation("ExpenseCategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children  ExpenseCategory[]  @relation("ExpenseCategoryTree")
+  expenses  BusinessExpense[]
+  recurring RecurringExpense[]
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@unique([companyId, name])
+  @@unique([companyId, code])
+  @@index([companyId, active])
+  @@index([companyId, parentId])
+  @@map("expense_categories")
+}
+
+model Vendor {
+  id                     String             @id @default(uuid())
+  companyId              String
+  company                Company            @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  name                   String
+  normalizedName         String
+  type                   String             @default("OTHER")
+  legalName              String?
+  contactName            String?
+  email                  String?
+  phone                  String?
+  website                String?
+  address                String?
+  city                   String?
+  state                  String?
+  postalCode             String?
+  taxIdReference         String?
+  accountNumberReference String?
+  paymentTerms           String?
+  active                 Boolean            @default(true)
+  notes                  String?
+  expenses               BusinessExpense[]
+  documents              FinanceDocument[]
+  recurringExpenses      RecurringExpense[]
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  @@unique([companyId, normalizedName])
+  @@index([companyId, name])
+  @@index([companyId, type, active])
+  @@map("vendors")
+}
+
+model BusinessExpense {
+  id                       String                  @id @default(uuid())
+  companyId                String
+  company                  Company                 @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  expenseNumber            Int
+  transactionDate          DateTime
+  postingDate              DateTime?
+  vendorId                 String?
+  vendor                   Vendor?                 @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  categoryId               String
+  category                 ExpenseCategory         @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  description              String
+  subtotalCents            Int
+  taxCents                 Int                     @default(0)
+  tipCents                 Int                     @default(0)
+  feeCents                 Int                     @default(0)
+  totalCents               Int
+  currencyCode             String                  @default("USD")
+  paymentMethod            String?
+  transactionReference     String?
+  deductibleClassification String?
+  businessUsePercentage    Int?
+  reviewStatus             ExpenseReviewStatus     @default(Draft)
+  reimbursementStatus      String?
+  recurringExpenseId       String?
+  recurringExpense         RecurringExpense?       @relation(fields: [recurringExpenseId], references: [id], onDelete: Restrict)
+  sourceType               ExpenseSourceType       @default(Manual)
+  sourceRecordId           String?
+  notes                    String?
+  createdById              String
+  reviewedById             String?
+  reviewedAt               DateTime?
+  rejectionReason          String?
+  voidReason               String?
+  fuelEntryId              String?
+  fuelEntry                FuelEntry?              @relation(fields: [fuelEntryId], references: [id], onDelete: Restrict)
+  maintenanceRecordId      String?
+  maintenanceRecord        AssetMaintenanceRecord? @relation(fields: [maintenanceRecordId], references: [id], onDelete: Restrict)
+  allocations              ExpenseAllocation[]
+  documents                FinanceDocument[]
+  revisions                ExpenseRevision[]
+  createdAt                DateTime                @default(now())
+  updatedAt                DateTime                @updatedAt
+
+  @@unique([companyId, expenseNumber])
+  @@unique([companyId, sourceType, sourceRecordId])
+  @@index([companyId, transactionDate])
+  @@index([companyId, reviewStatus, transactionDate])
+  @@index([companyId, categoryId])
+  @@index([companyId, vendorId])
+  @@map("business_expenses")
+}
+
+model ExpenseAllocation {
+  id                   String                  @id @default(uuid())
+  companyId            String
+  company              Company                 @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  expenseId            String
+  expense              BusinessExpense         @relation(fields: [expenseId], references: [id], onDelete: Restrict)
+  targetType           ExpenseAllocationTarget
+  jobId                String?
+  job                  Job?                    @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  customerId           String?
+  customer             Customer?               @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  employeeId           String?
+  employee             Employee?               @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  crewId               String?
+  crew                 Crew?                   @relation(fields: [crewId], references: [id], onDelete: Restrict)
+  assetId              String?
+  asset                FleetAsset?             @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  locationReference    String?
+  departmentReference  String?
+  accountingClass      String?
+  allocatedAmountCents Int
+  allocatedPercentage  Int?
+  notes                String?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+
+  @@index([companyId, expenseId])
+  @@index([companyId, targetType])
+  @@index([companyId, jobId])
+  @@index([companyId, customerId])
+  @@index([companyId, employeeId])
+  @@index([companyId, crewId])
+  @@index([companyId, assetId])
+  @@map("expense_allocations")
+}
+
+model FinanceDocument {
+  id               String                  @id @default(uuid())
+  companyId        String
+  company          Company                 @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  category         ExpenseDocumentCategory
+  expenseId        String?
+  expense          BusinessExpense?        @relation(fields: [expenseId], references: [id], onDelete: Restrict)
+  vendorId         String?
+  vendor           Vendor?                 @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  jobId            String?
+  job              Job?                    @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  assetId          String?
+  asset            FleetAsset?             @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  storageKey       String                  @unique
+  originalFilename String
+  mimeType         String
+  sizeBytes        Int
+  transactionDate  DateTime?
+  uploadedById     String
+  notes            String?
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+
+  @@index([companyId, category, createdAt])
+  @@index([companyId, expenseId])
+  @@index([companyId, vendorId])
+  @@index([companyId, jobId])
+  @@index([companyId, assetId])
+  @@map("finance_documents")
+}
+
+model RecurringExpense {
+  id                  String                  @id @default(uuid())
+  companyId           String
+  company             Company                 @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  vendorId            String?
+  vendor              Vendor?                 @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  categoryId          String
+  category            ExpenseCategory         @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  description         String
+  cadence             RecurringExpenseCadence
+  customCadenceDays   Int?
+  expectedAmountCents Int
+  nextDueDate         DateTime
+  startDate           DateTime
+  endDate             DateTime?
+  autoCreateDraft     Boolean                 @default(false)
+  reminderLeadDays    Int                     @default(7)
+  active              Boolean                 @default(true)
+  paymentMethod       String?
+  linkedAssetId       String?
+  linkedAsset         FleetAsset?             @relation(fields: [linkedAssetId], references: [id], onDelete: Restrict)
+  notes               String?
+  expenses            BusinessExpense[]
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+
+  @@index([companyId, active, nextDueDate])
+  @@index([companyId, categoryId])
+  @@map("recurring_expenses")
+}
+
+model ManualIncomeAdjustment {
+  id            String   @id @default(uuid())
+  companyId     String
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  effectiveDate DateTime
+  amountCents   Int
+  type          String
+  description   String
+  createdById   String
+  createdAt     DateTime @default(now())
+
+  @@index([companyId, effectiveDate])
+  @@map("manual_income_adjustments")
+}
+
+model FinancialPeriod {
+  id           String                @id @default(uuid())
+  companyId    String
+  company      Company               @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  name         String
+  startDate    DateTime
+  endDate      DateTime
+  status       FinancialPeriodStatus @default(Open)
+  lockedAt     DateTime?
+  lockedById   String?
+  unlockedAt   DateTime?
+  unlockedById String?
+  unlockReason String?
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  @@unique([companyId, startDate, endDate])
+  @@index([companyId, status, startDate])
+  @@map("financial_periods")
+}
+
+model ExpenseRevision {
+  id             String          @id @default(uuid())
+  companyId      String
+  company        Company         @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  expenseId      String
+  expense        BusinessExpense @relation(fields: [expenseId], references: [id], onDelete: Restrict)
+  revisionNumber Int
+  reason         String
+  previousValues Json
+  revisedValues  Json
+  correctedById  String
+  correctedAt    DateTime        @default(now())
+
+  @@unique([expenseId, revisionNumber])
+  @@index([companyId, correctedAt])
+  @@map("expense_revisions")
 }
 
 model EmployeeTimeEntry {
@@ -3166,22 +3503,23 @@ model AdminPasswordResetToken {
 }
 
 model Crew {
-  id                      String            @id @default(uuid())
+  id                      String              @id @default(uuid())
   companyId               String
-  company                 Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company                 Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
   name                    String
   color                   String?
-  active                  Boolean           @default(true)
+  active                  Boolean             @default(true)
   members                 CrewMember[]
-  defaultWorkforceMembers Employee[]        @relation("DefaultWorkforceCrew")
+  defaultWorkforceMembers Employee[]          @relation("DefaultWorkforceCrew")
   assignments             JobAssignment[]
   servicePlans            ServicePlan[]
   timeClockEvents         TimeClockEvent[]
   workSessions            WorkSession[]
-  assignedAssets          FleetAsset[]      @relation("AssetAssignedCrew")
+  assignedAssets          FleetAsset[]        @relation("AssetAssignedCrew")
   assetAssignments        AssetAssignment[]
-  createdAt               DateTime          @default(now())
-  updatedAt               DateTime          @updatedAt
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+  expenseAllocations      ExpenseAllocation[]
 
   @@index([companyId])
   @@map("crews")
