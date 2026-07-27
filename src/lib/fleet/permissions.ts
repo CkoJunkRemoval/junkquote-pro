@@ -68,7 +68,6 @@ const capabilities: Record<MembershipRole, ReadonlySet<FleetCapability>> = {
   Crew: new Set([
     "fleet.view",
     "fleet.mileage.log",
-    "fleet.fuel.log",
     "fleet.inspections.perform",
   ]),
 };

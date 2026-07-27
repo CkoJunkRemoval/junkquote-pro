@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { forbidden } from "next/navigation";
 import AppLayout from "@/components/layout/AppLayout";
 import {
   assignAssetAction,
@@ -13,7 +14,7 @@ import {
   hasFleetCapability,
   requireFleetCapability,
 } from "@/lib/fleet/permissions";
-import { getAssetDetail, getFleetAssignmentOptions } from "@/lib/fleet/service";
+import { getAssetDetail, getAssignedFleetAssetWhere, getFleetAssignmentOptions } from "@/lib/fleet/service";
 import { getAssetRemovalEligibility } from "@/lib/fleet/service";
 import AssetLifecycleControls from "@/features/fleet/AssetLifecycleControls";
 
@@ -40,15 +41,30 @@ export default async function AssetDetailPage({
   const tenant = await requireTenantContext();
   requireFleetCapability(tenant.role, "fleet.view");
   const { id } = await params;
+  const visibleSections =
+    tenant.role === "Crew"
+      ? sections.filter((value) =>
+          ["overview", "specifications", "assignments", "mileage", "inspections", "timeline"].includes(value),
+        )
+      : sections;
   const requested = (await searchParams).section;
-  const section = sections.includes(requested ?? "") ? requested! : "overview";
+  const section = visibleSections.includes(requested ?? "")
+    ? requested!
+    : "overview";
   if (section === "costs")
     requireFleetCapability(tenant.role, "fleet.costs.view");
   const canRemove = hasFleetCapability(tenant.role, "fleet.remove");
+  const crewScope =
+    tenant.role === "Crew"
+      ? await getAssignedFleetAssetWhere(tenant.companyId, tenant.user.id)
+      : {};
   const [asset, options] = await Promise.all([
-    getAssetDetail(tenant.companyId, id),
-    getFleetAssignmentOptions(tenant.companyId),
+    getAssetDetail(tenant.companyId, id, crewScope),
+    tenant.role === "Crew"
+      ? Promise.resolve({ employees: [], crews: [], jobs: [], assets: [] })
+      : getFleetAssignmentOptions(tenant.companyId),
   ]);
+  if (!asset && tenant.role === "Crew") forbidden();
   if (!asset)
     return (
       <AppLayout>
@@ -90,7 +106,7 @@ export default async function AssetDetailPage({
           aria-label="Asset sections"
           className="mt-5 flex gap-2 overflow-x-auto pb-2"
         >
-          {sections
+          {visibleSections
             .filter(
               (value) =>
                 value !== "costs" ||

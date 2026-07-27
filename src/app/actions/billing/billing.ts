@@ -1,7 +1,8 @@
 "use server";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { requireTenantContext } from "@/lib/auth/tenant";
+import { AuthorizationError, requireTenantContext } from "@/lib/auth/tenant";
+import { canManageBilling } from "@/lib/billing/permissions";
 import { getStripe } from "@/lib/billing/stripe";
 import { plans } from "@/lib/billing/config";
 import { prisma } from "@/lib/prisma";
@@ -9,7 +10,7 @@ import type { SubscriptionPlan } from "@/generated/prisma/client";
 import { checkRateLimit, ratePolicies } from "@/lib/security/rateLimit";
 import { withDistributedLock } from "@/lib/distributed/locks";
 
-async function billingContext() { const context = await requireTenantContext(); if (context.role !== "Owner" && !context.membership.billingAdmin) throw new Error("Only company owners or billing administrators can manage billing."); return context; }
+async function billingContext() { const context = await requireTenantContext(); if (!canManageBilling(context.role,context.membership.billingAdmin)) throw new AuthorizationError("FORBIDDEN","You do not have permission to manage billing."); return context; }
 async function origin() { const requestHeaders = await headers(); return process.env.NEXT_PUBLIC_APP_URL ?? requestHeaders.get("origin") ?? `${requestHeaders.get("x-forwarded-proto") ?? "https"}://${requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host")}`; }
 async function enforceBillingLimit(companyId: string, userId: string) { if (!(await checkRateLimit(`billing:${companyId}:${userId}`, ratePolicies.billing)).allowed) throw new Error("Too many billing requests. Try again later."); }
 

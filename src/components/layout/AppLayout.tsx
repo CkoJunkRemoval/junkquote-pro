@@ -10,10 +10,7 @@ type Props = {
   dashboard?: { canCreateEstimate: boolean };
 };
 
-export default function AppLayout({
-  children,
-  dashboard,
-}: Props) {
+export default function AppLayout({ children, dashboard }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const collapsed = useSyncExternalStore(
     (onStoreChange) => {
@@ -25,7 +22,7 @@ export default function AppLayout({
       };
     },
     () => window.localStorage.getItem("junkquote:sidebar-collapsed") === "true",
-    () => false
+    () => false,
   );
 
   function toggleSidebar() {
@@ -36,18 +33,18 @@ export default function AppLayout({
 
   return (
     <div className="app-shell flex min-h-screen">
-      <Sidebar collapsed={collapsed} mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} onToggle={toggleSidebar} />
-
+      <Sidebar
+        collapsed={collapsed}
+        mobileOpen={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+        onToggle={toggleSidebar}
+      />
       <div className="relative flex min-w-0 flex-1 flex-col">
-
         <Header onMenu={() => setMobileOpen(true)} dashboard={dashboard} />
-
         <main className="relative flex-1 overflow-auto">
           <BrandedPageShell>{children}</BrandedPageShell>
         </main>
-
       </div>
-
     </div>
   );
 }

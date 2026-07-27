@@ -7,10 +7,10 @@ import { ensureDefaultCommunicationConfiguration, manualSendCommunication } from
 import { validateCommunicationTemplate } from "@/lib/communications/templates";
 import { prisma } from "@/lib/prisma";
 
-export async function markNotificationReadAction(formData:FormData){const c=await requireCompanyRole("Owner","Admin","Office","Crew");await markNotificationRead(c.companyId,c.user.id,String(formData.get("id")??""));revalidatePath("/communications")}
-export async function markAllNotificationsReadAction(){const c=await requireCompanyRole("Owner","Admin","Office","Crew");await markAllNotificationsRead(c.companyId,c.user.id);revalidatePath("/communications")}
+export async function markNotificationReadAction(formData:FormData){const c=await requireCompanyRole("Owner","Admin","Manager","Office");await markNotificationRead(c.companyId,c.user.id,String(formData.get("id")??""));revalidatePath("/communications")}
+export async function markAllNotificationsReadAction(){const c=await requireCompanyRole("Owner","Admin","Manager","Office");await markAllNotificationsRead(c.companyId,c.user.id);revalidatePath("/communications")}
 export async function retryCommunicationAction(formData:FormData){
-  const c=await requireCompanyRole("Owner","Admin","Office");
+  const c=await requireCompanyRole("Owner","Admin","Manager","Office");
   const deliveryId=String(formData.get("deliveryId")??"");
   const delivery=await prisma.communicationDelivery.findFirst({where:{id:deliveryId,companyId:c.companyId,status:{in:["Failed","Bounced","Rejected"]}},select:{backgroundJobId:true}});
   if(!delivery?.backgroundJobId)throw new Error("This delivery cannot be retried.");
@@ -37,7 +37,7 @@ export async function toggleCommunicationRuleAction(formData:FormData){
   await prisma.communicationAutomationRule.update({where:{id:rule.id},data:{enabled:!rule.enabled}});revalidatePath("/communications");
 }
 export async function manualSendCommunicationAction(formData:FormData){
-  const c=await requireCompanyRole("Owner","Admin","Office");
+  const c=await requireCompanyRole("Owner","Admin","Manager","Office");
   await manualSendCommunication({companyId:c.companyId,actingUserId:c.user.id,sourceType:String(formData.get("sourceType")??"Customer"),sourceId:String(formData.get("sourceId")??formData.get("customerId")??""),customerId:String(formData.get("customerId")??""),subject:String(formData.get("subject")??""),body:String(formData.get("body")??"")});
   revalidatePath("/communications");
 }

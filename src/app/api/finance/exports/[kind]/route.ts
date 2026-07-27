@@ -1,5 +1,5 @@
 import { requireTenantContext } from "@/lib/auth/tenant";
-import { requireFinanceCapability } from "@/lib/finance/permissions";
+import { hasFinanceCapability } from "@/lib/finance/permissions";
 import {
   exportFinanceCsv,
   type FinanceExportKind,
@@ -25,7 +25,8 @@ export async function GET(
   { params }: { params: Promise<{ kind: string }> },
 ) {
   const tenant = await requireTenantContext();
-  requireFinanceCapability(tenant.role, "finance.exports");
+  if (!hasFinanceCapability(tenant.role, "finance.exports"))
+    return Response.json({ error: { code: "FORBIDDEN", message: "You do not have permission to use this feature." } }, { status: 403 });
   const { kind } = await params;
   if (!kinds.has(kind as FinanceExportKind))
     return new Response("Unsupported export", { status: 404 });

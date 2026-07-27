@@ -41,6 +41,17 @@ export function safeErrorResponse(error: unknown, requestId: string) {
   const app =
     error instanceof AppError
       ? error
+      : error instanceof Error &&
+          error.name === "AuthorizationError" &&
+          "code" in error
+        ? new AppError(
+            error.code === "UNAUTHENTICATED"
+              ? "AUTHENTICATION_REQUIRED"
+              : "FORBIDDEN",
+            error.code === "UNAUTHENTICATED"
+              ? "Authentication is required."
+              : "You do not have permission to use this feature.",
+          )
       : new AppError("INTERNAL_ERROR", "Something went wrong.");
   const retryAfter = app.code === "RATE_LIMITED" && typeof app.details?.retryAfterSeconds === "number" ? String(Math.max(1, Math.ceil(app.details.retryAfterSeconds))) : undefined;
   return Response.json(

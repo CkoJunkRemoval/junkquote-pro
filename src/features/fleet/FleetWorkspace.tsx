@@ -5,11 +5,13 @@ import type {
   FleetAssetStatus,
 } from "@/generated/prisma/client";
 import {
+  getAssignedFleetAssetWhere,
   getAssetDirectory,
   getDueMaintenance,
   getFleetDashboard,
   getFuelSummary,
 } from "@/lib/fleet/service";
+import { requireTenantContext } from "@/lib/auth/tenant";
 
 const cards = [
   ["Active assets", "totalActive"],
@@ -53,19 +55,31 @@ export default async function FleetWorkspace({
   condition?: AssetCondition;
   assigned?: boolean;
 }) {
-  const dashboard = await getFleetDashboard(companyId);
+  const tenant = await requireTenantContext();
+  if (tenant.companyId !== companyId) throw new Error("Invalid tenant context.");
+  const crewScope =
+    tenant.role === "Crew"
+      ? await getAssignedFleetAssetWhere(companyId, tenant.user.id)
+      : {};
+  const dashboard =
+    tenant.role === "Crew" ? null : await getFleetDashboard(companyId);
   const assets = await getAssetDirectory(companyId, {
     search,
     categories: categories[view],
     status,
     condition,
     assigned,
-  });
-  const due = view === "maintenance" ? await getDueMaintenance(companyId) : [];
+  }, crewScope);
+  const due =
+    view === "maintenance" && tenant.role !== "Crew"
+      ? await getDueMaintenance(companyId)
+      : [];
   const month = new Date();
   month.setDate(1);
   const fuel =
-    view === "fuel" ? await getFuelSummary(companyId, month, new Date()) : [];
+    view === "fuel" && tenant.role !== "Crew"
+      ? await getFuelSummary(companyId, month, new Date())
+      : [];
   return (
     <main className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -79,12 +93,14 @@ export default async function FleetWorkspace({
             maintenance.
           </p>
         </div>
-        <Link
-          href="/fleet/new"
-          className="ui-button ui-button--primary inline-flex min-h-11 items-center rounded-xl px-5 font-semibold"
-        >
-          Add asset
-        </Link>
+        {tenant.role !== "Crew" && (
+          <Link
+            href="/fleet/new"
+            className="ui-button ui-button--primary inline-flex min-h-11 items-center rounded-xl px-5 font-semibold"
+          >
+            Add asset
+          </Link>
+        )}
       </div>
       <nav
         aria-label="Fleet sections"
@@ -100,7 +116,11 @@ export default async function FleetWorkspace({
           ["Maintenance", "/fleet/maintenance"],
           ["Inspections", "/fleet/inspections"],
           ["Documents", "/fleet/documents"],
-        ].map(([label, href]) => (
+        ].filter(([label]) =>
+          tenant.role === "Crew"
+            ? ["All assets", "Vehicles", "Trailers", "Equipment"].includes(label)
+            : true,
+        ).map(([label, href]) => (
           <Link
             key={href}
             href={href}
@@ -110,7 +130,7 @@ export default async function FleetWorkspace({
           </Link>
         ))}
       </nav>
-      {view === "dashboard" && (
+      {view === "dashboard" && dashboard && (
         <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {cards.map(([label, key]) => (
             <article key={key} className="glass-card p-5">
@@ -126,7 +146,8 @@ export default async function FleetWorkspace({
           </article>
         </section>
       )}
-      {["assets", "vehicles", "trailers", "equipment"].includes(view) && (
+      {(["assets", "vehicles", "trailers", "equipment"].includes(view) ||
+        (tenant.role === "Crew" && view === "dashboard")) && (
         <>
           <form className="glass-card mt-6 flex flex-wrap gap-3 p-4">
             <input

@@ -1,5 +1,5 @@
 import { requireTenantContext } from "@/lib/auth/tenant";
-import { requireFinanceCapability } from "@/lib/finance/permissions";
+import { hasFinanceCapability } from "@/lib/finance/permissions";
 import { getFinanceDocumentAccess } from "@/lib/finance/service";
 import { prisma } from "@/lib/prisma";
 import { readFinanceDocument } from "@/lib/storage/financeDocumentStorage";
@@ -9,7 +9,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const tenant = await requireTenantContext();
-  requireFinanceCapability(tenant.role, "finance.receipts.view");
+  if (!hasFinanceCapability(tenant.role, "finance.receipts.view"))
+    return Response.json({ error: { code: "FORBIDDEN", message: "You do not have permission to use this feature." } }, { status: 403 });
   const document = await getFinanceDocumentAccess(
     tenant.companyId,
     (await params).id,

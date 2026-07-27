@@ -38,25 +38,8 @@ const all: FinanceCapability[] = [
 const capabilities: Record<MembershipRole, ReadonlySet<FinanceCapability>> = {
   Owner: new Set(all),
   Admin: new Set(all),
-  Manager: new Set([
-    "finance.view",
-    "finance.expenses.view",
-    "finance.expenses.manage",
-    "finance.receipts.view",
-    "finance.receipts.manage",
-    "finance.vendors.view",
-    "finance.vendors.manage",
-    "finance.recurring.manage",
-    "finance.jobCosting.view",
-  ]),
-  Office: new Set([
-    "finance.view",
-    "finance.expenses.view",
-    "finance.expenses.manage",
-    "finance.receipts.view",
-    "finance.receipts.manage",
-    "finance.vendors.view",
-  ]),
+  Manager: new Set(),
+  Office: new Set(),
   Crew: new Set(),
 };
 

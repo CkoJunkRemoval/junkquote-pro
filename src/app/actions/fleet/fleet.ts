@@ -10,7 +10,7 @@ import type {
   AssetOwnershipType,
   MaintenanceTriggerType,
 } from "@/generated/prisma/client";
-import { requireTenantContext } from "@/lib/auth/tenant";
+import { AuthorizationError, requireTenantContext } from "@/lib/auth/tenant";
 import {
   requireFleetCapability,
   type FleetCapability,
@@ -37,6 +37,24 @@ async function context(capability: FleetCapability) {
   const tenant = await requireTenantContext();
   requireFleetCapability(tenant.role, capability);
   return tenant;
+}
+async function assertOperationalAssetAccess(
+  tenant: Awaited<ReturnType<typeof requireTenantContext>>,
+  assetId: string,
+) {
+  if (
+    tenant.role === "Crew" &&
+    !(await fleet.canUserAccessFleetAsset(
+      tenant.companyId,
+      tenant.user.id,
+      assetId,
+    ))
+  ) {
+    throw new AuthorizationError(
+      "FORBIDDEN",
+      "You do not have permission to access this asset.",
+    );
+  }
 }
 
 export async function createAssetAction(form: FormData) {
@@ -99,6 +117,7 @@ export async function changeAssetLifecycleAction(
 
 export async function recordMileageAction(assetId: string, form: FormData) {
   const tenant = await context("fleet.mileage.log");
+  await assertOperationalAssetAccess(tenant, assetId);
   await fleet.recordMileage(tenant.companyId, tenant.user.id, {
     assetId,
     odometerMiles: Number(text(form, "odometerMiles")),
@@ -112,6 +131,7 @@ export async function recordMileageAction(assetId: string, form: FormData) {
 
 export async function recordFuelAction(assetId: string, form: FormData) {
   const tenant = await context("fleet.fuel.log");
+  await assertOperationalAssetAccess(tenant, assetId);
   await fleet.recordFuel(tenant.companyId, tenant.user.id, {
     assetId,
     transactionAt: date(form, "transactionAt") ?? new Date(),

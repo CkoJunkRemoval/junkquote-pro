@@ -13,9 +13,10 @@ describe("finance permissions", () => {
     expect(hasFinanceCapability("Office", "finance.costs.view")).toBe(false);
   });
 
-  it("allows Office expense entry without approval or profitability access", () => {
-    expect(hasFinanceCapability("Office", "finance.expenses.manage")).toBe(true);
-    expect(hasFinanceCapability("Office", "finance.receipts.manage")).toBe(true);
+  it("keeps Office and Manager out of the broad Finance module", () => {
+    expect(hasFinanceCapability("Office", "finance.expenses.manage")).toBe(false);
+    expect(hasFinanceCapability("Office", "finance.receipts.manage")).toBe(false);
+    expect(hasFinanceCapability("Manager", "finance.view")).toBe(false);
     expect(hasFinanceCapability("Office", "finance.expenses.approve")).toBe(false);
     expect(hasFinanceCapability("Office", "finance.jobCosting.view")).toBe(false);
   });

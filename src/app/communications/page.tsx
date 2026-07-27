@@ -1,7 +1,7 @@
 import Link from "next/link";
 import AppLayout from "@/components/layout/AppLayout";
-import { requireCompanyRole } from "@/lib/auth/tenant";
-import { getCommunicationCenter, type CommunicationCenterFilters } from "@/lib/communications/center";
+import { requireCompanyModulePage } from "@/lib/auth/pageAccess";
+import { getCommunicationCenter } from "@/lib/communications/center";
 import { ensureDefaultCommunicationConfiguration } from "@/lib/communications/engine";
 import {
   manualSendCommunicationAction, markAllNotificationsReadAction, markNotificationReadAction,
@@ -13,10 +13,10 @@ const button="inline-flex min-h-11 items-center justify-center rounded-xl border
 const views=["activity","scheduled","failed","templates","automation","preferences","notifications"] as const;
 
 export default async function CommunicationsPage({searchParams}:{searchParams:Promise<Record<string,string|undefined>>}) {
-  const context=await requireCompanyRole("Owner","Admin","Office","Crew");
+  const context=await requireCompanyModulePage("communications");
   const query=await searchParams;
   const requested=views.includes(query.view as typeof views[number])?query.view as typeof views[number]:"activity";
-  const view=context.role==="Crew"?"notifications":requested;
+  const view=requested;
   if(["Owner","Admin"].includes(context.role))await ensureDefaultCommunicationConfiguration(context.companyId);
   const data=await getCommunicationCenter(context.companyId,context.user.id,context.role,{view,eventType:query.eventType,channel:query.channel,status:query.status,customerId:query.customerId,sourceId:query.sourceId,page:Number(query.page)||1});
   return <AppLayout><main className="mx-auto max-w-7xl p-4 sm:p-6">

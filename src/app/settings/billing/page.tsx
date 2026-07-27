@@ -1,16 +1,12 @@
 import { openBillingPortalAction } from "@/app/actions/billing/billing";
 import AppLayout from "@/components/layout/AppLayout";
-import { requireTenantContext } from "@/lib/auth/tenant";
+import { requireCompanyModulePage } from "@/lib/auth/pageAccess";
 import { getCompanyEntitlements } from "@/lib/billing/entitlements";
 import { isBillingAvailable } from "@/lib/billing/stripe";
 import Link from "next/link";
 
 export default async function Page() {
-  const context = await requireTenantContext();
-  if (context.role !== "Owner" && !context.membership.billingAdmin)
-    throw new Error(
-      "Billing access is restricted to owners and billing administrators.",
-    );
+  const context = await requireCompanyModulePage("billing");
   const entitlements = await getCompanyEntitlements(context.companyId);
   const subscription = entitlements.subscription;
   const billingEnabled = isBillingAvailable();

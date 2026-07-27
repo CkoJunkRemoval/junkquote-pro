@@ -1,6 +1,6 @@
 import AppLayout from "@/components/layout/AppLayout";
 import DispatchCenter from "@/features/dispatch/DispatchCenter";
-import { requireCompanyRole } from "@/lib/auth/tenant";
+import { requireCompanyModulePage } from "@/lib/auth/pageAccess";
 import { getDispatchData } from "@/lib/dispatch/dispatch";
 import { parseDispatchFilters } from "@/lib/dispatch/filters";
 export default async function DispatchPage({
@@ -8,7 +8,7 @@ export default async function DispatchPage({
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
-  const context = await requireCompanyRole("Owner", "Admin", "Office", "Crew");
+  const context = await requireCompanyModulePage("dispatch");
   const query = await searchParams;
   const rawDate = query.date;
   const date =

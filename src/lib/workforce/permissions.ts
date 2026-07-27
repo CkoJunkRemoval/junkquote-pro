@@ -34,15 +34,12 @@ const capabilities: Record<MembershipRole, ReadonlySet<WorkforceCapability>> = {
   Manager: new Set([
     "workforce.view",
     "workforce.manage",
-    "workforce.documents.view",
     "workforce.onboarding.manage",
     "workforce.credentials.manage",
   ]),
   Office: new Set([
     "workforce.view",
     "workforce.manage",
-    "workforce.documents.view",
-    "workforce.documents.manage",
     "workforce.onboarding.manage",
     "workforce.credentials.manage",
   ]),
@@ -64,4 +61,3 @@ export function requireWorkforceCapability(
     throw new Error("You do not have permission to access this workforce record.");
   }
 }
-

@@ -1339,10 +1339,12 @@ export async function getAssetDirectory(
     condition?: AssetCondition;
     assigned?: boolean;
   } = {},
+  accessWhere: Prisma.FleetAssetWhereInput = {},
 ) {
   return prisma.fleetAsset.findMany({
     where: {
       companyId,
+      AND: [accessWhere],
       category: filters.categories
         ? { in: filters.categories }
         : filters.category,
@@ -1380,9 +1382,13 @@ export async function getAssetDirectory(
   });
 }
 
-export async function getAssetDetail(companyId: string, assetId: string) {
+export async function getAssetDetail(
+  companyId: string,
+  assetId: string,
+  accessWhere: Prisma.FleetAssetWhereInput = {},
+) {
   return prisma.fleetAsset.findFirst({
-    where: { id: assetId, companyId },
+    where: { id: assetId, companyId, AND: [accessWhere] },
     include: {
       vehicleProfile: true,
       trailerProfile: true,
@@ -1402,6 +1408,68 @@ export async function getAssetDetail(companyId: string, assetId: string) {
       timelineEvents: { orderBy: { occurredAt: "desc" }, take: 200 },
     },
   });
+}
+
+export async function getAssignedFleetAssetWhere(
+  companyId: string,
+  userId: string,
+): Promise<Prisma.FleetAssetWhereInput> {
+  const employee = await prisma.employee.findFirst({
+    where: { companyId, userId, status: "Active" },
+    select: {
+      id: true,
+      defaultCrewId: true,
+      crewMembers: { select: { crewId: true } },
+      assignments: {
+        where: { status: { in: ["Assigned", "Confirmed"] } },
+        select: { jobId: true, crewId: true },
+      },
+    },
+  });
+  if (!employee) return { id: { in: [] } };
+  const crewIds = Array.from(
+    new Set([
+      ...(employee.defaultCrewId ? [employee.defaultCrewId] : []),
+      ...employee.crewMembers.map((row) => row.crewId),
+      ...employee.assignments.flatMap((row) => (row.crewId ? [row.crewId] : [])),
+    ]),
+  );
+  const jobIds = employee.assignments.map((row) => row.jobId);
+  return {
+    OR: [
+      { assignedEmployeeId: employee.id },
+      ...(crewIds.length ? [{ assignedCrewId: { in: crewIds } }] : []),
+      {
+        assignments: {
+          some: {
+            returnedAt: null,
+            OR: [
+              { employeeId: employee.id },
+              ...(crewIds.length ? [{ crewId: { in: crewIds } }] : []),
+              ...(jobIds.length ? [{ jobId: { in: jobIds } }] : []),
+            ],
+          },
+        },
+      },
+      ...(jobIds.length
+        ? [{ jobVehicleAssignments: { some: { jobId: { in: jobIds } } } }]
+        : []),
+    ],
+  };
+}
+
+export async function canUserAccessFleetAsset(
+  companyId: string,
+  userId: string,
+  assetId: string,
+) {
+  const accessWhere = await getAssignedFleetAssetWhere(companyId, userId);
+  return Boolean(
+    await prisma.fleetAsset.findFirst({
+      where: { id: assetId, companyId, AND: [accessWhere] },
+      select: { id: true },
+    }),
+  );
 }
 
 export async function getFleetAssignmentOptions(companyId: string) {

@@ -3,6 +3,9 @@ import { productionContentSecurityPolicy } from "./security-policy";
 
 const nextConfig: NextConfig = {
   productionBrowserSourceMaps: false,
+  experimental: {
+    authInterrupts: true,
+  },
   async headers() {
     const security = [
       {

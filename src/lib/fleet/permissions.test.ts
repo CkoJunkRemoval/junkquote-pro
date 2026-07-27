@@ -15,9 +15,9 @@ describe("fleet permissions", () => {
     expect(hasFleetCapability("Crew", "fleet.costs.view")).toBe(false);
   });
 
-  it("allows field logging without fleet administration", () => {
+  it("allows assigned mileage without exposing cost-bearing fuel entry", () => {
     expect(hasFleetCapability("Crew", "fleet.mileage.log")).toBe(true);
-    expect(hasFleetCapability("Crew", "fleet.fuel.log")).toBe(true);
+    expect(hasFleetCapability("Crew", "fleet.fuel.log")).toBe(false);
     expect(hasFleetCapability("Crew", "fleet.manage")).toBe(false);
   });
 
