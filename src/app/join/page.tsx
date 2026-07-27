@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import BrandedAuthLayout from "@/components/branding/BrandedAuthLayout";
 import { acceptTeamInvitationAction } from "@/app/actions/teamInvitations/teamInvitations";
 import { validateTeamInvitation } from "@/lib/teamInvitations/service";
+import PasswordInput from "@/components/forms/PasswordInput";
 
 export default async function JoinCompanyPage({ searchParams }: { searchParams: Promise<{ token?: string }> }) {
   const token = (await searchParams).token ?? "";
@@ -21,8 +22,8 @@ export default async function JoinCompanyPage({ searchParams }: { searchParams: 
       {!invitation.existingAccount && <>
         <Field name="firstName" label="First name" autoComplete="given-name"/>
         <Field name="lastName" label="Last name" autoComplete="family-name"/>
-        <Field name="password" label="Create password" type="password" autoComplete="new-password"/>
-        <Field name="passwordConfirmation" label="Confirm password" type="password" autoComplete="new-password"/>
+        <PasswordInput name="password" label="Create password" autoComplete="new-password" minLength={12} maxLength={128} required wrapperClassName="mt-3"/>
+        <PasswordInput name="passwordConfirmation" label="Confirm password" autoComplete="new-password" minLength={12} maxLength={128} required wrapperClassName="mt-3"/>
       </>}
       <button className="auth-submit mt-4">{invitation.existingAccount ? "Join Company" : "Create Password & Join Company"}</button>
     </form>}

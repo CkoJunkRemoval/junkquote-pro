@@ -6,28 +6,30 @@ import {
   signUpAction,
   type SignupActionState,
 } from "@/app/actions/auth/signUp";
+import PasswordInput from "@/components/forms/PasswordInput";
+import BrandedAuthLayout from "@/components/branding/BrandedAuthLayout";
 
 const initialState: SignupActionState = { error: null };
 
 export default function SignUpForm() {
   const [state, action, pending] = useActionState(signUpAction, initialState);
   return (
-    <main className="grid min-h-screen place-items-center bg-slate-100 p-4">
+    <BrandedAuthLayout>
       <form
         action={action}
-        className="w-full max-w-lg rounded-2xl bg-white p-6 shadow"
+        className="auth-card"
         aria-describedby={state.error ? "sign-up-error" : undefined}
       >
-        <p className="text-sm font-semibold text-blue-700">JunkQuote Pro</p>
-        <h1 className="mt-2 text-2xl font-bold">Create your company account</h1>
-        <p className="mt-2 text-sm text-slate-600">
+        <p className="auth-card__eyebrow">JunkQuote Pro</p>
+        <h1>Create your company account</h1>
+        <p className="auth-card__intro">
           You’ll be the owner of a new, isolated company workspace.
         </p>
         {state.error && (
           <p
             id="sign-up-error"
             role="alert"
-            className="mt-4 rounded bg-red-50 p-3 text-sm text-red-700"
+            className="auth-message auth-message--error"
           >
             {state.error}
           </p>
@@ -46,43 +48,47 @@ export default function SignUpForm() {
           <Field label="Last name" name="lastName" autoComplete="family-name" />
         </div>
         <Field label="Email" name="email" type="email" autoComplete="email" />
-        <Field
+        <PasswordInput
           label="Password"
           name="password"
-          type="password"
           autoComplete="new-password"
           hint="Use at least 12 characters."
           minLength={12}
+          maxLength={128}
+          required
+          wrapperClassName="mt-3"
         />
-        <Field
+        <PasswordInput
           label="Confirm password"
           name="passwordConfirmation"
-          type="password"
           autoComplete="new-password"
           minLength={12}
+          maxLength={128}
+          required
+          wrapperClassName="mt-3"
         />
         <button
           type="submit"
           aria-busy={pending}
           disabled={pending}
-          className="mt-5 w-full rounded bg-blue-700 px-4 py-2 font-semibold text-white disabled:opacity-50"
+          className="auth-submit"
         >
           {pending ? "Creating account..." : "Create account"}
         </button>
         <p aria-live="polite" className="sr-only">
           {pending ? "Creating your account." : ""}
         </p>
-        <p className="mt-5 text-center text-sm text-slate-600">
+        <p className="auth-card__signup">
           Already have an account?{" "}
           <Link
-            className="font-semibold text-blue-700 underline"
+            className="font-semibold"
             href="/sign-in"
           >
             Sign in
           </Link>
         </p>
       </form>
-    </main>
+    </BrandedAuthLayout>
   );
 }
 
@@ -103,8 +109,8 @@ function Field({
 }) {
   const hintId = hint ? `${name}-hint` : undefined;
   return (
-    <label className="mt-3 grid gap-1 text-sm font-medium">
-      {label}
+    <label className="auth-field">
+      <span>{label}</span>
       <input
         required
         disabled={false}
@@ -113,10 +119,9 @@ function Field({
         autoComplete={autoComplete}
         minLength={minLength}
         aria-describedby={hintId}
-        className="rounded border p-2"
       />
       {hint && (
-        <span id={hintId} className="text-xs font-normal text-slate-500">
+        <span id={hintId} className="auth-field__hint">
           {hint}
         </span>
       )}

@@ -142,7 +142,7 @@ export default async function FleetWorkspace({
               defaultValue={status ?? ""}
               className="min-h-11 rounded-xl border px-3"
             >
-              <option value="">All statuses</option>
+              <option value="">Active statuses</option>
               {[
                 "Active",
                 "Available",

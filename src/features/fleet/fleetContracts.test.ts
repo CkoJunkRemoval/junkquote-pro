@@ -35,6 +35,29 @@ describe("fleet production contracts", () => {
     expect(service).toContain("This asset status cannot be assigned");
   });
 
+  it("guards permanent deletion and historical lifecycle changes", () => {
+    for (const value of [
+      "assetReferenceCounts",
+      "Permanent deletion is unavailable",
+      "fleet.asset_deleted",
+      "A reason is required",
+      "returnedAt: now",
+      "blockedStatuses.includes",
+    ])
+      expect(service).toContain(value);
+    const controls = source("src/features/fleet/AssetLifecycleControls.tsx");
+    for (const label of [
+      "Remove Asset",
+      "Retire",
+      "Mark Sold",
+      "Mark Lost",
+      "Mark Stolen",
+      "Reactivate",
+    ])
+      expect(controls).toContain(label);
+    expect(controls).toContain("window.confirm");
+  });
+
   it("uses immutable operational relations and private documents", () => {
     expect(schema).toContain('@@map("asset_assignments")');
     expect(schema).toContain('@@map("asset_mileage_entries")');

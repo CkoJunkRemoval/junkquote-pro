@@ -2,8 +2,9 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
-import { LockKeyhole, Mail, Truck } from "lucide-react";
+import { Mail, Truck } from "lucide-react";
 import BrandedAuthLayout from "@/components/branding/BrandedAuthLayout";
+import PasswordInput from "@/components/forms/PasswordInput";
 
 export default function SignInForm({
   callbackUrl,
@@ -76,21 +77,17 @@ export default function SignInForm({
             placeholder="you@company.com"
           />
         </label>
-        <label className="auth-field">
-          <span>Password</span>
-          <LockKeyhole aria-hidden="true" size={18} />
-          <input
-            id="sign-in-password"
-            autoComplete="current-password"
-            aria-describedby={error ? "sign-in-error" : undefined}
-            aria-invalid={error ? true : undefined}
-            required
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            placeholder="Enter your password"
-          />
-        </label>
+        <PasswordInput
+          label="Password"
+          id="sign-in-password"
+          autoComplete="current-password"
+          aria-describedby={error ? "sign-in-error" : undefined}
+          aria-invalid={error ? true : undefined}
+          required
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          placeholder="Enter your password"
+        />
         <button
           type="submit"
           aria-busy={loading}

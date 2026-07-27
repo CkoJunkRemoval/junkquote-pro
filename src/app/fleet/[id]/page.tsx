@@ -14,6 +14,8 @@ import {
   requireFleetCapability,
 } from "@/lib/fleet/permissions";
 import { getAssetDetail, getFleetAssignmentOptions } from "@/lib/fleet/service";
+import { getAssetRemovalEligibility } from "@/lib/fleet/service";
+import AssetLifecycleControls from "@/features/fleet/AssetLifecycleControls";
 
 const field = "min-h-11 rounded-xl border px-3 py-2";
 const sections = [
@@ -42,6 +44,7 @@ export default async function AssetDetailPage({
   const section = sections.includes(requested ?? "") ? requested! : "overview";
   if (section === "costs")
     requireFleetCapability(tenant.role, "fleet.costs.view");
+  const canRemove = hasFleetCapability(tenant.role, "fleet.remove");
   const [asset, options] = await Promise.all([
     getAssetDetail(tenant.companyId, id),
     getFleetAssignmentOptions(tenant.companyId),
@@ -52,6 +55,9 @@ export default async function AssetDetailPage({
         <main className="p-10">Asset not found.</main>
       </AppLayout>
     );
+  const removal = canRemove
+    ? await getAssetRemovalEligibility(tenant.companyId, id)
+    : null;
   const canAssign = hasFleetCapability(tenant.role, "fleet.assign");
   return (
     <AppLayout>
@@ -101,6 +107,15 @@ export default async function AssetDetailPage({
               </Link>
             ))}
         </nav>
+        {canRemove && removal && (
+          <AssetLifecycleControls
+            assetId={id}
+            assetName={asset.name}
+            status={asset.status}
+            canDelete={removal.canDelete}
+            blockers={removal.blockers}
+          />
+        )}
         {section === "overview" && (
           <Grid>
             <Metric label="Status" value={asset.status} />

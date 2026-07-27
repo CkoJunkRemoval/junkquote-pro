@@ -65,6 +65,38 @@ export async function createAssetAction(form: FormData) {
   refresh(asset.id);
 }
 
+export async function deleteUnusedAssetAction(
+  assetId: string,
+  confirmation: string,
+) {
+  const tenant = await context("fleet.remove");
+  const result = await fleet.deleteUnusedAsset(
+    tenant.companyId,
+    tenant.user.id,
+    assetId,
+    confirmation,
+  );
+  refresh();
+  return result;
+}
+
+export async function changeAssetLifecycleAction(
+  assetId: string,
+  status: fleet.AssetLifecycleStatus | "Available",
+  reason: string,
+) {
+  const tenant = await context("fleet.remove");
+  const result = await fleet.changeAssetLifecycle(
+    tenant.companyId,
+    tenant.user.id,
+    assetId,
+    status,
+    reason,
+  );
+  refresh(assetId);
+  return result;
+}
+
 export async function recordMileageAction(assetId: string, form: FormData) {
   const tenant = await context("fleet.mileage.log");
   await fleet.recordMileage(tenant.companyId, tenant.user.id, {

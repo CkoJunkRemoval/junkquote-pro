@@ -213,6 +213,14 @@ export async function updateAsset(
       where: { id: assetId, companyId },
     });
     if (!current) throw new Error("Asset not found.");
+    if (
+      input.status &&
+      (blockedStatuses.includes(input.status) ||
+        blockedStatuses.includes(current.status))
+    )
+      throw new Error(
+        "Retirement, sale, loss, theft, and reactivation require the asset lifecycle action.",
+      );
     if (input.parentAssetId) {
       const rows = await tx.fleetAsset.findMany({
         where: { companyId },
@@ -259,29 +267,219 @@ export async function updateAsset(
   });
 }
 
-export const activateAsset = (
-  companyId: string,
-  userId: string,
-  assetId: string,
-) => updateAsset(companyId, userId, assetId, { status: "Available" });
 export const markAssetOutOfService = (
   companyId: string,
   userId: string,
   assetId: string,
 ) => updateAsset(companyId, userId, assetId, { status: "OutOfService" });
-export const retireAsset = (
+export type AssetLifecycleStatus = "Retired" | "Sold" | "Lost" | "Stolen";
+
+const removalChecks = [
+  ["assignments", "assignments"],
+  ["mileageEntries", "mileage entries"],
+  ["fuelEntries", "fuel entries"],
+  ["maintenanceSchedules", "maintenance schedules"],
+  ["maintenanceRecords", "maintenance records"],
+  ["legacyMaintenance", "legacy maintenance records"],
+  ["inspectionRecords", "inspections"],
+  ["inspectionDefects", "inspection defects"],
+  ["documents", "documents"],
+  ["jobLinks", "job links"],
+  ["vehicleAssignments", "dispatch vehicle assignments"],
+  ["employeeLinks", "employee truck links"],
+  ["childAssets", "dependent child assets"],
+  ["expenseAllocations", "expense allocations"],
+  ["financeDocuments", "finance documents"],
+  ["recurringExpenses", "recurring expenses"],
+  ["timelineHistory", "timeline history"],
+] as const;
+
+async function assetReferenceCounts(tx: Tx, companyId: string, assetId: string) {
+  const [
+    assignments,
+    mileageEntries,
+    fuelEntries,
+    maintenanceSchedules,
+    maintenanceRecords,
+    legacyMaintenance,
+    inspectionRecords,
+    inspectionDefects,
+    documents,
+    jobLinks,
+    vehicleAssignments,
+    employeeLinks,
+    childAssets,
+    expenseAllocations,
+    financeDocuments,
+    recurringExpenses,
+    timelineHistory,
+  ] = await Promise.all([
+    tx.assetAssignment.count({
+      where: { companyId, OR: [{ assetId }, { parentAssetId: assetId }] },
+    }),
+    tx.assetMileageEntry.count({ where: { companyId, assetId } }),
+    tx.fuelEntry.count({ where: { companyId, assetId } }),
+    tx.maintenanceSchedule.count({ where: { companyId, assetId } }),
+    tx.assetMaintenanceRecord.count({ where: { companyId, assetId } }),
+    tx.fleetMaintenance.count({ where: { companyId, assetId } }),
+    tx.inspectionRecord.count({ where: { companyId, assetId } }),
+    tx.inspectionDefect.count({ where: { companyId, assetId } }),
+    tx.assetDocument.count({ where: { companyId, assetId } }),
+    tx.job.count({ where: { companyId, assignedFleetAssetId: assetId } }),
+    tx.jobVehicleAssignment.count({ where: { fleetAssetId: assetId, job: { companyId } } }),
+    tx.employee.count({ where: { companyId, assignedTruckId: assetId } }),
+    tx.fleetAsset.count({ where: { companyId, parentAssetId: assetId } }),
+    tx.expenseAllocation.count({ where: { companyId, assetId } }),
+    tx.financeDocument.count({ where: { companyId, assetId } }),
+    tx.recurringExpense.count({ where: { companyId, linkedAssetId: assetId } }),
+    tx.assetTimelineEvent.count({
+      where: { companyId, assetId, eventType: { not: "Created" } },
+    }),
+  ]);
+  return {
+    assignments,
+    mileageEntries,
+    fuelEntries,
+    maintenanceSchedules,
+    maintenanceRecords,
+    legacyMaintenance,
+    inspectionRecords,
+    inspectionDefects,
+    documents,
+    jobLinks,
+    vehicleAssignments,
+    employeeLinks,
+    childAssets,
+    expenseAllocations,
+    financeDocuments,
+    recurringExpenses,
+    timelineHistory,
+  };
+}
+
+export async function getAssetRemovalEligibility(
+  companyId: string,
+  assetId: string,
+) {
+  return prisma.$transaction(async (tx) => {
+    const asset = await tx.fleetAsset.findFirst({
+      where: { id: assetId, companyId },
+      select: { id: true, name: true },
+    });
+    if (!asset) throw new Error("Asset not found.");
+    const counts = await assetReferenceCounts(tx, companyId, assetId);
+    const blockers = removalChecks
+      .filter(([key]) => counts[key] > 0)
+      .map(([key, label]) => ({ key, label, count: counts[key] }));
+    return { asset, canDelete: blockers.length === 0, blockers };
+  });
+}
+
+export async function deleteUnusedAsset(
   companyId: string,
   userId: string,
   assetId: string,
-) => updateAsset(companyId, userId, assetId, { status: "Retired" });
-export const sellAsset = (companyId: string, userId: string, assetId: string) =>
-  updateAsset(companyId, userId, assetId, { status: "Sold" });
-export const markAssetLostOrStolen = (
+  confirmation: string,
+) {
+  return prisma.$transaction(async (tx) => {
+    const asset = await tx.fleetAsset.findFirst({
+      where: { id: assetId, companyId },
+      select: { id: true, name: true },
+    });
+    if (!asset) throw new Error("Asset not found.");
+    if (confirmation.trim() !== asset.name)
+      throw new Error(`Type "${asset.name}" to confirm permanent deletion.`);
+    const counts = await assetReferenceCounts(tx, companyId, assetId);
+    const blockers = removalChecks
+      .filter(([key]) => counts[key] > 0)
+      .map(([, label]) => label);
+    if (blockers.length)
+      throw new Error(
+        `Permanent deletion is unavailable because this asset has ${blockers.join(", ")}. Retire it or choose another lifecycle status instead.`,
+      );
+    await tx.assetTimelineEvent.deleteMany({
+      where: { companyId, assetId, eventType: "Created" },
+    });
+    await tx.vehicleProfile.deleteMany({ where: { assetId } });
+    await tx.trailerProfile.deleteMany({ where: { assetId } });
+    await tx.fleetAsset.delete({ where: { id: asset.id } });
+    await audit(
+      tx,
+      companyId,
+      userId,
+      "fleet.asset_deleted",
+      "FleetAsset",
+      asset.id,
+      { name: asset.name, permanent: true },
+    );
+    return { id: asset.id, name: asset.name };
+  });
+}
+
+export async function changeAssetLifecycle(
   companyId: string,
   userId: string,
   assetId: string,
-  status: "Lost" | "Stolen",
-) => updateAsset(companyId, userId, assetId, { status });
+  nextStatus: AssetLifecycleStatus | "Available",
+  reason: string,
+) {
+  if (!reason.trim()) throw new Error("A reason is required.");
+  return prisma.$transaction(async (tx) => {
+    const asset = await tx.fleetAsset.findFirst({
+      where: { id: assetId, companyId },
+      select: { id: true, name: true, status: true },
+    });
+    if (!asset) throw new Error("Asset not found.");
+    const reactivating = nextStatus === "Available";
+    if (reactivating && !blockedStatuses.includes(asset.status))
+      throw new Error("Only a retired, sold, lost, or stolen asset can be reactivated.");
+    if (!reactivating && blockedStatuses.includes(asset.status))
+      throw new Error("Reactivate this asset before applying another terminal status.");
+    const now = new Date();
+    if (!reactivating) {
+      await tx.assetAssignment.updateMany({
+        where: {
+          companyId,
+          returnedAt: null,
+          OR: [{ assetId }, { parentAssetId: assetId }],
+        },
+        data: { returnedAt: now, returnedById: userId },
+      });
+      await tx.fleetAsset.updateMany({
+        where: { companyId, parentAssetId: assetId },
+        data: { parentAssetId: null },
+      });
+    }
+    const updated = await tx.fleetAsset.update({
+      where: { id: asset.id },
+      data: {
+        status: nextStatus,
+        assignedEmployeeId: reactivating ? undefined : null,
+        assignedCrewId: reactivating ? undefined : null,
+        parentAssetId: reactivating ? undefined : null,
+      },
+    });
+    await timeline(tx, {
+      companyId,
+      assetId,
+      eventType: reactivating ? "StatusChanged" : nextStatus,
+      sourceType: "FleetAssetStatus",
+      sourceId: `${assetId}:${updated.updatedAt.toISOString()}`,
+      createdById: userId,
+      metadata: { from: asset.status, to: nextStatus, reason: reason.trim() },
+    });
+    await audit(
+      tx,
+      companyId,
+      userId,
+      `fleet.asset_${reactivating ? "reactivated" : nextStatus.toLowerCase()}`,
+      "FleetAsset",
+      assetId,
+      { from: asset.status, to: nextStatus, reason: reason.trim() },
+    );
+    return updated;
+  });
+}
 
 export async function assignAsset(
   companyId: string,
@@ -1148,7 +1346,7 @@ export async function getAssetDirectory(
       category: filters.categories
         ? { in: filters.categories }
         : filters.category,
-      status: filters.status,
+      status: filters.status ?? { notIn: blockedStatuses },
       condition: filters.condition,
       ...(filters.assigned === undefined
         ? {}

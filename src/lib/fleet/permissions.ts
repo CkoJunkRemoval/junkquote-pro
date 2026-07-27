@@ -3,6 +3,7 @@ import type { MembershipRole } from "@/generated/prisma/client";
 export type FleetCapability =
   | "fleet.view"
   | "fleet.manage"
+  | "fleet.remove"
   | "fleet.assign"
   | "fleet.mileage.log"
   | "fleet.mileage.correct"
@@ -20,6 +21,7 @@ export type FleetCapability =
 const all: FleetCapability[] = [
   "fleet.view",
   "fleet.manage",
+  "fleet.remove",
   "fleet.assign",
   "fleet.mileage.log",
   "fleet.mileage.correct",

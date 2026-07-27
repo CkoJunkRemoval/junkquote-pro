@@ -793,6 +793,46 @@ body {
   color: white;
 }
 
+.auth-field .password-visibility-toggle {
+  position: absolute;
+  right: 0.25rem;
+  bottom: 0.125rem;
+  display: inline-grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border: 0;
+  border-radius: 0.75rem;
+  color: #94a3b8;
+  background: transparent;
+  cursor: pointer;
+}
+
+.auth-field .password-visibility-toggle:hover {
+  color: white;
+  background: rgb(255 255 255 / 8%);
+}
+
+.auth-field .password-visibility-toggle:focus-visible {
+  outline: 2px solid var(--brand-orange);
+  outline-offset: 2px;
+}
+
+.auth-field .password-visibility-toggle svg {
+  position: static;
+  color: currentColor;
+}
+
+.auth-field:has(.password-visibility-toggle) input {
+  padding-right: 3.25rem;
+}
+
+.auth-field__hint {
+  grid-column: 1 / -1;
+  color: #94a3b8;
+  font-weight: 400;
+}
+
 .auth-field input::placeholder {
   color: #94a3b8;
   opacity: 1;
@@ -958,7 +998,8 @@ body {
 @media (max-width: 767px) {
   .auth-shell {
     display: block;
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
     background-image: url("/branding/login-background-mobile.webp");
     background-position: 58% center;
   }
