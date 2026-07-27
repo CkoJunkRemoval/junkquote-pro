@@ -21,8 +21,15 @@ export async function resetIntegrationDatabase() {
       prisma.customerRescheduleRequest.deleteMany(),
       prisma.portalEstimateResponse.deleteMany(),
       prisma.assetTimelineEvent.deleteMany(),
+      prisma.assetDocument.deleteMany(),
+      prisma.inspectionDefect.deleteMany(),
+      prisma.inspectionRecord.deleteMany(),
+      prisma.inspectionTemplate.deleteMany(),
+      prisma.assetMaintenanceRecord.deleteMany(),
+      prisma.maintenanceSchedule.deleteMany(),
       prisma.assetAssignment.deleteMany(),
       prisma.assetMileageEntry.deleteMany(),
+      prisma.fuelEntry.deleteMany(),
       prisma.company.deleteMany(),
     ]);
   });

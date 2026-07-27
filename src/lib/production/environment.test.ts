@@ -110,7 +110,9 @@ describe("production environment", () => {
       Object.entries(valid).filter(([name]) => name !== "PLATFORM_ADMIN_EMAIL"),
     );
     expect(inspectProductionEnvironment(withoutAdmin).errors).toContain(
-      "PLATFORM_ADMIN_EMAIL is required in production.",
+      "PLATFORM_ADMIN_EMAIL or PLATFORM_ADMIN_EMAILS is required in production.",
     );
+    expect(inspectProductionEnvironment({ ...withoutAdmin, PLATFORM_ADMIN_EMAILS: "admin@example.com" }).errors)
+      .not.toContain("PLATFORM_ADMIN_EMAIL or PLATFORM_ADMIN_EMAILS is required in production.");
   });
 });

@@ -1,0 +1,6 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "incremental": false },
+  "include": ["scripts/platform-admin-browser-review.ts"],
+  "exclude": ["node_modules"]
+}

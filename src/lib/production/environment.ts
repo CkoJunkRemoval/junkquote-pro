@@ -73,7 +73,8 @@ export function inspectProductionEnvironment(
       );
     const email = requireValue("EMAIL_PROVIDER");
     requireValue("EMAIL_FROM");
-    requireValue("PLATFORM_ADMIN_EMAIL");
+    if (!value(env, "PLATFORM_ADMIN_EMAIL") && !value(env, "PLATFORM_ADMIN_EMAILS"))
+      errors.push("PLATFORM_ADMIN_EMAIL or PLATFORM_ADMIN_EMAILS is required in production.");
 
     if (!stripeConfigured)
       warnings.push(
