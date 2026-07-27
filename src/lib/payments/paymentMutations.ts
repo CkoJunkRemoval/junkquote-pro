@@ -4,6 +4,7 @@ import { deriveInvoicePaymentState } from "./paymentRecalculation";
 import { syncPricingOutcomeForInvoice } from "@/lib/smartPricing/outcomes";
 import {recordEstimateEventInTransaction} from "@/lib/estimates/estimateEvents";
 import {emitCommunicationEventForSource} from "@/lib/communications/engine";
+import {transitionEstimateInTransaction} from "@/lib/estimates/estimateLifecycle";
 
 export interface PaymentInput { amount: number; method: PaymentMethod; referenceNumber?: string; paymentDate: Date; notes?: string; }
 export type UpdatePaymentInput = PaymentInput;
@@ -11,13 +12,13 @@ export type UpdatePaymentInput = PaymentInput;
 function validateAmount(amount: number) { if (!Number.isFinite(amount) || amount <= 0) throw new Error("Payment amount must be positive."); }
 
 async function recalculateInvoice(tx: Prisma.TransactionClient, companyId: string, invoiceId: string) {
-  const invoice = await tx.invoice.findFirst({ where: { id: invoiceId, companyId }, select: { id: true, total: true, dueDate: true } });
+  const invoice = await tx.invoice.findFirst({ where: { id: invoiceId, companyId }, select: { id: true, total: true, dueDate: true, estimateId: true, estimate: { select: { status: true } } } });
   if (!invoice) throw new Error("Invoice not found.");
   const paymentTotal = await tx.payment.aggregate({ where: { invoiceId, companyId, invoice: { companyId } }, _sum: { amount: true } });
   const refundTotal = await tx.refund.aggregate({ where: { invoiceId, companyId, invoice: { companyId } }, _sum: { amount: true } });
   const state = deriveInvoicePaymentState(invoice.total, (paymentTotal._sum.amount ?? 0) - (refundTotal._sum.amount ?? 0), invoice.dueDate);
   await tx.invoice.update({ where: { id: invoice.id }, data: state });
-  return state;
+  return { state, estimateId: invoice.estimateId, estimateStatus: invoice.estimate.status };
 }
 
 export async function recordPayment(companyId: string, invoiceId: string, input: PaymentInput) {
@@ -30,9 +31,13 @@ export async function recordPayment(companyId: string, invoiceId: string, input:
     const existing = await tx.payment.aggregate({ where: { invoiceId: invoice.id, companyId, invoice: { companyId } }, _sum: { amount: true } });
     if ((existing._sum.amount ?? 0) + input.amount > invoice.total + 0.00001) throw new Error("Payment cannot exceed the invoice total.");
     const payment = await tx.payment.create({ data: { companyId, invoiceId: invoice.id, amount: input.amount, method: input.method, referenceNumber: input.referenceNumber?.trim() || null, paymentDate: input.paymentDate, notes: input.notes?.trim() || "" } });
-    const invoiceState = await recalculateInvoice(tx, companyId, invoice.id);
-    await recordEstimateEventInTransaction(tx,{companyId,estimateId:invoice.estimateId,eventType:"Payment Recorded",category:"Payment",actor:{type:"Employee",displayName:"Team member"},summary:`Team member recorded a $${input.amount.toFixed(2)} payment`,visibility:"Both",metadata:{invoiceId,paymentId:payment.id,amount:input.amount,method:input.method},attachments:[{referenceType:"Invoice",referenceId:invoice.id,displayName:invoice.displayNumber??"Invoice"}]});
-    return { payment, invoiceState };
+    const recalculated = await recalculateInvoice(tx, companyId, invoice.id);
+    if (recalculated.state.status === "Paid" && recalculated.estimateStatus === "Invoiced") {
+      await transitionEstimateInTransaction(tx,companyId,recalculated.estimateId,"Paid",{actor:{label:"Team member"},metadata:{invoiceId,paymentId:payment.id,amount:input.amount,method:input.method}});
+    } else {
+      await recordEstimateEventInTransaction(tx,{companyId,estimateId:invoice.estimateId,eventType:"Payment Recorded",category:"Payment",actor:{type:"Employee",displayName:"Team member"},summary:`Team member recorded a $${input.amount.toFixed(2)} payment`,visibility:"Both",metadata:{invoiceId,paymentId:payment.id,amount:input.amount,method:input.method},attachments:[{referenceType:"Invoice",referenceId:invoice.id,displayName:invoice.displayNumber??"Invoice"}]});
+    }
+    return { payment, invoiceState: recalculated.state };
   });
   await syncPricingOutcomeForInvoice(companyId, invoiceId);
   await emitCommunicationEventForSource({companyId,eventType:"PAYMENT_RECEIVED",sourceType:"Payment",sourceId:result.payment.id,dedupeKey:`PAYMENT_RECEIVED:${result.payment.id}`});
@@ -49,8 +54,11 @@ export async function updatePayment(companyId: string, paymentId: string, input:
     const otherPayments = await tx.payment.aggregate({ where: { invoiceId: payment.invoiceId, companyId, invoice: { companyId }, id: { not: payment.id } }, _sum: { amount: true } });
     if ((otherPayments._sum.amount ?? 0) + input.amount > payment.invoice.total + 0.00001) throw new Error("Payment cannot exceed the invoice total.");
     const updated = await tx.payment.update({ where: { id: payment.id }, data: { amount: input.amount, method: input.method, referenceNumber: input.referenceNumber?.trim() || null, paymentDate: input.paymentDate, notes: input.notes?.trim() || "" } });
-    const invoiceState = await recalculateInvoice(tx, companyId, payment.invoiceId);
-    return { payment: updated, invoiceState };
+    const recalculated = await recalculateInvoice(tx, companyId, payment.invoiceId);
+    if (recalculated.state.status === "Paid" && recalculated.estimateStatus === "Invoiced") {
+      await transitionEstimateInTransaction(tx,companyId,recalculated.estimateId,"Paid",{actor:{label:"Team member"},metadata:{invoiceId:payment.invoiceId,paymentId:updated.id,amount:input.amount,method:input.method}});
+    }
+    return { payment: updated, invoiceState: recalculated.state };
   });
   await syncPricingOutcomeForInvoice(companyId, result.payment.invoiceId);
   return result;
@@ -63,8 +71,8 @@ export async function deletePayment(companyId: string, paymentId: string) {
     const refunds = await tx.refund.count({ where: { companyId, paymentId: payment.id } });
     if (refunds > 0) throw new Error("Payments with durable refunds cannot be deleted.");
     await tx.payment.delete({ where: { id: payment.id } });
-    const invoiceState = await recalculateInvoice(tx, companyId, payment.invoiceId);
-    return { invoiceState, invoiceId: payment.invoiceId };
+    const recalculated = await recalculateInvoice(tx, companyId, payment.invoiceId);
+    return { invoiceState: recalculated.state, invoiceId: payment.invoiceId };
   });
   await syncPricingOutcomeForInvoice(companyId, result.invoiceId);
   return { invoiceState: result.invoiceState };
