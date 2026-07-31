@@ -12,6 +12,7 @@ import {
 import { AppError, safeErrorResponse } from "@/lib/errors/appError";
 import { createRequestId } from "@/lib/observability/requestId";
 import { checkRateLimit, ratePolicies } from "@/lib/security/rateLimit";
+import { requireFeature } from "@/lib/billing/entitlements";
 const reports = new Set([
   "executive",
   "revenue",
@@ -24,6 +25,7 @@ export async function GET(request: Request) {
   const requestId = createRequestId(request.headers.get("x-request-id"));
   try {
     const c = await requireCompanyRole("Owner", "Admin", "Manager", "Office");
+    await requireFeature(c.companyId, "advancedExports");
     if (
       !(await checkRateLimit(
         `analytics-export:${c.companyId}:${c.user.id}`,

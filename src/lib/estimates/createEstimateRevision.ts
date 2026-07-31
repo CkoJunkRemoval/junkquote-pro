@@ -47,6 +47,7 @@ export async function createEstimateRevision(companyId: string, estimateId: stri
         currentStep: source.currentStep,
       },
     });
+    await tx.estimateUsageEvent.create({ data: { companyId, estimateId: revision.id, kind: "Revision", createdAt: revision.createdAt } });
 
     const siteIds = new Map<string, string>();
     for (const site of source.jobSites) {

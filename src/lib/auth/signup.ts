@@ -175,7 +175,7 @@ export async function createCompanyOwner(input: SignupInput) {
       const trialStart = new Date();
       const trialEnd = new Date(trialStart);
       trialEnd.setDate(trialEnd.getDate() + billingConfig.trialDays);
-      await tx.companySubscription.create({ data: { companyId: company.id, plan: "Professional", status: "Trialing", trialStart, trialEnd } });
+      await tx.companySubscription.create({ data: { companyId: company.id, plan: "Free", status: "Incomplete", trialStart, trialEnd, trialPlan: "Professional", trialStatus: "Active" } });
       await tx.subscriptionHistory.create({ data: { companyId: company.id, plan: "Professional", status: "Trialing", source: "signup" } });
       await tx.companyOnboarding.create({ data: { companyId: company.id } });
       stage = "audit-create";
@@ -188,6 +188,8 @@ export async function createCompanyOwner(input: SignupInput) {
           entityId: company.id,
         },
       });
+      await tx.auditEvent.create({ data: { companyId: company.id, actingUserId: user.id, eventType: "billing.trial_started", entityType: "Subscription", metadata: { trialPlan: "Professional", trialDays: billingConfig.trialDays, trialEnd: trialEnd.toISOString() } } });
+      await tx.systemNotification.create({ data: { companyId: company.id, userId: user.id, channel: "in-app", sourceType: "BillingTrial", sourceId: "billing-trial:started", title: "Your 30-Day Professional Trial has started", body: "No card is required. Subscribe before the trial ends to keep Professional features; otherwise your company moves to Free with six estimates per month.", link: "/settings/billing" } });
       return {
         companyId: company.id,
         userId: user.id,

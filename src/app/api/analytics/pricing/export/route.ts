@@ -5,11 +5,13 @@ import { pricingIntelligenceRows,renderPricingIntelligenceCsv,renderPricingIntel
 import { checkRateLimit,ratePolicies } from "@/lib/security/rateLimit";
 import { AppError,safeErrorResponse } from "@/lib/errors/appError";
 import { createRequestId } from "@/lib/observability/requestId";
+import { requireFeature } from "@/lib/billing/entitlements";
 
 export async function GET(request:Request){
   const requestId=createRequestId(request.headers.get("x-request-id"));
   try{
     const context=await requireCompanyRole("Owner","Admin");
+    await requireFeature(context.companyId,"advancedExports");
     if(!(await checkRateLimit(`pricing-intelligence-export:${context.companyId}:${context.user.id}`,ratePolicies.export)).allowed)throw new AppError("RATE_LIMITED","Too many export requests.");
     const url=new URL(request.url),raw=Object.fromEntries(url.searchParams),format=raw.format==="pdf"?"pdf":"csv";
     const data=await getPricingIntelligence(context.companyId,parsePricingIntelligenceFilters(raw)),rows=pricingIntelligenceRows(data);

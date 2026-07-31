@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { authConfig } from "./auth.config";
+import { authConfig, isPublicAuthPath } from "./auth.config";
 const allowed = (path: string, authenticated = false) =>
   authConfig.callbacks!.authorized!({
     auth: authenticated ? { user: { id: "u" } } : null,
@@ -9,6 +9,8 @@ describe("production route protection", () => {
   it("keeps health, approval, portal, and private asset authorization public", () => {
     for (const path of [
       "/api/health/live",
+      "/api/webhooks/stripe",
+      "/api/webhooks/resend",
       "/approve/token",
       "/portal",
       "/api/private/assets/x",
@@ -16,7 +18,12 @@ describe("production route protection", () => {
       expect(allowed(path)).toBe(true);
   });
   it("protects staff routes", () => {
-    expect(allowed("/analytics")).toBe(false);
-    expect(allowed("/analytics", true)).toBe(true);
+    expect(allowed("/dashboard")).toBe(false);
+    expect(allowed("/dashboard", true)).toBe(true);
+  });
+  it("keeps the middleware and Auth.js public-route decisions aligned", () => {
+    expect(isPublicAuthPath("/sign-in")).toBe(true);
+    expect(isPublicAuthPath("/reset-password/token")).toBe(true);
+    expect(isPublicAuthPath("/dashboard")).toBe(false);
   });
 });

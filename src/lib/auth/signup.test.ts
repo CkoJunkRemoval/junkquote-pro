@@ -71,6 +71,7 @@ describe("self-service signup", () => {
       subscriptionHistory: { create: vi.fn().mockResolvedValue({ id: "history-1" }) },
       companyOnboarding: { create: vi.fn().mockResolvedValue({ id: "onboarding-1" }) },
       auditEvent: { create: vi.fn().mockResolvedValue({ id: "audit-1" }) },
+      systemNotification: { create: vi.fn().mockResolvedValue({ id: "notification-1" }) },
     };
     mocks.transaction.mockImplementation(async (callback) => callback(tx));
     await expect(createCompanyOwner(valid)).resolves.toEqual({
@@ -94,6 +95,11 @@ describe("self-service signup", () => {
         status: "Active",
       },
     });
+    const subscriptionData = tx.companySubscription.create.mock.calls[0][0].data;
+    expect(subscriptionData).toMatchObject({ companyId: "company-1", plan: "Free", status: "Incomplete", trialPlan: "Professional", trialStatus: "Active" });
+    expect(subscriptionData.stripeCustomerId).toBeUndefined();
+    expect(subscriptionData.stripeSubscriptionId).toBeUndefined();
+    expect(subscriptionData.trialEnd.getTime() - subscriptionData.trialStart.getTime()).toBe(30 * 86_400_000);
   });
 
   it("does not commit company or user state when membership creation fails", async () => {

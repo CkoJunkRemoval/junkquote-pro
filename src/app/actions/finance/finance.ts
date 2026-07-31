@@ -27,6 +27,7 @@ import {
   voidExpense,
 } from "@/lib/finance/service";
 import { saveFinanceDocument } from "@/lib/storage/financeDocumentStorage";
+import { requireFeature } from "@/lib/billing/entitlements";
 
 const text = (data: FormData, name: string) =>
   String(data.get(name) ?? "").trim();
@@ -37,6 +38,7 @@ const cents = (data: FormData, name: string) =>
 async function context(capability: Parameters<typeof requireFinanceCapability>[1]) {
   const tenant = await requireTenantContext();
   requireFinanceCapability(tenant.role, capability);
+  await requireFeature(tenant.companyId, "finance");
   return tenant;
 }
 

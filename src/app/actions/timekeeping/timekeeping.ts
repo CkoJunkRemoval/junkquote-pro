@@ -14,10 +14,12 @@ import {
   type TimeCapability,
 } from "@/lib/timekeeping/permissions";
 import * as time from "@/lib/timekeeping/service";
+import { requireFeature } from "@/lib/billing/entitlements";
 
 async function context(capability: TimeCapability) {
   const c = await requireTenantContext();
   requireTimeCapability(c.role, capability);
+  await requireFeature(c.companyId, "timekeeping");
   return c;
 }
 async function employeeForUser(companyId: string, userId: string) {

@@ -9,12 +9,14 @@ import { lockFinancialPeriod, unlockFinancialPeriod } from "@/lib/finance/servic
 import { requireTaxCapability } from "@/lib/tax/permissions";
 import { addChecklistItem, createTaxDocument, reviewTaxDocument, toggleChecklistItem } from "@/lib/tax/service";
 import { saveTaxDocument } from "@/lib/storage/taxDocumentStorage";
+import { requireFeature } from "@/lib/billing/entitlements";
 
 const text = (data: FormData, name: string) => String(data.get(name) ?? "").trim();
 
 async function context(capability: Parameters<typeof requireTaxCapability>[1]) {
   const tenant = await requireTenantContext();
   requireTaxCapability(tenant.role, capability);
+  await requireFeature(tenant.companyId, "taxCenter");
   return tenant;
 }
 

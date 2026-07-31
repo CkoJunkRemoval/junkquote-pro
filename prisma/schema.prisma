@@ -469,6 +469,7 @@ model Company {
   teamInvitations         TeamInvitation[]
   customers               Customer[]
   estimates               Estimate[]
+  estimateUsageEvents     EstimateUsageEvent[]
   estimateTimelineEvents  EstimateTimelineEvent[]
   estimateActivityItems   EstimateActivityFeedItem[]
   jobs                    Job[]
@@ -1399,9 +1400,22 @@ enum TimesheetApprovalAction {
 }
 
 enum SubscriptionPlan {
+  Free
   Starter
   Professional
-  Business
+  Enterprise
+}
+
+enum BillingInterval {
+  Monthly
+  Yearly
+}
+
+enum InternalTrialStatus {
+  Active
+  Expired
+  Converted
+  Ineligible
 }
 
 enum SubscriptionStatus {
@@ -3488,25 +3502,46 @@ model OfflineFieldMutation {
   @@map("offline_field_mutations")
 }
 
+model EstimateUsageEvent {
+  id         String   @id @default(uuid())
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  estimateId String   @unique
+  kind       String   @default("Estimate")
+  createdAt  DateTime
+
+  @@index([companyId, createdAt])
+  @@map("estimate_usage_events")
+}
+
 model CompanySubscription {
-  id                   String             @id @default(uuid())
-  companyId            String             @unique
-  company              Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  stripeCustomerId     String?            @unique
-  stripeSubscriptionId String?            @unique
-  plan                 SubscriptionPlan   @default(Starter)
-  status               SubscriptionStatus @default(Trialing)
-  trialStart           DateTime?
-  trialEnd             DateTime?
-  currentPeriodStart   DateTime?
-  currentPeriodEnd     DateTime?
-  cancelAtPeriodEnd    Boolean            @default(false)
-  canceledAt           DateTime?
-  gracePeriodEnd       DateTime?
-  createdAt            DateTime           @default(now())
-  updatedAt            DateTime           @updatedAt
+  id                        String               @id @default(uuid())
+  companyId                 String               @unique
+  company                   Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  stripeCustomerId          String?              @unique
+  stripeSubscriptionId      String?              @unique
+  plan                      SubscriptionPlan     @default(Free)
+  status                    SubscriptionStatus   @default(Incomplete)
+  trialStart                DateTime?
+  trialEnd                  DateTime?
+  trialPlan                 SubscriptionPlan?
+  trialStatus               InternalTrialStatus?
+  trialExpiredAt            DateTime?
+  paidSubscriptionStartedAt DateTime?
+  billingInterval           BillingInterval?
+  stripePriceId             String?
+  currentPeriodStart        DateTime?
+  currentPeriodEnd          DateTime?
+  cancelAtPeriodEnd         Boolean              @default(false)
+  canceledAt                DateTime?
+  gracePeriodEnd            DateTime?
+  lastStripeEventCreatedAt  DateTime?
+  lastSuccessfulPaymentAt   DateTime?
+  createdAt                 DateTime             @default(now())
+  updatedAt                 DateTime             @updatedAt
 
   @@index([status, trialEnd])
+  @@index([trialStatus, trialEnd])
   @@map("company_subscriptions")
 }
 
@@ -3593,6 +3628,7 @@ model SystemNotification {
   link       String?
   createdAt  DateTime  @default(now())
 
+  @@unique([companyId, userId, channel, sourceId])
   @@index([companyId, userId, status, createdAt])
   @@index([companyId, userId, readAt, createdAt])
   @@map("system_notifications")

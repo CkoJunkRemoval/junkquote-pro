@@ -1,14 +1,17 @@
 import { openBillingPortalAction } from "@/app/actions/billing/billing";
 import AppLayout from "@/components/layout/AppLayout";
 import { requireCompanyModulePage } from "@/lib/auth/pageAccess";
-import { getCompanyEntitlements } from "@/lib/billing/entitlements";
+import { getCompanyEntitlements, getEstimateUsage } from "@/lib/billing/entitlements";
 import { isBillingAvailable } from "@/lib/billing/stripe";
 import Link from "next/link";
+import { catchUpTrialLifecycle } from "@/lib/billing/trialLifecycle";
 
 export default async function Page() {
   const context = await requireCompanyModulePage("billing");
+  await catchUpTrialLifecycle(context.companyId);
   const entitlements = await getCompanyEntitlements(context.companyId);
   const subscription = entitlements.subscription;
+  const usage = await getEstimateUsage(context.companyId);
   const billingEnabled = isBillingAvailable();
   return (
     <AppLayout>
@@ -23,12 +26,11 @@ export default async function Page() {
             </p>
           </div>
         )}
-        {!entitlements.allowed && (
+        {entitlements.plan === "Free" && (
           <div className="surface-warning mt-5 rounded-xl border border-red-300 p-4">
-            <strong>Restricted mode</strong>
+            <strong>Your company is on the Free plan</strong>
             <p>
-              Existing data remains available to view and export. New estimates,
-              jobs, invoices, approvals, and users are disabled.
+              Existing records are preserved. Free includes six estimates per UTC calendar month; paid features require an upgrade.
             </p>
           </div>
         )}
@@ -40,8 +42,9 @@ export default async function Page() {
         )}
         <section className="mt-6 rounded-2xl border bg-white p-6">
           <dl className="grid gap-4 sm:grid-cols-2">
-            <Field label="Plan" value={subscription?.plan ?? "No plan"} />
+            <Field label="Effective plan" value={entitlements.plan} />
             <Field label="Status" value={subscription?.status ?? "Inactive"} />
+            <Field label="Billing interval" value={subscription?.billingInterval ?? "—"} />
             <Field label="Trial ends" value={date(subscription?.trialEnd)} />
             <Field
               label="Trial remaining"
@@ -51,6 +54,7 @@ export default async function Page() {
               label="Renews"
               value={date(subscription?.currentPeriodEnd)}
             />
+            {entitlements.plan === "Free" && <Field label="Estimate usage" value={`${usage.used} of ${usage.limit} estimates used this month`} />}
             <Field
               label="Cancellation"
               value={
@@ -60,6 +64,7 @@ export default async function Page() {
               }
             />
           </dl>
+          {entitlements.reason === "trial" && <div className="surface-warning mt-6 rounded-xl border border-blue-300 p-4"><strong>30-Day Professional Trial</strong><p className="mt-1">You are using the Professional plan free for 30 days. No card is required. If you do not subscribe, your company will move to the Free plan with six estimates per month when the trial ends.</p></div>}
           <h2 className="mt-6 text-xl font-bold">Included features</h2>
           <p className="mt-2 capitalize text-slate-600">
             {entitlements.config.features.join(" · ")}

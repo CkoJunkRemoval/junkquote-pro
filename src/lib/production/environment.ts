@@ -41,9 +41,13 @@ export function inspectProductionEnvironment(
   const stripeNames = [
     "STRIPE_SECRET_KEY",
     "STRIPE_WEBHOOK_SECRET",
-    "STRIPE_PRICE_STARTER",
-    "STRIPE_PRICE_PROFESSIONAL",
-    "STRIPE_PRICE_BUSINESS",
+    "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
+    "STRIPE_PRICE_STARTER_MONTHLY",
+    "STRIPE_PRICE_STARTER_YEARLY",
+    "STRIPE_PRICE_PROFESSIONAL_MONTHLY",
+    "STRIPE_PRICE_PROFESSIONAL_YEARLY",
+    "STRIPE_PRICE_ENTERPRISE_MONTHLY",
+    "STRIPE_PRICE_ENTERPRISE_YEARLY",
   ];
   const stripeValues = stripeNames.map((name) => value(env, name));
   const stripeConfigured = stripeValues.every(Boolean);
@@ -76,16 +80,13 @@ export function inspectProductionEnvironment(
     if (!value(env, "PLATFORM_ADMIN_EMAIL") && !value(env, "PLATFORM_ADMIN_EMAILS"))
       errors.push("PLATFORM_ADMIN_EMAIL or PLATFORM_ADMIN_EMAILS is required in production.");
 
-    if (!stripeConfigured)
-      warnings.push(
-        stripePartiallyConfigured
-          ? `Stripe billing is disabled because configuration is incomplete (${stripeNames.filter((name, index) => !stripeValues[index]).join(", ")} missing).`
-          : "Stripe billing is disabled because Stripe is not configured.",
-      );
+    if (stripePartiallyConfigured) errors.push(`Stripe billing configuration is incomplete (${stripeNames.filter((name, index) => !stripeValues[index]).join(", ")} missing).`);
+    else if (!stripeConfigured) warnings.push("Stripe billing is disabled because Stripe is not configured.");
     if (
       stripeConfigured &&
       (stripeValues[0]?.startsWith("sk_test_") ||
-        stripeValues.slice(2).some((configured) => configured?.startsWith("price_test_")))
+        stripeValues[2]?.startsWith("pk_test_") ||
+        stripeValues.slice(3).some((configured) => configured?.startsWith("price_test_")))
     )
       errors.push("Stripe test-mode credentials must not be used in production.");
     if (!redisConfigured)

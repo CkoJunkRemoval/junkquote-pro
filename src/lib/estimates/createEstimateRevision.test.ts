@@ -4,6 +4,7 @@ const tx = {
   estimate: { findFirst: vi.fn(), aggregate: vi.fn(), create: vi.fn(), update: vi.fn() },
   jobSite: { create: vi.fn() },
   estimatePhoto: { createMany: vi.fn() },
+  estimateUsageEvent: { create: vi.fn() },
 };
 vi.mock("../prisma", () => ({ prisma: { $transaction: vi.fn((callback) => callback(tx)) } }));
 vi.mock("./estimateEvents",()=>({recordEstimateEventInTransaction:vi.fn()}));

@@ -17,6 +17,7 @@ import {
 } from "@/lib/fleet/permissions";
 import * as fleet from "@/lib/fleet/service";
 import { saveAssetDocument } from "@/lib/storage/assetDocumentStorage";
+import { requireFeature } from "@/lib/billing/entitlements";
 
 const text = (form: FormData, key: string) =>
   String(form.get(key) ?? "").trim();
@@ -36,6 +37,7 @@ const refresh = (assetId?: string) => {
 async function context(capability: FleetCapability) {
   const tenant = await requireTenantContext();
   requireFleetCapability(tenant.role, capability);
+  await requireFeature(tenant.companyId, "fleet");
   return tenant;
 }
 async function assertOperationalAssetAccess(

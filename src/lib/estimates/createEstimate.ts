@@ -26,6 +26,7 @@ export async function createEstimate(companyId: string, input: CreateEstimateInp
       },
       include: { pricingProfile: true },
     });
+    await tx.estimateUsageEvent.create({ data: { companyId, estimateId: estimate.id, kind: "Estimate", createdAt: estimate.createdAt } });
     await recordEstimateEventInTransaction(tx, {
       companyId,
       estimateId: estimate.id,
