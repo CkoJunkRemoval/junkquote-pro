@@ -68,7 +68,7 @@ describe("production environment", () => {
     ).toEqual(
       expect.arrayContaining([
         expect.stringContaining("local is unsafe"),
-        expect.stringContaining("test-mode"),
+        expect.stringContaining("invalid prefixes"),
       ]),
     );
   });

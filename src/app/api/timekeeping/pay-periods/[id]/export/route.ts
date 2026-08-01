@@ -2,6 +2,7 @@ import { requireTenantContext } from "@/lib/auth/tenant";
 import { hasWorkforceCapability } from "@/lib/workforce/permissions";
 import { requireTimeCapability } from "@/lib/timekeeping/permissions";
 import { exportApprovedTimeCsv } from "@/lib/timekeeping/service";
+import { canAccessFeature } from "@/lib/billing/entitlements";
 
 export async function GET(
   _request: Request,
@@ -10,6 +11,7 @@ export async function GET(
   const { id } = await params,
     c = await requireTenantContext();
   requireTimeCapability(c.role, "time.export");
+  if (!(await canAccessFeature(c.companyId, "advancedExports"))) return Response.json({ error: { code: "UPGRADE_REQUIRED", message: "Upgrade to export timekeeping data." } }, { status: 403 });
   const csv = await exportApprovedTimeCsv(
     c.companyId,
     c.user.id,

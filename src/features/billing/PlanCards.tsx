@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
-import { startCheckoutAction } from "@/app/actions/billing/billing";
+import { useActionState, useState } from "react";
+import { startCheckoutAction, type BillingCheckoutActionState } from "@/app/actions/billing/billing";
 import type { SubscriptionPlan } from "@/generated/prisma/client";
 import { plans } from "@/lib/billing/config";
 
@@ -17,8 +17,17 @@ export default function PlanCards({ current, billingEnabled = true }: { current?
         <p className="mt-5 text-3xl font-bold">${(cents / 100).toLocaleString()}<span className="text-base font-normal text-slate-500">/{interval === "Monthly" ? "month" : "year"}</span></p>
         {interval === "Yearly" && <p className="mt-1 text-sm text-emerald-700">Save ${(plan.monthlyCents * 12 - plan.yearlyCents) / 100} per year</p>}
         <ul className="mt-4 space-y-2 text-sm"><li>{plan.userLimit} users</li><li>{plan.monthlyEstimateLimit === Number.MAX_SAFE_INTEGER ? "Unlimited" : plan.monthlyEstimateLimit} estimates/month</li>{plan.features.slice(0, 7).map(feature => <li key={feature}>✓ {feature.replaceAll(/([A-Z])/g, " $1")}</li>)}</ul>
-        <form action={startCheckoutAction.bind(null, id, interval)}><button disabled={!billingEnabled || current === id} className="control-disabled mt-6 min-h-11 w-full rounded-lg bg-blue-700 px-4 py-3 font-semibold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">{!billingEnabled ? "Billing unavailable" : current === id ? "Current plan" : `Choose ${plan.name}`}</button></form>
+        <CheckoutForm plan={id} interval={interval} disabled={!billingEnabled || current === id} label={!billingEnabled ? "Billing unavailable" : current === id ? "Current plan" : `Choose ${plan.name}`} />
       </article>})}
     </div>
   </>;
+}
+
+function CheckoutForm({ plan, interval, disabled, label }: { plan: "Starter" | "Professional" | "Enterprise"; interval: "Monthly" | "Yearly"; disabled: boolean; label: string }) {
+  const action = startCheckoutAction.bind(null, plan, interval);
+  const [state, formAction, pending] = useActionState(action, { error: null } satisfies BillingCheckoutActionState);
+  return <form action={formAction} className="mt-6">
+    {state.error && <div role="alert" className="surface-warning mb-3 rounded-xl border border-amber-300 p-3 text-sm font-medium">{state.error}</div>}
+    <button disabled={disabled || pending} className="control-disabled min-h-11 w-full rounded-lg bg-blue-700 px-4 py-3 font-semibold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">{pending ? "Opening secure checkout…" : label}</button>
+  </form>;
 }

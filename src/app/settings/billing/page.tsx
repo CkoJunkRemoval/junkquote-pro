@@ -5,6 +5,7 @@ import { getCompanyEntitlements, getEstimateUsage } from "@/lib/billing/entitlem
 import { isBillingAvailable } from "@/lib/billing/stripe";
 import Link from "next/link";
 import { catchUpTrialLifecycle } from "@/lib/billing/trialLifecycle";
+import { billingFeatureLabel, billingStatusLabel } from "@/lib/billing/presentation";
 
 export default async function Page() {
   const context = await requireCompanyModulePage("billing");
@@ -43,7 +44,7 @@ export default async function Page() {
         <section className="mt-6 rounded-2xl border bg-white p-6">
           <dl className="grid gap-4 sm:grid-cols-2">
             <Field label="Effective plan" value={entitlements.plan} />
-            <Field label="Status" value={subscription?.status ?? "Inactive"} />
+            <Field label="Status" value={billingStatusLabel(subscription, entitlements.reason)} />
             <Field label="Billing interval" value={subscription?.billingInterval ?? "—"} />
             <Field label="Trial ends" value={date(subscription?.trialEnd)} />
             <Field
@@ -66,9 +67,9 @@ export default async function Page() {
           </dl>
           {entitlements.reason === "trial" && <div className="surface-warning mt-6 rounded-xl border border-blue-300 p-4"><strong>30-Day Professional Trial</strong><p className="mt-1">You are using the Professional plan free for 30 days. No card is required. If you do not subscribe, your company will move to the Free plan with six estimates per month when the trial ends.</p></div>}
           <h2 className="mt-6 text-xl font-bold">Included features</h2>
-          <p className="mt-2 capitalize text-slate-600">
-            {entitlements.config.features.join(" · ")}
-          </p>
+          <ul className="mt-3 flex flex-wrap gap-2" aria-label="Included features">
+            {entitlements.config.features.map((feature) => <li className="rounded-full border border-slate-600 bg-slate-900 px-3 py-1.5 text-sm text-slate-200" key={feature}>{billingFeatureLabel(feature)}</li>)}
+          </ul>
           <div className="mt-6 flex gap-3">
             {billingEnabled && (
               <Link

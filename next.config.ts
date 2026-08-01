@@ -1,6 +1,14 @@
 import type { NextConfig } from "next";
 import { productionContentSecurityPolicy } from "./security-policy";
 
+const defaultContentSecurityPolicy =
+  process.env.NODE_ENV === "production"
+    ? productionContentSecurityPolicy
+    : productionContentSecurityPolicy.replace(
+        "script-src 'self' 'unsafe-inline'",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      );
+
 const nextConfig: NextConfig = {
   productionBrowserSourceMaps: false,
   experimental: {
@@ -12,7 +20,7 @@ const nextConfig: NextConfig = {
         key: "Content-Security-Policy",
         value:
           process.env.CONTENT_SECURITY_POLICY ??
-          productionContentSecurityPolicy,
+          defaultContentSecurityPolicy,
       },
       { key: "X-Frame-Options", value: "DENY" },
       { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },

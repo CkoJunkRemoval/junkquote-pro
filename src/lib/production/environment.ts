@@ -1,5 +1,6 @@
 import { productionContentSecurityPolicy } from "../../../security-policy";
 import { validateContentSecurityPolicy } from "@/lib/security/adminSecurity";
+import { inspectStripeConfiguration } from "@/lib/billing/stripeConfiguration";
 
 const unsafeValues = new Set([
   "changeme",
@@ -38,21 +39,8 @@ export function inspectProductionEnvironment(
 
   const databaseUrl = requireValue("DATABASE_URL");
   const directUrl = production ? requireValue("DIRECT_URL") : value(env, "DIRECT_URL");
-  const stripeNames = [
-    "STRIPE_SECRET_KEY",
-    "STRIPE_WEBHOOK_SECRET",
-    "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
-    "STRIPE_PRICE_STARTER_MONTHLY",
-    "STRIPE_PRICE_STARTER_YEARLY",
-    "STRIPE_PRICE_PROFESSIONAL_MONTHLY",
-    "STRIPE_PRICE_PROFESSIONAL_YEARLY",
-    "STRIPE_PRICE_ENTERPRISE_MONTHLY",
-    "STRIPE_PRICE_ENTERPRISE_YEARLY",
-  ];
-  const stripeValues = stripeNames.map((name) => value(env, name));
-  const stripeConfigured = stripeValues.every(Boolean);
-  const stripePartiallyConfigured =
-    stripeValues.some(Boolean) && !stripeConfigured;
+  const stripe = inspectStripeConfiguration(env, production);
+  const stripePartiallyConfigured = stripe.missingVariables.length > 0 && stripe.missingVariables.length < 9;
   const redisUrl =
     value(env, "KV_REST_API_URL") || value(env, "UPSTASH_REDIS_REST_URL");
   const redisToken =
@@ -80,15 +68,10 @@ export function inspectProductionEnvironment(
     if (!value(env, "PLATFORM_ADMIN_EMAIL") && !value(env, "PLATFORM_ADMIN_EMAILS"))
       errors.push("PLATFORM_ADMIN_EMAIL or PLATFORM_ADMIN_EMAILS is required in production.");
 
-    if (stripePartiallyConfigured) errors.push(`Stripe billing configuration is incomplete (${stripeNames.filter((name, index) => !stripeValues[index]).join(", ")} missing).`);
-    else if (!stripeConfigured) warnings.push("Stripe billing is disabled because Stripe is not configured.");
-    if (
-      stripeConfigured &&
-      (stripeValues[0]?.startsWith("sk_test_") ||
-        stripeValues[2]?.startsWith("pk_test_") ||
-        stripeValues.slice(3).some((configured) => configured?.startsWith("price_test_")))
-    )
-      errors.push("Stripe test-mode credentials must not be used in production.");
+    if (stripePartiallyConfigured) errors.push(`Stripe billing configuration is incomplete (${stripe.missingVariables.join(", ")} missing).`);
+    else if (stripe.missingVariables.length === 9) warnings.push("Stripe billing is disabled because Stripe is not configured.");
+    if (stripe.invalidPrefixes.length)
+      errors.push(`Stripe billing configuration has invalid prefixes (${stripe.invalidPrefixes.map(({ name, expected }) => `${name} expected ${expected}`).join(", ")}).`);
     if (!redisConfigured)
       warnings.push(
         redisUrl || redisToken
@@ -181,7 +164,7 @@ export function inspectProductionEnvironment(
     errors,
     warnings,
     features: {
-      billing: stripeConfigured,
+      billing: stripe.available,
       redis: redisConfigured && Boolean(redisUrl?.startsWith("https://")),
       pushNotifications: pushConfigured,
     },
