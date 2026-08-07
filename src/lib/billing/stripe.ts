@@ -8,6 +8,16 @@ export function assertBillingAvailable() { const status = inspectStripeConfigura
 let client: Stripe | undefined;
 export function getStripe() { assertBillingAvailable(); return (client ??= new Stripe(process.env.STRIPE_SECRET_KEY!)); }
 export function requireStripeWebhookSecret() { assertBillingAvailable(); return process.env.STRIPE_WEBHOOK_SECRET!; }
+export function getStripeConnect() {
+  const key = process.env.STRIPE_SECRET_KEY?.trim();
+  if (!key || !/^sk_(test|live)_/.test(key)) throw new BillingUnavailableError("Stripe Connect is unavailable because STRIPE_SECRET_KEY is not configured.");
+  return (client ??= new Stripe(key));
+}
+export function requireStripeConnectWebhookSecret() {
+  const secret = process.env.STRIPE_CONNECT_WEBHOOK_SECRET?.trim();
+  if (!secret || !/^whsec_/.test(secret)) throw new BillingUnavailableError("Stripe Connect webhooks are unavailable because STRIPE_CONNECT_WEBHOOK_SECRET is not configured.");
+  return secret;
+}
 export function validateCheckoutSelection(plan: string, interval: string) {
   if (!["Starter", "Professional", "Enterprise"].includes(plan) || !["Monthly", "Yearly"].includes(interval)) throw new Error("Choose a supported plan and billing interval.");
   const priceId = priceIdFor(plan as "Starter" | "Professional" | "Enterprise", interval as "Monthly" | "Yearly");

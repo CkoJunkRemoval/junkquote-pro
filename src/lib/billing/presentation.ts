@@ -19,6 +19,7 @@ export const billingFeatureLabels: Record<BillingFeature, string> = {
   pricingIntelligence: "Pricing Intelligence",
   automation: "Automation",
   advancedExports: "Advanced exports",
+  onlinePayments: "Online invoice payments",
 };
 
 export function billingFeatureLabel(feature: BillingFeature) {

@@ -10,9 +10,15 @@ import type { BillingFeature } from "@/lib/billing/config";
 import { AuthorizationError } from "./tenant";
 
 const paidModuleFeatures: Partial<Record<CompanyModule, BillingFeature>> = {
-  operations: "operations", fleet: "fleet", finance: "finance", tax: "taxCenter",
-  teamTime: "timekeeping", dispatch: "scheduling", servicePlans: "automation",
-  analytics: "reporting", pricingIntelligence: "pricingIntelligence",
+  operations: "operations",
+  fleet: "fleet",
+  finance: "finance",
+  tax: "taxCenter",
+  teamTime: "timekeeping",
+  dispatch: "scheduling",
+  servicePlans: "automation",
+  analytics: "reporting",
+  pricingIntelligence: "pricingIntelligence",
 };
 
 export async function requireCompanyModulePage(module: CompanyModule) {
@@ -20,7 +26,8 @@ export async function requireCompanyModulePage(module: CompanyModule) {
   try {
     tenant = await requireTenantContext();
   } catch (error) {
-    if (error instanceof AuthorizationError && error.code !== "UNAUTHENTICATED") forbidden();
+    if (error instanceof AuthorizationError && error.code !== "UNAUTHENTICATED")
+      forbidden();
     throw error;
   }
   if (
@@ -35,6 +42,20 @@ export async function requireCompanyModulePage(module: CompanyModule) {
     forbidden();
   }
   const paidFeature = paidModuleFeatures[module];
-  if (paidFeature && !(await canAccessFeature(tenant.companyId, paidFeature))) forbidden();
+  if (paidFeature && !(await canAccessFeature(tenant.companyId, paidFeature)))
+    forbidden();
+  return tenant;
+}
+
+export async function requireAdminTenantPage() {
+  let tenant;
+  try {
+    tenant = await requireTenantContext();
+  } catch (error) {
+    if (error instanceof AuthorizationError && error.code !== "UNAUTHENTICATED")
+      forbidden();
+    throw error;
+  }
+  if (tenant.role !== "Owner" && tenant.role !== "Admin") forbidden();
   return tenant;
 }

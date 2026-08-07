@@ -5,7 +5,7 @@ import { requireAdminTenant } from "@/lib/auth/tenant";
 import { getSmartPricingSettings } from "@/lib/smartPricing/settings";
 import SmartPricingSettings from "@/features/company/SmartPricingSettings";
 import Link from "next/link";
-import { Library, SlidersHorizontal } from "lucide-react";
+import { CreditCard, Library, SlidersHorizontal } from "lucide-react";
 
 export default async function SettingsPage() {
   const { companyId } = await requireAdminTenant();
@@ -23,6 +23,7 @@ export default async function SettingsPage() {
       <Link href="/settings/pricing-rules" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-4 font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600">
         Manage Pricing Rules
       </Link>
+      <Link href="/settings/payments" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[var(--border-color)] bg-[var(--surface)] px-4 font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"><CreditCard size={18} aria-hidden="true"/>Customer Payments</Link>
     </div>
     <CompanySettings initialCompany={company} />
     <SmartPricingSettings initial={smartPricing} />

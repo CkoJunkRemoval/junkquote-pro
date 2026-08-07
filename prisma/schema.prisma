@@ -241,6 +241,23 @@ enum ProviderPaymentStatus {
   Refunded
 }
 
+enum StripeConnectStatus {
+  NOT_CONNECTED
+  ONBOARDING
+  ACTION_REQUIRED
+  CONNECTED
+  RESTRICTED
+}
+
+enum ConnectedPaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  PARTIALLY_REFUNDED
+  REFUNDED
+  DISPUTED
+}
+
 enum FinancialAdjustmentType {
   Credit
   WriteOff
@@ -431,10 +448,10 @@ enum SmartPricingDecisionType {
 }
 
 model Company {
-  id                            String  @id @default(uuid())
+  id                            String              @id @default(uuid())
   name                          String
-  legalName                     String  @default("JunkQuote Pro")
-  displayName                   String  @default("JunkQuote Pro")
+  legalName                     String              @default("JunkQuote Pro")
+  displayName                   String              @default("JunkQuote Pro")
   phone                         String?
   email                         String?
   website                       String?
@@ -450,15 +467,24 @@ model Company {
   logoUrl                       String?
   primaryColor                  String?
   secondaryColor                String?
-  invoicePrefix                 String  @default("INV")
-  estimatePrefix                String  @default("EST")
-  defaultTaxRate                Float   @default(0)
-  defaultPaymentTermsDays       Int     @default(30)
-  defaultEstimateExpirationDays Int     @default(30)
-  defaultMinimumCharge          Float   @default(0)
-  timezone                      String  @default("America/New_York")
-  currencyCode                  String  @default("USD")
-  active                        Boolean @default(true)
+  invoicePrefix                 String              @default("INV")
+  estimatePrefix                String              @default("EST")
+  defaultTaxRate                Float               @default(0)
+  defaultPaymentTermsDays       Int                 @default(30)
+  defaultEstimateExpirationDays Int                 @default(30)
+  defaultMinimumCharge          Float               @default(0)
+  timezone                      String              @default("America/New_York")
+  currencyCode                  String              @default("USD")
+  active                        Boolean             @default(true)
+  stripeConnectedAccountId      String?             @unique
+  stripeConnectStatus           StripeConnectStatus @default(NOT_CONNECTED)
+  stripeChargesEnabled          Boolean             @default(false)
+  stripePayoutsEnabled          Boolean             @default(false)
+  stripeDetailsSubmitted        Boolean             @default(false)
+  stripeConnectRequirementsDue  String[]            @default([])
+  stripeConnectConnectedAt      DateTime?
+  stripeConnectUpdatedAt        DateTime?
+  stripeConnectDisconnectedAt   DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1724,19 +1750,26 @@ model Payment {
   invoiceId String
   invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
-  amount                Float
-  method                PaymentMethod
-  referenceNumber       String?
-  paymentDate           DateTime
-  notes                 String                @default("")
-  provider              PaymentProvider       @default(Manual)
-  providerStatus        ProviderPaymentStatus @default(Captured)
-  externalTransactionId String?
-  idempotencyKey        String?
-  processingFee         Float                 @default(0)
-  capturedAt            DateTime?
-  failedAt              DateTime?
-  failureReason         String?
+  amount                   Float
+  method                   PaymentMethod
+  referenceNumber          String?
+  paymentDate              DateTime
+  notes                    String                  @default("")
+  provider                 PaymentProvider         @default(Manual)
+  providerStatus           ProviderPaymentStatus   @default(Captured)
+  externalTransactionId    String?
+  idempotencyKey           String?
+  processingFee            Float                   @default(0)
+  capturedAt               DateTime?
+  failedAt                 DateTime?
+  failureReason            String?
+  connectedPaymentStatus   ConnectedPaymentStatus?
+  stripeCheckoutSessionId  String?                 @unique
+  stripePaymentIntentId    String?
+  stripeChargeId           String?
+  stripeConnectedAccountId String?
+  currency                 String                  @default("usd")
+  refundedAmount           Float                   @default(0)
 
   createdAt           DateTime                    @default(now())
   updatedAt           DateTime                    @updatedAt
@@ -1747,6 +1780,7 @@ model Payment {
   @@unique([companyId, idempotencyKey])
   @@index([companyId, provider, providerStatus, paymentDate])
   @@index([companyId])
+  @@index([stripeConnectedAccountId, stripePaymentIntentId])
   @@index([invoiceId])
   @@map("payments")
 }
@@ -1763,11 +1797,12 @@ model Refund {
   reason            String?
   externalReference String?
   refundedAt        DateTime
-  createdByUserId   String
-  createdByUser     User     @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
+  createdByUserId   String?
+  createdByUser     User?    @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
+  @@unique([companyId, externalReference])
   @@index([companyId, paymentId])
   @@index([companyId, invoiceId])
   @@map("refunds")

@@ -21,6 +21,7 @@ const valid = {
   BACKGROUND_WORKERS_ENABLED: "true",
   STRIPE_SECRET_KEY: "sk_live_example",
   STRIPE_WEBHOOK_SECRET: "whsec_example",
+  STRIPE_CONNECT_WEBHOOK_SECRET: "whsec_connect_example",
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: "pk_live_example",
   STRIPE_PRICE_STARTER_MONTHLY: "price_starter_monthly",
   STRIPE_PRICE_STARTER_YEARLY: "price_starter_yearly",

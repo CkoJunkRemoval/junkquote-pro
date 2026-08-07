@@ -11,10 +11,10 @@ export type UpdatePaymentInput = PaymentInput;
 
 function validateAmount(amount: number) { if (!Number.isFinite(amount) || amount <= 0) throw new Error("Payment amount must be positive."); }
 
-async function recalculateInvoice(tx: Prisma.TransactionClient, companyId: string, invoiceId: string) {
+export async function recalculateInvoice(tx: Prisma.TransactionClient, companyId: string, invoiceId: string) {
   const invoice = await tx.invoice.findFirst({ where: { id: invoiceId, companyId }, select: { id: true, total: true, dueDate: true, estimateId: true, estimate: { select: { status: true } } } });
   if (!invoice) throw new Error("Invoice not found.");
-  const paymentTotal = await tx.payment.aggregate({ where: { invoiceId, companyId, invoice: { companyId } }, _sum: { amount: true } });
+  const paymentTotal = await tx.payment.aggregate({ where: { invoiceId, companyId, providerStatus: "Captured", invoice: { companyId } }, _sum: { amount: true } });
   const refundTotal = await tx.refund.aggregate({ where: { invoiceId, companyId, invoice: { companyId } }, _sum: { amount: true } });
   const state = deriveInvoicePaymentState(invoice.total, (paymentTotal._sum.amount ?? 0) - (refundTotal._sum.amount ?? 0), invoice.dueDate);
   await tx.invoice.update({ where: { id: invoice.id }, data: state });
@@ -28,7 +28,7 @@ export async function recordPayment(companyId: string, invoiceId: string, input:
     if (!invoice) throw new Error("Invoice not found.");
     if (invoice.status === "Cancelled") throw new Error("Cancelled invoices cannot receive payments.");
     if (invoice.status === "Void") throw new Error("Void invoices cannot receive payments.");
-    const existing = await tx.payment.aggregate({ where: { invoiceId: invoice.id, companyId, invoice: { companyId } }, _sum: { amount: true } });
+    const existing = await tx.payment.aggregate({ where: { invoiceId: invoice.id, companyId, providerStatus: "Captured", invoice: { companyId } }, _sum: { amount: true } });
     if ((existing._sum.amount ?? 0) + input.amount > invoice.total + 0.00001) throw new Error("Payment cannot exceed the invoice total.");
     const payment = await tx.payment.create({ data: { companyId, invoiceId: invoice.id, amount: input.amount, method: input.method, referenceNumber: input.referenceNumber?.trim() || null, paymentDate: input.paymentDate, notes: input.notes?.trim() || "" } });
     const recalculated = await recalculateInvoice(tx, companyId, invoice.id);
@@ -51,7 +51,7 @@ export async function updatePayment(companyId: string, paymentId: string, input:
     if (!payment) throw new Error("Payment not found.");
     if (payment.invoice.status === "Cancelled") throw new Error("Cancelled invoices cannot receive payments.");
     if (payment.invoice.status === "Void") throw new Error("Void invoices cannot receive payments.");
-    const otherPayments = await tx.payment.aggregate({ where: { invoiceId: payment.invoiceId, companyId, invoice: { companyId }, id: { not: payment.id } }, _sum: { amount: true } });
+    const otherPayments = await tx.payment.aggregate({ where: { invoiceId: payment.invoiceId, companyId, providerStatus: "Captured", invoice: { companyId }, id: { not: payment.id } }, _sum: { amount: true } });
     if ((otherPayments._sum.amount ?? 0) + input.amount > payment.invoice.total + 0.00001) throw new Error("Payment cannot exceed the invoice total.");
     const updated = await tx.payment.update({ where: { id: payment.id }, data: { amount: input.amount, method: input.method, referenceNumber: input.referenceNumber?.trim() || null, paymentDate: input.paymentDate, notes: input.notes?.trim() || "" } });
     const recalculated = await recalculateInvoice(tx, companyId, payment.invoiceId);

@@ -72,6 +72,10 @@ export function inspectProductionEnvironment(
     else if (stripe.missingVariables.length === 9) warnings.push("Stripe billing is disabled because Stripe is not configured.");
     if (stripe.invalidPrefixes.length)
       errors.push(`Stripe billing configuration has invalid prefixes (${stripe.invalidPrefixes.map(({ name, expected }) => `${name} expected ${expected}`).join(", ")}).`);
+    if (value(env, "STRIPE_SECRET_KEY")) {
+      const connectSecret = requireValue("STRIPE_CONNECT_WEBHOOK_SECRET");
+      if (connectSecret && !/^whsec_/.test(connectSecret)) errors.push("STRIPE_CONNECT_WEBHOOK_SECRET must start with whsec_.");
+    }
     if (!redisConfigured)
       warnings.push(
         redisUrl || redisToken

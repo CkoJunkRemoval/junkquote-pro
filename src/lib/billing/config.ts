@@ -4,7 +4,8 @@ export type BillingFeature =
   | "approvals" | "pdfEstimates" | "dashboard" | "scheduling" | "invoicing"
   | "payments" | "reporting" | "advancedReporting" | "operations"
   | "prioritySupport" | "finance" | "taxCenter" | "timekeeping"
-  | "fleet" | "pricingIntelligence" | "automation" | "advancedExports";
+  | "fleet" | "pricingIntelligence" | "automation" | "advancedExports"
+  | "onlinePayments";
 
 export const billingConfig = { trialDays: 30, pastDueGraceDays: Number(process.env.BILLING_GRACE_DAYS ?? 7) } as const;
 const unlimited = Number.MAX_SAFE_INTEGER;
@@ -16,9 +17,9 @@ export const plans: Record<SubscriptionPlan, {
   crewLimit: number; truckLimit: number; features: BillingFeature[];
 }> = {
   Free: { name: "Free", description: "Core estimating for one company owner.", monthlyCents: 0, yearlyCents: 0, userLimit: 1, monthlyEstimateLimit: 6, storageBytes: 2e9, crewLimit: 0, truckLimit: 1, features: core },
-  Starter: { name: "Starter", description: "Core estimating and customer workflows.", monthlyCents: 3900, yearlyCents: 39000, userLimit: 3, monthlyEstimateLimit: 50, storageBytes: 10e9, crewLimit: 1, truckLimit: 3, features: [...core, "scheduling", "invoicing"] },
-  Professional: { name: "Professional", description: "Complete operations for growing teams.", monthlyCents: 8900, yearlyCents: 89000, userLimit: 10, monthlyEstimateLimit: unlimited, storageBytes: 25e9, crewLimit: 5, truckLimit: 10, features: [...core, "scheduling", "invoicing", "payments", "reporting", "operations", "finance", "timekeeping", "fleet", "pricingIntelligence", "automation", "advancedExports"] },
-  Enterprise: { name: "Enterprise", description: "Advanced controls and scale for established operators.", monthlyCents: 14900, yearlyCents: 149000, userLimit: 50, monthlyEstimateLimit: unlimited, storageBytes: 100e9, crewLimit: 25, truckLimit: 50, features: [...core, "scheduling", "invoicing", "payments", "reporting", "advancedReporting", "operations", "prioritySupport", "finance", "taxCenter", "timekeeping", "fleet", "pricingIntelligence", "automation", "advancedExports"] },
+  Starter: { name: "Starter", description: "Core estimating and customer workflows.", monthlyCents: 3900, yearlyCents: 39000, userLimit: 3, monthlyEstimateLimit: 50, storageBytes: 10e9, crewLimit: 1, truckLimit: 3, features: [...core, "scheduling", "invoicing", "onlinePayments"] },
+  Professional: { name: "Professional", description: "Complete operations for growing teams.", monthlyCents: 8900, yearlyCents: 89000, userLimit: 10, monthlyEstimateLimit: unlimited, storageBytes: 25e9, crewLimit: 5, truckLimit: 10, features: [...core, "scheduling", "invoicing", "payments", "onlinePayments", "reporting", "operations", "finance", "timekeeping", "fleet", "pricingIntelligence", "automation", "advancedExports"] },
+  Enterprise: { name: "Enterprise", description: "Advanced controls and scale for established operators.", monthlyCents: 14900, yearlyCents: 149000, userLimit: 50, monthlyEstimateLimit: unlimited, storageBytes: 100e9, crewLimit: 25, truckLimit: 50, features: [...core, "scheduling", "invoicing", "payments", "onlinePayments", "reporting", "advancedReporting", "operations", "prioritySupport", "finance", "taxCenter", "timekeeping", "fleet", "pricingIntelligence", "automation", "advancedExports"] },
 };
 
 const priceEnvironmentNames: Record<Exclude<SubscriptionPlan, "Free">, Record<BillingInterval, string>> = {
