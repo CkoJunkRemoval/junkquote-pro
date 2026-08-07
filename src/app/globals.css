@@ -1074,3 +1074,10 @@ body {
     animation: none !important;
   }
 }
+
+/* Public launch pages keep navigation targets touch-friendly at every viewport. */
+main[class*="bg-[#050806]"] nav > a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+}

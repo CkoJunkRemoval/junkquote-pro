@@ -7,6 +7,7 @@ import {
 import { requireTenantContext } from "./tenant";
 import { canAccessFeature } from "@/lib/billing/entitlements";
 import type { BillingFeature } from "@/lib/billing/config";
+import { AuthorizationError } from "./tenant";
 
 const paidModuleFeatures: Partial<Record<CompanyModule, BillingFeature>> = {
   operations: "operations", fleet: "fleet", finance: "finance", tax: "taxCenter",
@@ -15,7 +16,13 @@ const paidModuleFeatures: Partial<Record<CompanyModule, BillingFeature>> = {
 };
 
 export async function requireCompanyModulePage(module: CompanyModule) {
-  const tenant = await requireTenantContext();
+  let tenant;
+  try {
+    tenant = await requireTenantContext();
+  } catch (error) {
+    if (error instanceof AuthorizationError && error.code !== "UNAUTHENTICATED") forbidden();
+    throw error;
+  }
   if (
     !hasCompanyModuleAccess(
       {

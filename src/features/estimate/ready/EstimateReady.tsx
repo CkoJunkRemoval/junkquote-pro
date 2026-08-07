@@ -181,7 +181,7 @@ export default function EstimateReady() {
             <div className="rounded-xl border border-slate-200 p-6">
               <h2 className="text-xl font-bold">Delivery</h2>
               <p className="mt-1 text-slate-500">
-                Prepare a customer approval link. Email and SMS provider delivery are not connected yet.
+                Prepare a customer approval link or share it using your preferred communication method.
               </p>
 
               <div className="mt-4 flex flex-wrap gap-3">
@@ -193,15 +193,6 @@ export default function EstimateReady() {
                   })}
                 >
                   Send by Email
-                </Button>
-                <Button
-                  type="button"
-                  disabled={isPreparingDelivery}
-                  onClick={() => void prepareDelivery("sms").then((url) => {
-                    if (url) setDeliveryMessage("Text delivery is not connected yet. Share the generated link manually.");
-                  })}
-                >
-                  Send by Text
                 </Button>
                 <Button type="button" disabled={isPreparingDelivery} onClick={() => void copyApprovalLink()}>
                   Copy Approval Link

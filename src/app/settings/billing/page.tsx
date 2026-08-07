@@ -65,23 +65,23 @@ export default async function Page() {
               }
             />
           </dl>
-          {entitlements.reason === "trial" && <div className="surface-warning mt-6 rounded-xl border border-blue-300 p-4"><strong>30-Day Professional Trial</strong><p className="mt-1">You are using the Professional plan free for 30 days. No card is required. If you do not subscribe, your company will move to the Free plan with six estimates per month when the trial ends.</p></div>}
+          {entitlements.reason === "trial" && <div className="surface-warning mt-6 rounded-xl border border-blue-300 p-4"><strong>Professional Trial · {entitlements.trialDaysRemaining} days remaining</strong><p className="mt-1">No card required. You have full Professional access for 30 days. If you do not subscribe, your company will move to the Free plan with 6 estimates per month when the trial ends.</p></div>}
           <h2 className="mt-6 text-xl font-bold">Included features</h2>
           <ul className="mt-3 flex flex-wrap gap-2" aria-label="Included features">
             {entitlements.config.features.map((feature) => <li className="rounded-full border border-slate-600 bg-slate-900 px-3 py-1.5 text-sm text-slate-200" key={feature}>{billingFeatureLabel(feature)}</li>)}
           </ul>
-          <div className="mt-6 flex gap-3">
+          <div className="mt-6 flex flex-wrap gap-3">
             {billingEnabled && (
               <Link
                 href="/pricing"
-                className="rounded bg-blue-700 px-4 py-2 font-semibold text-white"
+                className="inline-flex min-h-11 items-center rounded bg-blue-700 px-4 py-2 font-semibold text-white"
               >
-                Change plan
+                {entitlements.reason === "trial" ? "View Plans / Upgrade" : "Change plan"}
               </Link>
             )}
             {billingEnabled && subscription?.stripeCustomerId && (
               <form action={openBillingPortalAction}>
-                <button className="rounded border px-4 py-2 font-semibold">
+                <button className="min-h-11 rounded border px-4 py-2 font-semibold">
                   Manage billing
                 </button>
               </form>

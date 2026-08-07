@@ -35,6 +35,12 @@ describe("staff route authentication middleware", () => {
     );
   });
 
+  it("redirects an unauthenticated invoice-detail request to sign-in", async () => {
+    const response = await run("/invoices/invoice-a");
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toContain("/sign-in?callbackUrl=");
+  });
+
   it("allows an authenticated user to continue to the dashboard", async () => {
     const response = await run("/dashboard", true);
 

@@ -4,6 +4,7 @@ const publicPrefixes = [
   "/approve",
   "/sign-in",
   "/sign-up",
+  "/pricing",
   "/join",
   "/reset-password",
   "/api/auth",
@@ -18,7 +19,7 @@ const publicPrefixes = [
 ];
 
 export function isPublicAuthPath(pathname: string) {
-  return publicPrefixes.some((prefix) => pathname.startsWith(prefix));
+  return pathname === "/" || publicPrefixes.some((prefix) => pathname.startsWith(prefix));
 }
 
 export const authConfig = {

@@ -1,38 +1,20 @@
+import Link from "next/link";
+import { plans } from "@/lib/billing/config";
+import { billingFeatureLabel } from "@/lib/billing/presentation";
+import { auth } from "@/auth";
 import AppLayout from "@/components/layout/AppLayout";
 import PlanCards from "@/features/billing/PlanCards";
 import { requireTenantContext } from "@/lib/auth/tenant";
 import { getCompanyEntitlements } from "@/lib/billing/entitlements";
 import { isBillingAvailable } from "@/lib/billing/stripe";
 
-export default async function Page() {
-  const context = await requireTenantContext();
-  const entitlements = await getCompanyEntitlements(context.companyId);
-  const billingEnabled = isBillingAvailable();
-  return (
-    <AppLayout>
-      <main className="contrast-controls mx-auto max-w-6xl p-6 sm:p-10">
-        <h1 className="text-4xl font-bold">
-          Plans built for junk removal teams
-        </h1>
-        <p className="mt-2 text-slate-600">
-          Pricing and payment details are shown securely in Stripe Checkout.
-        </p>
-        {!billingEnabled && (
-          <div className="surface-warning mt-5 rounded-xl border border-amber-300 p-4">
-            <strong>Online billing is temporarily unavailable.</strong>
-            <p>
-              Your existing account and application data remain available.
-              Contact a platform administrator to change plans.
-            </p>
-          </div>
-        )}
-        <div className="mt-8">
-          <PlanCards
-            current={entitlements.subscription?.plan}
-            billingEnabled={billingEnabled}
-          />
-        </div>
-      </main>
-    </AppLayout>
-  );
+export const metadata = { title: "Pricing | JunkQuote Pro" };
+export default async function PricingPage() {
+  if (await auth()) {
+    const context = await requireTenantContext();
+    const entitlements = await getCompanyEntitlements(context.companyId);
+    const billingEnabled = isBillingAvailable();
+    return <AppLayout><main className="contrast-controls mx-auto max-w-6xl p-6 sm:p-10"><h1 className="text-4xl font-bold">Plans built for junk removal teams</h1><p className="mt-2 text-slate-600">Choose monthly or yearly billing. Checkout and payment details are handled securely by Stripe.</p>{!billingEnabled&&<div className="surface-warning mt-5 rounded-xl border border-amber-300 p-4"><strong>Online billing is temporarily unavailable.</strong><p>Your existing account and application data remain available. Contact a platform administrator to change plans.</p></div>}<div className="mt-8"><PlanCards current={entitlements.subscription?.plan} billingEnabled={billingEnabled}/></div></main></AppLayout>;
+  }
+  return <main className="min-h-screen overflow-x-hidden bg-[#050806] px-5 py-10 text-white sm:px-8"><div className="mx-auto max-w-7xl"><nav className="flex min-h-11 items-center justify-between"><Link href="/" className="font-black">JunkQuote <span className="text-[#a4ef29]">Pro</span></Link><Link href="/sign-in" className="inline-flex min-h-11 items-center font-semibold">Sign in</Link></nav><header className="mx-auto max-w-3xl py-14 text-center"><p className="font-bold uppercase tracking-[.2em] text-[#a4ef29]">Simple pricing</p><h1 className="mt-3 text-4xl font-black sm:text-6xl">Choose the plan that fits your operation.</h1><p className="mt-5 text-lg text-slate-300">Start with 30 days of full Professional access. No credit card required. If you do not subscribe, you automatically move to Free.</p></header><div className="grid gap-5 lg:grid-cols-4">{Object.values(plans).map(plan=>{const annualSaving=(plan.monthlyCents*12-plan.yearlyCents)/100;return <article key={plan.name} className={`relative rounded-2xl border p-6 ${plan.name==="Professional"?"border-[#a4ef29] bg-[#10180d]":"border-white/15 bg-[#0d130e]"}`}>{plan.name==="Professional"&&<span className="absolute right-4 top-4 rounded-full bg-[#a4ef29] px-3 py-1 text-xs font-black text-black">Recommended</span>}<h2 className="text-2xl font-black">{plan.name}</h2><p className="mt-2 min-h-12 text-sm text-slate-300">{plan.description}</p><p className="mt-5 text-3xl font-black">${plan.monthlyCents/100}<span className="text-sm font-normal text-slate-400">/month</span></p>{plan.name==="Free"?<p className="mt-2 min-h-10 text-sm text-slate-300">Free stays available.</p>:<p className="mt-2 min-h-10 text-sm text-slate-300">${plan.yearlyCents/100}/year · Save ${annualSaving}/year</p>}<ul className="mt-5 space-y-2 text-sm"><li>{plan.monthlyEstimateLimit===Number.MAX_SAFE_INTEGER?"Unlimited estimates":`${plan.monthlyEstimateLimit} estimates per month`}</li><li>{plan.userLimit} user{plan.userLimit===1?"":"s"}</li>{plan.features.slice(0,6).map(feature=><li key={feature}>✓ {billingFeatureLabel(feature)}</li>)}</ul><Link href="/sign-up" className={`mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-xl px-4 text-center font-bold ${plan.name==="Professional"?"bg-[#a4ef29] text-black":"border border-white/20"}`}>{plan.name==="Professional"?"Start 30-Day Professional Trial":plan.name==="Free"?"Start Free After Your Trial":`Start with Professional Trial`}</Link></article>})}</div><p className="mt-10 text-center text-slate-300">Monthly or yearly billing is available for Starter, Professional, and Enterprise. You can upgrade at any time.</p></div></main>;
 }
