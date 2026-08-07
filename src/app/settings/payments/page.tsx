@@ -5,8 +5,13 @@ import {
   disconnectStripeConnectAction,
   startStripeConnectAction,
 } from "@/app/actions/payments/stripeConnect";
-export default async function PaymentsSettings() {
+export default async function PaymentsSettings({
+  searchParams,
+}: {
+  searchParams: Promise<{ connectError?: string }>;
+}) {
   const c = await requireAdminTenantPage();
+  const connectError = (await searchParams).connectError === "1";
   const company = await prisma.company.findUniqueOrThrow({
     where: { id: c.companyId },
   });
@@ -22,6 +27,15 @@ export default async function PaymentsSettings() {
           JunkQuote Pro invoices. Payments are deposited into your own Stripe
           account and paid out to your bank account.
         </p>
+        {connectError && (
+          <p
+            className="mt-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900"
+            role="alert"
+          >
+            We couldn&apos;t start Stripe setup. Please try again or contact
+            support if the problem continues.
+          </p>
+        )}
         <div className="surface-card mt-6 rounded-2xl border p-6">
           {!connected ? (
             <form action={startStripeConnectAction}>
