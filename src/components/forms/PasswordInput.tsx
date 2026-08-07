@@ -35,30 +35,32 @@ export default function PasswordInput({
   return (
     <div className={`auth-field ${wrapperClassName}`.trim()}>
       <label htmlFor={inputId}>{label}</label>
-      <LockKeyhole aria-hidden="true" size={18} />
-      <input
-        {...inputProps}
-        id={inputId}
-        type={visible ? "text" : "password"}
-        aria-describedby={
-          [inputProps["aria-describedby"], hintId].filter(Boolean).join(" ") ||
-          undefined
-        }
-        className={className}
-      />
-      <button
-        type="button"
-        className="password-visibility-toggle"
-        aria-label={visible ? "Hide password" : "Show password"}
-        aria-pressed={visible}
-        onClick={() => setVisible((current) => !current)}
-      >
-        {visible ? (
-          <EyeOff aria-hidden="true" size={20} />
-        ) : (
-          <Eye aria-hidden="true" size={20} />
-        )}
-      </button>
+      <div className="auth-field__control">
+        <LockKeyhole aria-hidden="true" className="auth-field__leading-icon" size={18} />
+        <input
+          {...inputProps}
+          id={inputId}
+          type={visible ? "text" : "password"}
+          aria-describedby={
+            [inputProps["aria-describedby"], hintId].filter(Boolean).join(" ") ||
+            undefined
+          }
+          className={className}
+        />
+        <button
+          type="button"
+          className="password-visibility-toggle"
+          aria-label={visible ? "Hide password" : "Show password"}
+          aria-pressed={visible}
+          onClick={() => setVisible((current) => !current)}
+        >
+          {visible ? (
+            <EyeOff aria-hidden="true" size={20} />
+          ) : (
+            <Eye aria-hidden="true" size={20} />
+          )}
+        </button>
+      </div>
       {hint && (
         <small id={hintId} className="auth-field__hint">
           {hint}

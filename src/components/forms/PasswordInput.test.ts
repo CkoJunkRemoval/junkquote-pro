@@ -29,6 +29,17 @@ describe("PasswordInput", () => {
     expect(component).toContain('visible ? "text" : "password"');
   });
 
+  it("positions icons within a dedicated control and leaves hints outside it", () => {
+    const component = source("src/components/forms/PasswordInput.tsx");
+    const styles = source("src/app/globals.css");
+    expect(component).toContain('className="auth-field__control"');
+    expect(component).toContain('className="auth-field__leading-icon"');
+    expect(component.indexOf('className="auth-field__hint"')).toBeGreaterThan(component.indexOf('className="auth-field__control"'));
+    expect(styles).toContain(".auth-field__control .auth-field__leading-icon");
+    expect(styles).toContain(".auth-field__control input");
+    expect(styles).toContain("transform: translateY(-50%)");
+  });
+
   it("is shared by sign-in and every account-creation/reset flow", () => {
     for (const path of [
       "src/app/sign-in/sign-in-form.tsx",

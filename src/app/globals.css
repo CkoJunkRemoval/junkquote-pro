@@ -793,10 +793,21 @@ body {
   color: white;
 }
 
+.auth-field__control {
+  position: relative;
+}
+
+.auth-field__control .auth-field__leading-icon {
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
+}
+
 .auth-field .password-visibility-toggle {
   position: absolute;
   right: 0.25rem;
-  bottom: 0.125rem;
+  top: 50%;
+  bottom: auto;
   display: inline-grid;
   width: 2.75rem;
   height: 2.75rem;
@@ -806,6 +817,7 @@ body {
   color: #94a3b8;
   background: transparent;
   cursor: pointer;
+  transform: translateY(-50%);
 }
 
 .auth-field .password-visibility-toggle:hover {
@@ -823,7 +835,7 @@ body {
   color: currentColor;
 }
 
-.auth-field:has(.password-visibility-toggle) input {
+.auth-field__control input {
   padding-right: 3.25rem;
 }
 
