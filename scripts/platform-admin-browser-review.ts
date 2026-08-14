@@ -2,69 +2,26 @@ import { chromium, type Page } from "playwright-core";
 import bcrypt from "bcryptjs";
 import { prisma } from "../src/lib/prisma";
 
-const baseUrl = process.env.PLATFORM_ADMIN_REVIEW_BASE_URL ?? "http://127.0.0.1:3112";
-const browserPath = process.env.PLATFORM_ADMIN_REVIEW_BROWSER ?? "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
-const password = "PlatformReview!123";
-const adminEmail = "platform-review@test.invalid";
-const ownerEmail = "ordinary-owner-review@test.invalid";
-const routes = ["/platform-admin", "/platform-admin/companies", "/platform-admin/activation", "/platform-admin/usage", "/platform-admin/subscriptions", "/platform-admin/conversions"];
-const viewports = [{ width: 390, height: 844 }, { width: 1366, height: 768 }, { width: 1920, height: 1080 }];
+const baseUrl=process.env.PLATFORM_ADMIN_REVIEW_BASE_URL??"http://127.0.0.1:3112",browserPath=process.env.PLATFORM_ADMIN_REVIEW_BROWSER??"C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
+const password="PlatformReview!123",adminEmail="platform-review@test.invalid",ownerEmail="ordinary-owner-review@test.invalid";
+const routes=["/platform-admin","/platform-admin/companies","/platform-admin/activation","/platform-admin/usage","/platform-admin/subscriptions","/platform-admin/conversions"],viewports=[{width:390,height:844},{width:1366,height:768},{width:1920,height:1080}];
 
-function assertDisposableDatabase() {
-  const url = new URL(process.env.DATABASE_URL ?? "");
-  if (!["127.0.0.1", "localhost"].includes(url.hostname) || !url.pathname.toLowerCase().includes("test"))
-    throw new Error("Platform admin browser review requires a disposable local test database.");
-}
-async function seed() {
-  assertDisposableDatabase();
-  await prisma.company.deleteMany({ where: { name: { startsWith: "Platform Review" } } });
-  const company = await prisma.company.create({ data: {
-    name: "Platform Review Company", onboarding: { create: { completedAt: new Date() } },
-    subscription: { create: { plan: "Professional", status: "Active" } },
-    usageMetrics: { create: { date: new Date(), activeUsers: 1, estimates: 3, jobs: 2 } },
-  } });
-  for (const [email, platformAdmin] of [[adminEmail, true], [ownerEmail, false]] as const) {
-    const user = await prisma.user.create({ data: { companyId: company.id, email, passwordHash: await bcrypt.hash(password, 10), role: "OWNER", platformAdmin } });
-    await prisma.companyMembership.create({ data: { companyId: company.id, userId: user.id, role: "Owner" } });
-  }
-  await prisma.auditEvent.create({ data: { companyId: company.id, actingUserId: (await prisma.user.findUniqueOrThrow({ where: { email: adminEmail } })).id, eventType: "estimate.created", entityType: "Estimate" } });
-}
-async function login(page: Page, email: string) {
-  const csrf = await page.request.get(`${baseUrl}/api/auth/csrf`);
-  const { csrfToken } = await csrf.json() as { csrfToken: string };
-  const response = await page.request.post(`${baseUrl}/api/auth/callback/credentials`, { form: { csrfToken, email, password, callbackUrl: `${baseUrl}/platform-admin` } });
-  if (!response.ok()) throw new Error(`Login failed for ${email}: ${response.status()}`);
-}
-async function layout(page: Page, route: string, width: number, height: number) {
-  await page.setViewportSize({ width, height });
-  const response = await page.goto(`${baseUrl}${route}`, { waitUntil: "networkidle" });
-  if (!response?.ok()) throw new Error(`${route} returned ${response?.status()}`);
-  await page.getByRole("heading", { name: "JunkQuote Pro Platform Administration" }).waitFor();
-  const dimensions = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, content: document.documentElement.scrollWidth }));
-  if (dimensions.content > dimensions.viewport) throw new Error(`${route} overflows at ${width}x${height}`);
-  if (width === 390) {
-    const undersized = await page.locator("a:visible, button:visible, input:visible, select:visible").evaluateAll((elements) => elements.filter((element) => {
-      const box = element.getBoundingClientRect();
-      return box.width < 44 || box.height < 44;
-    }).map((element) => element.textContent?.trim() || element.getAttribute("name")));
-    if (undersized.length) throw new Error(`${route} has undersized targets: ${JSON.stringify(undersized)}`);
-  }
-}
-async function main() {
-  await seed();
-  const browser = await chromium.launch({ executablePath: browserPath, headless: true });
-  try {
-    const admin = await browser.newPage(); await login(admin, adminEmail);
-    for (const viewport of viewports) for (const route of routes) await layout(admin, route, viewport.width, viewport.height);
-    const owner = await browser.newPage(); await login(owner, ownerEmail);
-    const denied = await owner.goto(`${baseUrl}/platform-admin`, { waitUntil: "networkidle" });
-    if (denied?.status() !== 403) throw new Error(`Ordinary owner denial returned ${denied?.status()}`);
-    const exportDenied = await owner.request.get(`${baseUrl}/api/platform-admin/exports/companies`);
-    if (exportDenied.status() !== 403) throw new Error(`Ordinary owner export returned ${exportDenied.status()}`);
-    console.log(`Platform admin browser review passed ${routes.length * viewports.length} authorized route/viewport checks plus Owner page/export denials.`);
-  } finally {
-    await browser.close();
-    await prisma.$disconnect();
-  }
-}
-main().catch((error) => { console.error(error); process.exitCode = 1; });
+function assertDisposableDatabase(){const url=new URL(process.env.DATABASE_URL??"");if(!["127.0.0.1","localhost"].includes(url.hostname)||url.port!=="55432"||url.pathname!=="/junkquote_pro_test")throw new Error("Browser review requires 127.0.0.1:55432/junkquote_pro_test.");}
+async function seed(){assertDisposableDatabase();await prisma.platformCompanyDeletionTombstone.deleteMany({where:{companyName:{startsWith:"Platform Review"}}});await prisma.company.deleteMany({where:{name:{startsWith:"Platform Review"}}});
+  const customer=await prisma.company.create({data:{name:"Platform Review Customer",classification:"CUSTOMER",onboarding:{create:{completedAt:new Date()}},usageMetrics:{create:{date:new Date(),activeUsers:1,estimates:3,jobs:2}}}});
+  const safe=await prisma.company.create({data:{name:"Platform Review Safe Test",classification:"TEST"}});
+  const internal=await prisma.company.create({data:{name:"Platform Review Internal",classification:"INTERNAL"}});
+  const unsafe=await prisma.company.create({data:{name:"Platform Review Financial Test",classification:"TEST",subscription:{create:{plan:"Starter",status:"Active",stripeSubscriptionId:"sub_browser_financial",lastSuccessfulPaymentAt:new Date()}}}});
+  for(const [email,platformAdmin] of [[adminEmail,true],[ownerEmail,false]] as const){const user=await prisma.user.create({data:{companyId:customer.id,email,passwordHash:await bcrypt.hash(password,10),role:"OWNER",platformAdmin}});await prisma.companyMembership.create({data:{companyId:customer.id,userId:user.id,role:"Owner"}})}
+  await prisma.auditEvent.create({data:{companyId:customer.id,actingUserId:(await prisma.user.findUniqueOrThrow({where:{email:adminEmail}})).id,eventType:"estimate.created",entityType:"Estimate"}});return{customer,safe,internal,unsafe};}
+async function login(page:Page,email:string){const csrf=await page.request.get(`${baseUrl}/api/auth/csrf`),{csrfToken}=await csrf.json() as{csrfToken:string};const response=await page.request.post(`${baseUrl}/api/auth/callback/credentials`,{form:{csrfToken,email,password,callbackUrl:`${baseUrl}/platform-admin`}});if(!response.ok())throw new Error(`Login failed for ${email}: ${response.status()}`)}
+async function layout(page:Page,route:string,width:number,height:number){await page.setViewportSize({width,height});const response=await page.goto(`${baseUrl}${route}`,{waitUntil:"networkidle"});if(!response?.ok())throw new Error(`${route} returned ${response?.status()}`);await page.getByRole("heading",{name:"JunkQuote Pro Platform Administration"}).waitFor();const dimensions=await page.evaluate(()=>({viewport:document.documentElement.clientWidth,content:document.documentElement.scrollWidth}));if(dimensions.content>dimensions.viewport)throw new Error(`${route} overflows at ${width}x${height}`);if(width===390){const undersized=await page.locator("a:visible, button:visible, input:visible:not([type=checkbox]):not([type=radio]), select:visible").evaluateAll(elements=>elements.filter(element=>{const box=element.getBoundingClientRect();return box.width<44||box.height<44}).map(element=>element.textContent?.trim()||element.getAttribute("name")));if(undersized.length)throw new Error(`${route} has undersized targets: ${JSON.stringify(undersized)}`)}await page.keyboard.press("Tab");if(!await page.evaluate(()=>document.activeElement!==document.body))throw new Error(`${route} has no keyboard focus target`)}
+async function main(){const seeded=await seed(),browser=await chromium.launch({executablePath:browserPath,headless:true});try{const adminContext=await browser.newContext(),admin=await adminContext.newPage();await login(admin,adminEmail);for(const viewport of viewports)for(const route of routes)await layout(admin,route,viewport.width,viewport.height);
+    await admin.goto(`${baseUrl}/platform-admin/companies`,{waitUntil:"networkidle"});for(const badge of ["CUSTOMER","TEST","INTERNAL"])await admin.getByText(badge,{exact:true}).first().waitFor();await admin.getByPlaceholder("Search company").fill("Internal");await admin.getByRole("button",{name:"Filter"}).click();await admin.getByText(seeded.internal.name).waitFor();
+    await admin.goto(`${baseUrl}/platform-admin/companies/${seeded.safe.id}`,{waitUntil:"networkidle"});await admin.getByLabel("Trial reason").fill("Sales demo");await admin.getByRole("button",{name:"Grant Professional trial"}).click();await admin.getByRole("button",{name:"Extend Professional trial"}).waitFor();await admin.getByLabel("Trial reason").fill("Extended evaluation");await admin.getByRole("button",{name:"Extend Professional trial"}).click();await admin.getByPlaceholder("Reason to end trial").fill("Evaluation complete");await admin.getByRole("button",{name:"End trial"}).click();await admin.getByRole("button",{name:"Grant Professional trial"}).waitFor();
+    await admin.getByLabel("Account status reason").fill("Support investigation");await admin.getByRole("button",{name:"Suspend company"}).click();await admin.getByRole("button",{name:"Reactivate company"}).waitFor();await admin.getByLabel("Account status reason").fill("Support resolution");await admin.getByRole("button",{name:"Reactivate company"}).click();
+    await admin.goto(`${baseUrl}/platform-admin/companies/${seeded.unsafe.id}`,{waitUntil:"networkidle"});const unsafeText=await admin.locator("body").innerText();if(!unsafeText.includes("Deletion blocked"))throw new Error(`Financial deletion block missing: ${unsafeText.slice(-800)}`);
+    await admin.goto(`${baseUrl}/platform-admin/companies/${seeded.safe.id}`,{waitUntil:"networkidle"});await admin.getByLabel(/Type Platform Review Safe Test to confirm/).fill(seeded.safe.name);await admin.getByPlaceholder("Required deletion reason").fill("Disposable browser fixture");await admin.getByRole("button",{name:"Delete Test Company"}).click();await admin.waitForURL(`${baseUrl}/platform-admin/companies`);
+    await admin.goto(`${baseUrl}/platform-admin`,{waitUntil:"networkidle"});await admin.getByText("Include Test/Internal").click();await admin.getByRole("button",{name:"Apply population"}).click();await admin.getByText("TEST and INTERNAL companies are included.").waitFor();const text=(await admin.locator("body").innerText()).toLowerCase();for(const forbidden of ["card number","bank account number","routing number","secret key"]){if(text.includes(forbidden))throw new Error(`Sensitive label exposed: ${forbidden}`)}
+    const ownerContext=await browser.newContext(),owner=await ownerContext.newPage();await login(owner,ownerEmail);const denied=await owner.goto(`${baseUrl}/platform-admin`,{waitUntil:"networkidle"});if(denied?.status()!==403)throw new Error(`Ordinary owner denial returned ${denied?.status()}`);if((await owner.request.get(`${baseUrl}/api/platform-admin/exports/companies`)).status()!==403)throw new Error("Ordinary owner export was not denied");await ownerContext.close();await adminContext.close();console.log(`Platform admin browser review passed ${routes.length*viewports.length} route/viewport checks, management interactions, privacy checks, and Owner page/export denials.`)}finally{await browser.close();await prisma.$disconnect()}}
+main().catch(error=>{console.error(error);process.exitCode=1});

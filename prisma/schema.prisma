@@ -448,10 +448,10 @@ enum SmartPricingDecisionType {
 }
 
 model Company {
-  id                            String              @id @default(uuid())
+  id                            String                @id @default(uuid())
   name                          String
-  legalName                     String              @default("JunkQuote Pro")
-  displayName                   String              @default("JunkQuote Pro")
+  legalName                     String                @default("JunkQuote Pro")
+  displayName                   String                @default("JunkQuote Pro")
   phone                         String?
   email                         String?
   website                       String?
@@ -467,21 +467,24 @@ model Company {
   logoUrl                       String?
   primaryColor                  String?
   secondaryColor                String?
-  invoicePrefix                 String              @default("INV")
-  estimatePrefix                String              @default("EST")
-  defaultTaxRate                Float               @default(0)
-  defaultPaymentTermsDays       Int                 @default(30)
-  defaultEstimateExpirationDays Int                 @default(30)
-  defaultMinimumCharge          Float               @default(0)
-  timezone                      String              @default("America/New_York")
-  currencyCode                  String              @default("USD")
-  active                        Boolean             @default(true)
-  stripeConnectedAccountId      String?             @unique
-  stripeConnectStatus           StripeConnectStatus @default(NOT_CONNECTED)
-  stripeChargesEnabled          Boolean             @default(false)
-  stripePayoutsEnabled          Boolean             @default(false)
-  stripeDetailsSubmitted        Boolean             @default(false)
-  stripeConnectRequirementsDue  String[]            @default([])
+  invoicePrefix                 String                @default("INV")
+  estimatePrefix                String                @default("EST")
+  defaultTaxRate                Float                 @default(0)
+  defaultPaymentTermsDays       Int                   @default(30)
+  defaultEstimateExpirationDays Int                   @default(30)
+  defaultMinimumCharge          Float                 @default(0)
+  timezone                      String                @default("America/New_York")
+  currencyCode                  String                @default("USD")
+  active                        Boolean               @default(true)
+  classification                CompanyClassification @default(CUSTOMER)
+  suspendedAt                   DateTime?
+  suspendedReason               String?
+  stripeConnectedAccountId      String?               @unique
+  stripeConnectStatus           StripeConnectStatus   @default(NOT_CONNECTED)
+  stripeChargesEnabled          Boolean               @default(false)
+  stripePayoutsEnabled          Boolean               @default(false)
+  stripeDetailsSubmitted        Boolean               @default(false)
+  stripeConnectRequirementsDue  String[]              @default([])
   stripeConnectConnectedAt      DateTime?
   stripeConnectUpdatedAt        DateTime?
   stripeConnectDisconnectedAt   DateTime?
@@ -589,7 +592,22 @@ model Company {
   businessLocations       BusinessLocation[]
   companyDocuments        CompanyDocument[]
 
+  @@index([classification, active, createdAt])
   @@map("companies")
+}
+
+model PlatformCompanyDeletionTombstone {
+  id               String                @id @default(uuid())
+  deletedCompanyId String
+  companyName      String
+  classification   CompanyClassification
+  deletedByUserId  String?
+  reason           String
+  safeCounts       Json
+  deletedAt        DateTime              @default(now())
+
+  @@index([deletedCompanyId, deletedAt])
+  @@map("platform_company_deletion_tombstones")
 }
 
 model CompanySettings {
@@ -1442,6 +1460,12 @@ enum InternalTrialStatus {
   Expired
   Converted
   Ineligible
+}
+
+enum CompanyClassification {
+  CUSTOMER
+  TEST
+  INTERNAL
 }
 
 enum SubscriptionStatus {

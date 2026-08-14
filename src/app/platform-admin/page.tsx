@@ -2,9 +2,9 @@ import { requirePlatformAdminPage } from "@/lib/admin/platformPageAuth";
 import { getPlatformOverview } from "@/lib/admin/platformAnalytics";
 import PlatformAdminShell, { ExportLinks, MetricCard, Panel } from "@/features/platformAdmin/PlatformAdminShell";
 
-export default async function PlatformOverviewPage() {
+export default async function PlatformOverviewPage({searchParams}:{searchParams:Promise<{includeNonCustomers?:string}>}) {
   await requirePlatformAdminPage("platform_admin.overview_viewed");
-  const data = await getPlatformOverview();
+  const include=(await searchParams).includeNonCustomers==="1"; const data = await getPlatformOverview(new Date(),include);
   const metrics = [
     ["Registered companies", data.registered], ["User accounts", data.users], ["Created today", data.companiesToday],
     ["Created this week", data.companiesWeek], ["Created this month", data.companiesMonth], ["Activated", data.activated],
@@ -14,6 +14,7 @@ export default async function PlatformOverviewPage() {
     ["Invoices sent", data.invoicesSent], ["Payments recorded", data.payments],
   ] as const;
   return <PlatformAdminShell active="/platform-admin">
+    <form className="mb-4 flex flex-wrap items-center gap-3"><label className="flex min-h-11 items-center gap-2"><input type="checkbox" name="includeNonCustomers" value="1" defaultChecked={include}/>Include Test/Internal</label><button className="min-h-11 rounded-xl bg-orange-500 px-4 font-bold text-slate-950">Apply population</button></form>{include&&<p className="mb-4 rounded-xl bg-amber-950 p-3 text-amber-200">TEST and INTERNAL companies are included.</p>}
     <p className="max-w-3xl text-slate-300">Privacy-safe platform activation, adoption, subscription, conversion, retention, and application-health signals. No customer notes, private files, compensation, tax documents, credentials, or payment-card data are queried.</p>
     <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{metrics.map(([label, value]) => <MetricCard key={label} label={label} value={value} />)}</section>
     <Panel title="Activity and retention signals"><div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">

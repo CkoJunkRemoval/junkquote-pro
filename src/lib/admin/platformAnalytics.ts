@@ -1,5 +1,6 @@
 import "server-only";
-import type { SubscriptionPlan, SubscriptionStatus } from "@/generated/prisma/client";
+import type { CompanyClassification, SubscriptionPlan, SubscriptionStatus } from "@/generated/prisma/client";
+import { resolveEffectivePlan } from "@/lib/billing/entitlements";
 import { prisma } from "@/lib/prisma";
 
 const sentStatuses = ["Sent", "Viewed", "Approved", "Scheduled", "InProgress", "Completed", "Invoiced", "Paid", "Declined", "Expired"] as const;
@@ -24,23 +25,24 @@ export function platformRange(period: PlatformPeriod, from?: string, to?: string
   return { from: daysAgo(period === "7d" ? 7 : 30, now), to: end };
 }
 
-export async function getPlatformOverview(now = new Date()) {
+export async function getPlatformOverview(now = new Date(), includeNonCustomers = false) {
+  const companyWhere = includeNonCustomers ? {} : { classification: "CUSTOMER" as const };
   const today = startOfDay(now), week = daysAgo(7, now), month = new Date(now.getFullYear(), now.getMonth(), 1);
-  const activeAt = async (since: Date) => (await prisma.auditEvent.groupBy({ by: ["companyId"], where: { companyId: { not: null }, createdAt: { gte: since }, eventType: meaningfulEvents } })).length;
+  const activeAt = async (since: Date) => (await prisma.auditEvent.groupBy({ by: ["companyId"], where: { companyId: { not: null }, company: { is: companyWhere }, createdAt: { gte: since }, eventType: meaningfulEvents } })).length;
   const [companies, users, todayCompanies, weekCompanies, monthCompanies, onboarding, trials, activeSubscriptions, cancelled, pastDue, estimates, sent, approved, jobs, completedJobs, invoicesSent, payments, activeToday, active7, active30, errorsToday, failedJobs] = await Promise.all([
-    prisma.company.count(), prisma.user.count(), prisma.company.count({ where: { createdAt: { gte: today } } }),
-    prisma.company.count({ where: { createdAt: { gte: week } } }), prisma.company.count({ where: { createdAt: { gte: month } } }),
-    prisma.companyOnboarding.count({ where: { completedAt: { not: null } } }),
-    prisma.companySubscription.count({ where: { status: "Trialing" } }), prisma.companySubscription.count({ where: { status: "Active" } }),
-    prisma.companySubscription.count({ where: { status: "Canceled" } }), prisma.companySubscription.count({ where: { status: "PastDue" } }),
-    prisma.estimate.count(), prisma.estimate.count({ where: { status: { in: [...sentStatuses] } } }),
-    prisma.estimate.count({ where: { status: { in: [...approvedStatuses] } } }), prisma.job.count(),
-    prisma.job.count({ where: { status: "Completed" } }), prisma.invoice.count({ where: { status: { in: [...invoiceSentStatuses] } } }),
-    prisma.payment.count(), activeAt(today), activeAt(week), activeAt(daysAgo(30, now)),
+    prisma.company.count({where:companyWhere}), prisma.user.count({where:{company:companyWhere}}), prisma.company.count({ where: { ...companyWhere, createdAt: { gte: today } } }),
+    prisma.company.count({ where: { ...companyWhere, createdAt: { gte: week } } }), prisma.company.count({ where: { ...companyWhere, createdAt: { gte: month } } }),
+    prisma.companyOnboarding.count({ where: { company: companyWhere, completedAt: { not: null } } }),
+    prisma.companySubscription.count({ where: { company: companyWhere, trialStatus: "Active", trialEnd: {gt:now} } }), prisma.companySubscription.count({ where: { company: companyWhere, status: "Active" } }),
+    prisma.companySubscription.count({ where: { company: companyWhere, status: "Canceled" } }), prisma.companySubscription.count({ where: { company: companyWhere, status: "PastDue" } }),
+    prisma.estimate.count({where:{company:companyWhere}}), prisma.estimate.count({ where: { company:companyWhere, status: { in: [...sentStatuses] } } }),
+    prisma.estimate.count({ where: { company:companyWhere, status: { in: [...approvedStatuses] } } }), prisma.job.count({where:{company:companyWhere}}),
+    prisma.job.count({ where: { company:companyWhere, status: "Completed" } }), prisma.invoice.count({ where: { company:companyWhere, status: { in: [...invoiceSentStatuses] } } }),
+    prisma.payment.count({where:{company:companyWhere}}), activeAt(today), activeAt(week), activeAt(daysAgo(30, now)),
     prisma.systemErrorEvent.count({ where: { createdAt: { gte: today } } }),
     prisma.backgroundJob.count({ where: { status: "Failed" } }),
   ]);
-  const lastActivity = await prisma.auditEvent.groupBy({ by: ["companyId"], where: { companyId: { not: null }, eventType: meaningfulEvents }, _max: { createdAt: true } });
+  const lastActivity = await prisma.auditEvent.groupBy({ by: ["companyId"], where: { companyId: { not: null }, company:{is:companyWhere}, eventType: meaningfulEvents }, _max: { createdAt: true } });
   const inactive = (days: number) => lastActivity.filter((row) => !row._max.createdAt || row._max.createdAt < daysAgo(days, now)).length + Math.max(0, companies - lastActivity.length);
   return {
     registered: companies, activated: onboarding, paying: activeSubscriptions, churned: cancelled,
@@ -74,8 +76,8 @@ function milestones(company: MilestoneCompany) {
     first(company.payments.map((x) => x.createdAt)),
   ];
 }
-export async function getActivationFunnel() {
-  const companies = await prisma.company.findMany({ select: {
+export async function getActivationFunnel(includeNonCustomers = false) {
+  const companies = await prisma.company.findMany({ where: includeNonCustomers ? {} : {classification:"CUSTOMER"}, select: {
     id: true, createdAt: true, onboarding: { select: { completedAt: true } },
     memberships: { orderBy: { createdAt: "asc" }, select: { createdAt: true } },
     customers: { orderBy: { createdAt: "asc" }, select: { createdAt: true, properties: { orderBy: { createdAt: "asc" }, take: 1, select: { createdAt: true } } } },
@@ -94,33 +96,37 @@ export async function getActivationFunnel() {
   });
 }
 
-export type CompanyDirectoryFilters = { search?: string; plan?: SubscriptionPlan; status?: SubscriptionStatus; from?: Date; to?: Date; stage?: string; inactiveDays?: number };
+export type CompanyDirectoryFilters = { search?: string; plan?: SubscriptionPlan; status?: SubscriptionStatus; classification?: CompanyClassification; account?: "active"|"suspended"; from?: Date; to?: Date; stage?: string; inactiveDays?: number };
 export async function getPlatformCompanies(filters: CompanyDirectoryFilters = {}) {
   const activity = await prisma.auditEvent.groupBy({ by: ["companyId"], where: { companyId: { not: null }, eventType: meaningfulEvents }, _max: { createdAt: true } });
   const lastByCompany = new Map(activity.map((x) => [x.companyId, x._max.createdAt]));
   const companies = await prisma.company.findMany({
     where: {
-      name: filters.search ? { contains: filters.search, mode: "insensitive" } : undefined,
+      classification: filters.classification,
+      active: filters.account ? filters.account === "active" : undefined,
+      OR: filters.search ? [{ name: { contains: filters.search, mode: "insensitive" } }, { memberships: { some: { role: "Owner", user: { OR: [{email:{contains:filters.search,mode:"insensitive"}},{firstName:{contains:filters.search,mode:"insensitive"}},{lastName:{contains:filters.search,mode:"insensitive"}}] } } } }] : undefined,
       createdAt: filters.from || filters.to ? { gte: filters.from, lte: filters.to } : undefined,
       subscription: filters.plan || filters.status ? { is: { plan: filters.plan, status: filters.status } } : undefined,
     },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 500,
     select: {
-      id: true, name: true, createdAt: true, active: true, onboarding: { select: { completedAt: true } },
-      subscription: { select: { plan: true, status: true, trialEnd: true } },
-      memberships: { select: { id: true } }, estimates: { select: { id: true, sentAt: true, signedAt: true, status: true } },
+      id: true, name: true, createdAt: true, active: true, classification:true, stripeConnectStatus:true, onboarding: { select: { completedAt: true } },
+      subscription: { select: { plan: true, status: true, trialEnd: true, trialStatus:true, trialPlan:true, gracePeriodEnd:true,currentPeriodEnd:true,lastSuccessfulPaymentAt:true,billingInterval:true } },
+      memberships:{where:{role:"Owner",status:"Active"},take:1,select:{user:{select:{firstName:true,lastName:true,email:true}}}},
+      estimates: { where:{createdAt:{gte:new Date(new Date().getFullYear(),new Date().getMonth(),1)}}, select: { id: true, sentAt: true, signedAt: true, status: true } },
       _count: { select: { users: true, estimates: true, jobs: true, invoices: true, customers: true } },
     },
   });
   return companies.map((company) => {
     const stage = company._count.invoices ? "Invoice" : company._count.jobs ? "Job" : company.estimates.some((x) => approvedStatuses.includes(x.status as never)) ? "Approved" : company.estimates.some((x) => x.sentAt) ? "Sent" : company._count.estimates ? "Estimate" : company._count.customers ? "Customer" : company.onboarding?.completedAt ? "Onboarded" : "Registered";
-    return { ...company, activationStage: stage, lastActivity: lastByCompany.get(company.id) ?? null, seatUsage: company.memberships.length, approvals: company.estimates.filter((x) => approvedStatuses.includes(x.status as never)).length };
+    return { ...company, effectivePlan:resolveEffectivePlan(company.subscription).plan, primaryOwner:company.memberships[0]?.user??null, activationStage: stage, lastActivity: lastByCompany.get(company.id) ?? null, seatUsage: company._count.users, approvals: company.estimates.filter((x) => approvedStatuses.includes(x.status as never)).length };
   }).filter((company) => (!filters.stage || company.activationStage === filters.stage) && (!filters.inactiveDays || !company.lastActivity || company.lastActivity < daysAgo(filters.inactiveDays)));
 }
 
 export async function getPlatformCompanySummary(companyId: string) {
   const company = await prisma.company.findUnique({ where: { id: companyId }, select: {
-    id: true, name: true, createdAt: true, active: true, subscription: true,
+    id: true, name: true, createdAt: true, active: true, classification:true,suspendedAt:true,suspendedReason:true, stripeConnectStatus:true,stripeChargesEnabled:true,stripePayoutsEnabled:true,stripeDetailsSubmitted:true, subscription: true,
+    memberships:{where:{status:"Active"},orderBy:{createdAt:"asc"},select:{role:true,user:{select:{firstName:true,lastName:true,email:true}}}},
     settings: { select: { smartPricingEnabled: true, portalBrandingEnabled: true, integrationSettings: true } },
     featureFlags: { select: { key: true, enabled: true } }, usageMetrics: { orderBy: { date: "desc" }, take: 30 },
     onboarding: { select: { completedAt: true, completedSections: true } },
@@ -129,7 +135,8 @@ export async function getPlatformCompanySummary(companyId: string) {
   if (!company) return null;
   const recent = await prisma.auditEvent.findMany({ where: { companyId, eventType: meaningfulEvents }, orderBy: { createdAt: "desc" }, take: 25, select: { createdAt: true, eventType: true, entityType: true } });
   const lastActivity = recent[0]?.createdAt ?? null;
-  return { ...company, recent, lastActivity, warnings: [
+  const deletionPreview = await import("@/lib/admin/platformCompanyManagement").then(x=>x.getDeletionPreview(companyId));
+  return { ...company, effectivePlan:resolveEffectivePlan(company.subscription).plan, recent, lastActivity, deletionPreview, warnings: [
     ...(!company.onboarding?.completedAt ? ["Onboarding is incomplete."] : []),
     ...(!company.subscription ? ["No subscription record is configured."] : []),
     ...(!company.active ? ["The company account is inactive."] : []),
@@ -137,17 +144,18 @@ export async function getPlatformCompanySummary(companyId: string) {
   ] };
 }
 
-export async function getPlatformUsage(now = new Date()) {
+export async function getPlatformUsage(now = new Date(), includeNonCustomers = false) {
   const since = daysAgo(30, now);
+  const company = includeNonCustomers ? {} : { classification: "CUSTOMER" as const };
   const [daily, activity, timeCompanies, fleetCompanies, financeCompanies, taxCompanies, portalCompanies, signups, invoices, estimateEvents] = await Promise.all([
-    prisma.companyUsageDaily.findMany({ where: { date: { gte: daysAgo(30, now) } }, orderBy: { date: "asc" } }),
-    prisma.auditEvent.findMany({ where: { createdAt: { gte: since }, eventType: meaningfulEvents }, select: { createdAt: true, actingUserId: true, companyId: true } }),
-    prisma.timeClockEvent.groupBy({ by: ["companyId"] }), prisma.fleetAsset.groupBy({ by: ["companyId"] }),
-    prisma.businessExpense.groupBy({ by: ["companyId"] }), prisma.taxChecklistItem.groupBy({ by: ["companyId"] }),
-    prisma.auditEvent.groupBy({ by: ["companyId"], where: { portalAccessId: { not: null } } }),
-    prisma.company.findMany({ where: { createdAt: { gte: since } }, select: { createdAt: true } }),
-    prisma.invoice.findMany({ where: { createdAt: { gte: since } }, select: { createdAt: true } }),
-    prisma.estimate.findMany({ where: { createdAt: { gte: since } }, select: { createdAt: true, status: true, sentAt: true } }),
+    prisma.companyUsageDaily.findMany({ where: { company, date: { gte: daysAgo(30, now) } }, orderBy: { date: "asc" } }),
+    prisma.auditEvent.findMany({ where: { company:{is:company}, createdAt: { gte: since }, eventType: meaningfulEvents }, select: { createdAt: true, actingUserId: true, companyId: true } }),
+    prisma.timeClockEvent.groupBy({ by: ["companyId"],where:{company} }), prisma.fleetAsset.groupBy({ by: ["companyId"],where:{company} }),
+    prisma.businessExpense.groupBy({ by: ["companyId"],where:{company} }), prisma.taxChecklistItem.groupBy({ by: ["companyId"],where:{company} }),
+    prisma.auditEvent.groupBy({ by: ["companyId"], where: { company:{is:company},portalAccessId: { not: null } } }),
+    prisma.company.findMany({ where: { ...company,createdAt: { gte: since } }, select: { createdAt: true } }),
+    prisma.invoice.findMany({ where: { company,createdAt: { gte: since } }, select: { createdAt: true } }),
+    prisma.estimate.findMany({ where: { company,createdAt: { gte: since } }, select: { createdAt: true, status: true, sentAt: true } }),
   ]);
   const byDay = new Map<string, { date: string; activeUsers: number; estimates: number; jobs: number; invoices: number; signups: number; companies: number; estimatesSent: number; estimatesApproved: number; approvalRate: number }>();
   const emptyDay = (date: string) => ({ date, activeUsers: 0, estimates: 0, jobs: 0, invoices: 0, signups: 0, companies: 0, estimatesSent: 0, estimatesApproved: 0, approvalRate: 0 });
@@ -182,16 +190,18 @@ export async function getPlatformUsage(now = new Date()) {
   return { daily: [...byDay.values()].sort((a, b) => a.date.localeCompare(b.date)), weeklyActiveUsers: weeklyActors.size, monthlyActiveUsers: monthlyActors.size, moduleCompanies: { time: timeCompanies.length, fleet: fleetCompanies.length, finance: financeCompanies.length, tax: taxCompanies.length, portal: portalCompanies.length } };
 }
 
-export async function getPlatformSubscriptions() {
-  const rows = await prisma.companySubscription.groupBy({ by: ["status"], _count: true });
-  const plans = await prisma.companySubscription.groupBy({ by: ["plan"], _count: true });
+export async function getPlatformSubscriptions(includeNonCustomers = false) {
+  const where=includeNonCustomers?{}:{company:{classification:"CUSTOMER" as const}};
+  const rows = await prisma.companySubscription.groupBy({ by: ["status"],where, _count: true });
+  const plans = await prisma.companySubscription.groupBy({ by: ["plan"],where, _count: true });
   return { statuses: rows.map((x) => ({ label: x.status, value: x._count })), plans: plans.map((x) => ({ label: x.plan, value: x._count })) };
 }
 
-export async function getPlatformConversions(range: { from?: Date; to: Date }) {
+export async function getPlatformConversions(range: { from?: Date; to: Date }, includeNonCustomers = false) {
   const createdAt = { gte: range.from, lte: range.to };
-  const estimates = await prisma.estimate.findMany({ where: { createdAt }, select: { status: true, createdAt: true, sentAt: true, signedAt: true, job: { select: { id: true } } } });
-  const invoices = await prisma.invoice.findMany({ where: { createdAt }, select: { status: true, payments: { select: { id: true } } } });
+  const company=includeNonCustomers?{}:{classification:"CUSTOMER" as const};
+  const estimates = await prisma.estimate.findMany({ where: { company,createdAt }, select: { status: true, createdAt: true, sentAt: true, signedAt: true, job: { select: { id: true } } } });
+  const invoices = await prisma.invoice.findMany({ where: { company,createdAt }, select: { status: true, payments: { select: { id: true } } } });
   return calculateConversionMetrics(estimates, invoices);
 }
 export function calculateConversionMetrics(
