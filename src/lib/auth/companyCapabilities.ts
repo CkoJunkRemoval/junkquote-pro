@@ -51,6 +51,7 @@ export function hasCompanyModuleAccess(
   module: CompanyModule,
 ) {
   const { role } = subject;
+  if (role === "Owner") return true;
   switch (module) {
     case "dashboard":
     case "myTime":
@@ -77,7 +78,7 @@ export function hasCompanyModuleAccess(
     case "pricing":
       return officeOperations.has(role);
     case "analytics":
-      return role === "Owner" || role === "Admin" || role === "Manager";
+      return role === "Admin" || role === "Manager";
     case "finance":
     case "tax":
     case "pricingIntelligence":

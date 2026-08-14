@@ -26,7 +26,7 @@ async function authorizedCompanyId() {
 }
 export async function addPaymentAction(invoiceId: string, input: PaymentInput) {
   const c = await authorizedContext();
-  await requireFeature(c.companyId, "payments");
+  await requireFeature(c.companyId, "payments", c.role);
   const result = await recordPayment(c.companyId, invoiceId, input);
   await recordAuditEvent({
     companyId: c.companyId,

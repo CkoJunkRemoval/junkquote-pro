@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ requireTenantContext: vi.fn(), forbidden: vi.fn(() => { throw new Error("NEXT_FORBIDDEN"); }) }));
+const mocks = vi.hoisted(() => ({ requireTenantContext: vi.fn(), canAccessFeature: vi.fn(async () => true), forbidden: vi.fn(() => { throw new Error("NEXT_FORBIDDEN"); }) }));
 vi.mock("server-only", () => ({}));
 vi.mock("next/navigation", () => ({ forbidden: mocks.forbidden }));
 vi.mock("./tenant", () => ({
@@ -9,7 +9,7 @@ vi.mock("./tenant", () => ({
   },
   requireTenantContext: mocks.requireTenantContext,
 }));
-vi.mock("@/lib/billing/entitlements", () => ({ canAccessFeature: vi.fn(async () => true) }));
+vi.mock("@/lib/billing/entitlements", () => ({ canAccessFeature: mocks.canAccessFeature }));
 
 import { AuthorizationError } from "./tenant";
 import { requireCompanyModulePage } from "./pageAccess";
@@ -28,6 +28,7 @@ describe("company module page authorization", () => {
     await expect(requireCompanyModulePage("invoices")).rejects.toThrow("NEXT_FORBIDDEN");
     expect(mocks.forbidden).toHaveBeenCalledOnce();
   });
+  it("passes the membership role into paid feature gates", async () => { mocks.requireTenantContext.mockResolvedValue(context("Owner")); await requireCompanyModulePage("finance"); expect(mocks.canAccessFeature).toHaveBeenCalledWith("company-a", "finance", "Owner"); });
   it("converts an authenticated membership failure into controlled forbidden", async () => {
     mocks.requireTenantContext.mockRejectedValue(new AuthorizationError("NO_ACTIVE_MEMBERSHIP", "Membership required"));
     await expect(requireCompanyModulePage("invoices")).rejects.toThrow("NEXT_FORBIDDEN");

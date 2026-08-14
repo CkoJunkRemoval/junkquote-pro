@@ -16,7 +16,7 @@ const text = (data: FormData, name: string) => String(data.get(name) ?? "").trim
 async function context(capability: Parameters<typeof requireTaxCapability>[1]) {
   const tenant = await requireTenantContext();
   requireTaxCapability(tenant.role, capability);
-  await requireFeature(tenant.companyId, "taxCenter");
+  await requireFeature(tenant.companyId, "taxCenter", tenant.role);
   return tenant;
 }
 

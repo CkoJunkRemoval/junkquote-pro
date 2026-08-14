@@ -11,7 +11,7 @@ export async function GET(
   const { id } = await params,
     c = await requireTenantContext();
   requireTimeCapability(c.role, "time.export");
-  if (!(await canAccessFeature(c.companyId, "advancedExports"))) return Response.json({ error: { code: "UPGRADE_REQUIRED", message: "Upgrade to export timekeeping data." } }, { status: 403 });
+  if (!(await canAccessFeature(c.companyId, "advancedExports", c.role))) return Response.json({ error: { code: "UPGRADE_REQUIRED", message: "Upgrade to export timekeeping data." } }, { status: 403 });
   const csv = await exportApprovedTimeCsv(
     c.companyId,
     c.user.id,

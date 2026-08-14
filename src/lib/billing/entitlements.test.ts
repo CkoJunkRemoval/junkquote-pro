@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ subscription: vi.fn(), usage: vi.fn() }));
 vi.mock("@/lib/prisma", () => ({ prisma: { companySubscription: { findUnique: mocks.subscription }, estimateUsageEvent: { count: mocks.usage } } }));
-import { BillingAccessError, canCreateEstimate, resolveEffectivePlan, utcMonthRange } from "./entitlements";
+import { BillingAccessError, canAccessFeature, canCreateEstimate, requireFeature, resolveEffectivePlan, utcMonthRange } from "./entitlements";
 const base = { plan: "Starter" as const, status: "Incomplete" as const, trialEnd: null, trialPlan: "Professional" as const, trialStatus: null, gracePeriodEnd: null, currentPeriodEnd: null, lastSuccessfulPaymentAt: null };
 describe("effective subscription plan", () => {
   const now = new Date("2026-01-31T12:00:00.000Z");
@@ -16,4 +16,6 @@ describe("Free estimate allowance", () => {
   beforeEach(() => { mocks.subscription.mockResolvedValue(null); mocks.usage.mockReset(); });
   it("allows the first six estimates and blocks the seventh", async () => { mocks.usage.mockResolvedValueOnce(5); await expect(canCreateEstimate("company-1", new Date("2026-01-15"))).resolves.toBe(true); mocks.usage.mockResolvedValueOnce(6); await expect(canCreateEstimate("company-1", new Date("2026-01-15"))).rejects.toMatchObject({ code: "PLAN_LIMIT" } satisfies Partial<BillingAccessError>); });
   it("counts only the current UTC month", async () => { mocks.usage.mockResolvedValue(0); await canCreateEstimate("company-1", new Date("2026-02-01T00:00:00Z")); expect(mocks.usage).toHaveBeenCalledWith({ where: { companyId: "company-1", createdAt: { gte: new Date("2026-02-01T00:00:00Z"), lt: new Date("2026-03-01T00:00:00Z") } } }); });
+  it("lets Owner bypass feature and usage plan restrictions", async () => { mocks.usage.mockResolvedValue(999); await expect(canAccessFeature("company-1", "advancedExports", "Owner")).resolves.toBe(true); await expect(requireFeature("company-1", "finance", "Owner")).resolves.toMatchObject({ plan: "Free" }); await expect(canCreateEstimate("company-1", new Date("2026-01-15"), "Owner")).resolves.toBe(true); expect(mocks.usage).not.toHaveBeenCalled(); });
+  it("keeps non-owner feature and usage restrictions", async () => { await expect(canAccessFeature("company-1", "advancedExports", "Manager")).resolves.toBe(false); await expect(requireFeature("company-1", "finance", "Admin")).rejects.toMatchObject({ code: "FEATURE_UNAVAILABLE" }); mocks.usage.mockResolvedValue(6); await expect(canCreateEstimate("company-1", new Date("2026-01-15"), "Office")).rejects.toMatchObject({ code: "PLAN_LIMIT" }); });
 });

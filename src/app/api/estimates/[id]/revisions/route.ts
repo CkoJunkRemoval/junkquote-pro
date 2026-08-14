@@ -5,8 +5,8 @@ import { withDistributedLock } from "@/lib/distributed/locks";
 
 export async function POST(_request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const { companyId } = await requireCompanyRole("Owner", "Admin", "Manager", "Office");
-    const revision = await withDistributedLock("estimate-plan-limit", companyId, 30_000, async () => { await canCreateEstimate(companyId); return createEstimateRevision(companyId, (await context.params).id); });
+    const { companyId, role } = await requireCompanyRole("Owner", "Admin", "Manager", "Office");
+    const revision = await withDistributedLock("estimate-plan-limit", companyId, 30_000, async () => { await canCreateEstimate(companyId, new Date(), role); return createEstimateRevision(companyId, (await context.params).id); });
     return Response.json({ revision }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to create revision.";

@@ -34,7 +34,7 @@ const resolveTenantContext = cache(async (): Promise<TenantContext | null> => {
 
 export function getTenantContext() { return resolveTenantContext(); }
 export async function requireTenantContext() { const context = await getTenantContext(); if (!context) throw new AuthorizationError("UNAUTHENTICATED", "Sign in is required."); return context; }
-export async function requireTenantRole(...roles: MembershipRole[]) { const context = await requireTenantContext(); if (!roles.includes(context.role)) throw new AuthorizationError("FORBIDDEN", "Your company role cannot perform this action."); return context; }
+export async function requireTenantRole(...roles: MembershipRole[]) { const context = await requireTenantContext(); if (context.role !== "Owner" && !roles.includes(context.role)) throw new AuthorizationError("FORBIDDEN", "Your company role cannot perform this action."); return context; }
 export function requireOperationalTenant() { return requireTenantRole("Owner", "Admin", "Manager", "Office"); }
 export function requireAdminTenant() { return requireTenantRole("Owner", "Admin"); }
 

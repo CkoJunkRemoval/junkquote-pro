@@ -42,7 +42,7 @@ export async function requireCompanyModulePage(module: CompanyModule) {
     forbidden();
   }
   const paidFeature = paidModuleFeatures[module];
-  if (paidFeature && !(await canAccessFeature(tenant.companyId, paidFeature)))
+  if (paidFeature && !(await canAccessFeature(tenant.companyId, paidFeature, tenant.role)))
     forbidden();
   return tenant;
 }

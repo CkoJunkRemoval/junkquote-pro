@@ -38,7 +38,7 @@ const cents = (data: FormData, name: string) =>
 async function context(capability: Parameters<typeof requireFinanceCapability>[1]) {
   const tenant = await requireTenantContext();
   requireFinanceCapability(tenant.role, capability);
-  await requireFeature(tenant.companyId, "finance");
+  await requireFeature(tenant.companyId, "finance", tenant.role);
   return tenant;
 }
 

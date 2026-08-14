@@ -9,7 +9,7 @@ import { currentRequestId } from "@/lib/audit/requestAudit";
 import { requireFeature } from "@/lib/billing/entitlements";
 export async function createInvoiceAction(input: CreateInvoiceInput) {
   const c = await requireOperationalTenant();
-  await requireFeature(c.companyId,"invoicing");
+  await requireFeature(c.companyId,"invoicing",c.role);
   const result = await createInvoice(c.companyId, input);
   await recordAuditEvent({
     companyId: c.companyId,

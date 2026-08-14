@@ -25,7 +25,7 @@ export async function GET(request: Request) {
   const requestId = createRequestId(request.headers.get("x-request-id"));
   try {
     const c = await requireCompanyRole("Owner", "Admin", "Manager", "Office");
-    await requireFeature(c.companyId, "advancedExports");
+    await requireFeature(c.companyId, "advancedExports", c.role);
     if (
       !(await checkRateLimit(
         `analytics-export:${c.companyId}:${c.user.id}`,

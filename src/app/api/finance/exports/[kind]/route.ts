@@ -26,7 +26,7 @@ export async function GET(
   { params }: { params: Promise<{ kind: string }> },
 ) {
   const tenant = await requireTenantContext();
-  if (!(await canAccessFeature(tenant.companyId, "advancedExports"))) return Response.json({ error: { code: "UPGRADE_REQUIRED", message: "Upgrade to export Finance data." } }, { status: 403 });
+  if (!(await canAccessFeature(tenant.companyId, "advancedExports", tenant.role))) return Response.json({ error: { code: "UPGRADE_REQUIRED", message: "Upgrade to export Finance data." } }, { status: 403 });
   if (!hasFinanceCapability(tenant.role, "finance.exports"))
     return Response.json({ error: { code: "FORBIDDEN", message: "You do not have permission to use this feature." } }, { status: 403 });
   const { kind } = await params;

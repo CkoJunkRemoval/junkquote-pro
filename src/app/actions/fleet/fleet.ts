@@ -37,7 +37,7 @@ const refresh = (assetId?: string) => {
 async function context(capability: FleetCapability) {
   const tenant = await requireTenantContext();
   requireFleetCapability(tenant.role, capability);
-  await requireFeature(tenant.companyId, "fleet");
+  await requireFeature(tenant.companyId, "fleet", tenant.role);
   return tenant;
 }
 async function assertOperationalAssetAccess(

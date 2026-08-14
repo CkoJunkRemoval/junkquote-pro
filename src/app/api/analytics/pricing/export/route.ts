@@ -11,7 +11,7 @@ export async function GET(request:Request){
   const requestId=createRequestId(request.headers.get("x-request-id"));
   try{
     const context=await requireCompanyRole("Owner","Admin");
-    await requireFeature(context.companyId,"advancedExports");
+    await requireFeature(context.companyId,"advancedExports",context.role);
     if(!(await checkRateLimit(`pricing-intelligence-export:${context.companyId}:${context.user.id}`,ratePolicies.export)).allowed)throw new AppError("RATE_LIMITED","Too many export requests.");
     const url=new URL(request.url),raw=Object.fromEntries(url.searchParams),format=raw.format==="pdf"?"pdf":"csv";
     const data=await getPricingIntelligence(context.companyId,parsePricingIntelligenceFilters(raw)),rows=pricingIntelligenceRows(data);
