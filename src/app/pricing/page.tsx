@@ -8,7 +8,7 @@ import { requireTenantContext } from "@/lib/auth/tenant";
 import { getCompanyEntitlements } from "@/lib/billing/entitlements";
 import { isBillingAvailable } from "@/lib/billing/stripe";
 
-export const metadata = { title: "Pricing | JunkQuote Pro" };
+export const metadata = { title: "Pricing - Junk Removal Software Plans from $0/mo", description: "Junk removal software plans priced per company, not per seat. Start free or try Professional for 30 days with no credit card required." };
 export default async function PricingPage() {
   if (await auth()) {
     const context = await requireTenantContext();

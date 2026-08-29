@@ -5,9 +5,15 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   applicationName: "JunkQuote Pro",
-  title: { default: "JunkQuote Pro", template: "%s | JunkQuote Pro" },
+  title: { default: "JunkQuote Pro - Junk Removal Business Software | Estimate, Schedule, Invoice, Get Paid", template: "%s | JunkQuote Pro" },
   description:
-    "Junk-removal estimating, scheduling, field operations, invoicing, and payments.",
+    "Run your junk removal business, not your paperwork. Estimate, schedule, dispatch, invoice, and collect payment in one place.",
+  openGraph: {
+    type: "website", siteName: "JunkQuote Pro", title: "JunkQuote Pro - Junk Removal Business Software",
+    description: "Run your junk removal business, not your paperwork. Estimate, schedule, invoice, and collect payment in one place.",
+    images: [{ url: "/branding/dashboard-hero.webp", width: 1600, height: 675, alt: "Junk removal crew loading a truck" }],
+  },
+  twitter: { card: "summary_large_image", title: "JunkQuote Pro - Junk Removal Business Software", description: "Estimate, schedule, invoice, and collect payment in one place." },
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
