@@ -20,10 +20,16 @@ describe("production route protection", () => {
   it("protects staff routes", () => {
     expect(allowed("/dashboard")).toBe(false);
     expect(allowed("/dashboard", true)).toBe(true);
+    expect(allowed("/customers")).toBe(false);
+    expect(allowed("/customers/customer-id")).toBe(false);
+    expect(allowed("/customers", true)).toBe(true);
   });
   it("keeps the middleware and Auth.js public-route decisions aligned", () => {
     expect(isPublicAuthPath("/sign-in")).toBe(true);
     expect(isPublicAuthPath("/reset-password/token")).toBe(true);
+    expect(isPublicAuthPath("/customer-stories")).toBe(true);
+    expect(isPublicAuthPath("/customers")).toBe(false);
+    expect(isPublicAuthPath("/customers/customer-id")).toBe(false);
     expect(isPublicAuthPath("/dashboard")).toBe(false);
   });
 });

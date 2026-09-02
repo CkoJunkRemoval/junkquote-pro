@@ -1,0 +1,10 @@
+import Link from "next/link";
+
+export const metadata = {
+  title: "Customer Stories",
+  description: "JunkQuote Pro customer stories.",
+};
+
+export default function CustomerStories() {
+  return <main className="min-h-screen bg-[#050806] px-5 py-12 text-white"><div className="mx-auto max-w-3xl"><Link href="/" className="font-black text-[#a4ef29]">JunkQuote Pro</Link><h1 className="mt-12 text-5xl font-black">Customer stories are on the way.</h1><p className="mt-5 text-xl text-slate-300">We do not publish customer names or outcomes without their permission. Check back soon for verified stories from junk removal operators.</p></div></main>;
+}

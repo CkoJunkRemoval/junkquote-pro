@@ -45,6 +45,7 @@ export default function Sidebar({ collapsed, mobileOpen, onClose, onToggle }: { 
   useEffect(() => { void getCompanyBranding().then((value) => setCompany({ displayName: value.displayName || value.name, logoUrl: value.logoUrl })).catch(() => undefined); }, []);
   useEffect(() => { void getVisibleNavigationModules().then(setVisibleModules).catch(() => setVisibleModules([])); }, []);
   const width = collapsed ? "lg:w-20" : "lg:w-64";
+  const visibleItems = items.filter((item) => visibleModules.includes(item.module));
 
   return <>
     {mobileOpen && <button aria-label="Close navigation" onClick={onClose} className="fixed inset-0 z-30 bg-slate-950/75 backdrop-blur-sm lg:hidden" />}
@@ -52,7 +53,7 @@ export default function Sidebar({ collapsed, mobileOpen, onClose, onToggle }: { 
       <div className="flex h-20 items-center justify-between border-b border-white/10 px-5">
         <Link href="/dashboard" onClick={onClose} className="flex min-h-11 min-w-0 items-center gap-3">
           <CompanyLogo src={company?.logoUrl} companyName={company?.displayName} size={36} fallbackClassName="rounded-lg !bg-[var(--brand-orange)]" />
-          {!collapsed && <span className="min-w-0"><span className="block truncate text-base font-bold">{company?.displayName ?? "Your company"}</span><span className="block truncate text-[11px] uppercase tracking-[0.16em] text-slate-400">JunkQuote Pro</span></span>}
+          <span className={`min-w-0 ${collapsed ? "lg:hidden" : ""}`}><span className="block truncate text-base font-bold">{company?.displayName ?? "Your company"}</span><span className="block truncate text-[11px] uppercase tracking-[0.16em] text-slate-400">JunkQuote Pro</span></span>
         </Link>
         <button
           aria-label="Close navigation"
@@ -63,12 +64,13 @@ export default function Sidebar({ collapsed, mobileOpen, onClose, onToggle }: { 
         </button>
       </div>
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-        {items.filter((item) => visibleModules.includes(item.module)).map(({ label, href, icon: Icon }) => {
-          const active = pathname === href || (href === "/estimates" && pathname === "/estimate");
-          return <Link key={href} href={href} onClick={onClose} title={collapsed ? label : undefined} aria-current={active ? "page" : undefined} className={`sidebar-link flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${active ? "sidebar-link--active" : "text-slate-300"}`}><Icon size={19} /><span className={collapsed ? "hidden" : ""}>{label}</span></Link>;
+        {visibleItems.map(({ label, href, icon: Icon }) => {
+          const moreSpecificItemMatches = visibleItems.some((item) => item.href.startsWith(`${href}/`) && (pathname === item.href || pathname.startsWith(`${item.href}/`)));
+          const active = pathname === href || (pathname.startsWith(`${href}/`) && !moreSpecificItemMatches) || (href === "/estimates" && pathname === "/estimate");
+          return <Link key={href} href={href} onClick={onClose} title={collapsed && !mobileOpen ? label : undefined} aria-current={active ? "page" : undefined} className={`sidebar-link flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${active ? "sidebar-link--active" : "text-slate-300"}`}><Icon className="shrink-0" size={19} /><span className={`truncate ${collapsed ? "lg:hidden" : ""}`}>{label}</span></Link>;
         })}
       </nav>
-      <div className="hidden border-t border-white/10 p-3 lg:block"><button onClick={onToggle} className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2.5 text-slate-300 hover:bg-white/5"><ChevronLeft className={collapsed ? "rotate-180" : ""} size={20} /><span className={collapsed ? "hidden" : ""}>Collapse</span></button></div>
+      <div className="hidden border-t border-white/10 p-3 lg:block"><button aria-label={collapsed ? "Expand navigation" : "Collapse navigation"} onClick={onToggle} className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2.5 text-slate-300 hover:bg-white/5"><ChevronLeft className={`shrink-0 ${collapsed ? "rotate-180" : ""}`} size={20} /><span className={collapsed ? "hidden" : ""}>Collapse</span></button></div>
     </aside>
   </>;
 }
