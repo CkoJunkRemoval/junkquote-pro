@@ -69,6 +69,8 @@ describe("communication queue", () => {
     );
     expect(result.mode).toBe("synchronous");
     expect(provider.send).toHaveBeenCalledOnce();
+    expect(deliveryMocks.begin).toHaveBeenCalledBefore(provider.send);
+    expect(provider.send).toHaveBeenCalledBefore(deliveryMocks.sent);
     expect(deliveryMocks.sent).toHaveBeenCalledWith("delivery-1", "console-1");
   });
   it("records a failed synchronous delivery without marking it sent", async () => {

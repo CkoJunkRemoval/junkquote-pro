@@ -12,8 +12,10 @@ describe("invoice email review UI", () => {
     expect(source).toContain('type="email"');
     expect(source).toContain("setEmailSubject");
     expect(source).toContain("setEmailMessage");
-    expect(source).toContain("Sending…");
+    expect(source).toContain("Sending...");
     expect(source).toContain("Resend Invoice");
+    expect(source).toContain("Delivery failed:");
+    expect(source).not.toContain("Scheduled");
   });
 
   it("explains a missing saved customer email and reports success and errors", () => {

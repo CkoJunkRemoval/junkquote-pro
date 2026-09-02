@@ -31,8 +31,25 @@ export async function sendInvoiceAction(invoiceId: string, input: { recipient: s
     await recordAuditEvent({ companyId: c.companyId, actingUserId: c.user.id, eventType: "invoice.sent", entityType: "Invoice", entityId: invoiceId, requestId: await currentRequestId(), metadata: { to: result.invoice.lastSentTo, providerMessageId: result.providerMessageId } });
     return { ok: true as const, invoice: result.invoice };
   } catch (error) {
-    if (error instanceof AppError && ["VALIDATION_FAILED", "NOT_FOUND", "PROVIDER_FAILED"].includes(error.code)) {
-      return { ok: false as const, error: error.message };
+    if (error instanceof AppError) {
+      console.error("Invoice email failed.", {
+        invoiceId,
+        companyId: c.companyId,
+        code: error.code,
+        providerStatus:
+          typeof error.details?.providerStatus === "number"
+            ? error.details.providerStatus
+            : undefined,
+      });
+      if (error.code === "PROVIDER_FAILED") {
+        return {
+          ok: false as const,
+          error: "We couldn't send this invoice email. Please try again.",
+        };
+      }
+      if (["VALIDATION_FAILED", "NOT_FOUND"].includes(error.code)) {
+        return { ok: false as const, error: error.message };
+      }
     }
     console.error("Invoice email failed unexpectedly.", { invoiceId, companyId: c.companyId });
     return { ok: false as const, error: "Unable to send the invoice email right now." };

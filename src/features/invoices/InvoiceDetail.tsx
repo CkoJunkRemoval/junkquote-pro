@@ -70,7 +70,7 @@ export default function InvoiceDetail({
         message: emailMessage,
       });
       if (!result.ok) {
-        setError(result.error);
+        setError(`Delivery failed: ${result.error}`);
         return;
       }
       const updated = result.invoice;
@@ -78,7 +78,9 @@ export default function InvoiceDetail({
       setMessage(`Invoice emailed to ${updated.lastSentTo}.`);
       setShowEmailForm(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to send invoice.");
+      setError(
+        `Delivery failed: ${e instanceof Error ? e.message : "Unable to send invoice."}`,
+      );
     } finally {
       setSaving(false);
     }
@@ -242,7 +244,7 @@ export default function InvoiceDetail({
             disabled={saving || !recipient.trim() || !emailSubject.trim() || !emailMessage.trim()}
             className="mt-4 min-h-11 rounded-lg bg-blue-700 px-4 py-2 font-semibold text-white disabled:opacity-60"
           >
-            {saving ? "Sending…" : invoice.sentAt ? "Resend Invoice" : "Send Invoice"}
+            {saving ? "Sending..." : invoice.sentAt ? "Resend Invoice" : "Send Invoice"}
           </button>
         </section>
       )}
