@@ -1,19 +1,21 @@
 import type { Metadata, Viewport } from "next";
 import { PwaManager } from "@/components/pwa/PwaManager";
 import { NativeBridge } from "@/components/native/NativeBridge";
+import { siteUrl } from "@/lib/marketing/metadata";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: siteUrl,
   applicationName: "JunkQuote Pro",
-  title: { default: "JunkQuote Pro - Junk Removal Business Software | Estimate, Schedule, Invoice, Get Paid", template: "%s | JunkQuote Pro" },
+  title: { default: "JunkQuote Pro", template: "%s | JunkQuote Pro" },
   description:
-    "Run your junk removal business, not your paperwork. Estimate, schedule, dispatch, invoice, and collect payment in one place.",
+    "JunkQuote Pro is estimating and job management software built for junk removal businesses. Create quotes, manage jobs, organize customers, and keep your operation moving.",
   openGraph: {
-    type: "website", siteName: "JunkQuote Pro", title: "JunkQuote Pro - Junk Removal Business Software",
-    description: "Run your junk removal business, not your paperwork. Estimate, schedule, invoice, and collect payment in one place.",
-    images: [{ url: "/branding/dashboard-hero.webp", width: 1600, height: 675, alt: "Junk removal crew loading a truck" }],
+    type: "website", siteName: "JunkQuote Pro", title: "JunkQuote Pro",
+    description: "JunkQuote Pro is estimating and job management software built for junk removal businesses.",
+    images: [{ url: "/branding/dashboard-hero.webp", width: 1600, height: 675, alt: "Junk removal crew loading furniture into a truck" }],
   },
-  twitter: { card: "summary_large_image", title: "JunkQuote Pro - Junk Removal Business Software", description: "Estimate, schedule, invoice, and collect payment in one place." },
+  twitter: { card: "summary_large_image", title: "JunkQuote Pro", description: "Estimating and job management software built for junk removal businesses.", images: ["/branding/dashboard-hero.webp"] },
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,

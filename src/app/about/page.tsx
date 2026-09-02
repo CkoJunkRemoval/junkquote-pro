@@ -1,10 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
+import { marketingMetadata } from "@/lib/marketing/metadata";
 
-export const metadata = {
-  title: "About Chris, Founder of JunkQuote Pro",
-  description: "JunkQuote Pro was built by a junk removal business owner for the people doing the work.",
-};
+export const metadata = marketingMetadata(
+  "/about",
+  "About the Founder | JunkQuote Pro",
+  "Meet the junk removal business owner behind JunkQuote Pro and learn why the software was built around the way junk removal companies actually work.",
+);
 
 export default function About() {
   return <main className="min-h-screen overflow-x-hidden bg-[#050806] text-white">
