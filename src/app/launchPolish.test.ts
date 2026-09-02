@@ -17,7 +17,7 @@ describe("launch polish public and invoice UX", () => {
     expect(home).toContain("Start Your 30-Day Professional Trial");
   });
   it("states the complete trial and Free fallback terms", () => {
-    for (const copy of ["30-Day Professional Trial", "No Credit Card Required", "Full Professional Access", "automatically moves to the Free plan", "6 estimates per month", "There is no automatically renewing paid trial"]) expect(home).toContain(copy);
+    for (const copy of ["30-Day Professional Trial", "No Credit Card Required", "Full Professional Access", "You automatically move to the Free plan", "6 estimates per month", "No charge and no credit card required"]) expect(home).toContain(copy);
   });
   it("renders public prices from the authoritative plan catalog", () => {
     expect(plans.Free.monthlyCents).toBe(0);

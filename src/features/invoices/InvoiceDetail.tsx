@@ -29,6 +29,14 @@ export default function InvoiceDetail({
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showEmailForm, setShowEmailForm] = useState(false);
+  const invoiceLabel = invoice.displayNumber ?? `Invoice #${invoice.invoiceNumber}`;
+  const companyName = invoice.company.displayName ?? invoice.company.name;
+  const [recipient, setRecipient] = useState(invoice.customer.email ?? "");
+  const [emailSubject, setEmailSubject] = useState(
+    `${invoiceLabel} from ${companyName}`,
+  );
+  const [emailMessage, setEmailMessage] = useState("Your invoice is ready.");
   const [items, setItems] = useState(
     invoice.lineItems.map((x) => ({
       description: x.description,
@@ -56,9 +64,19 @@ export default function InvoiceDetail({
     setSaving(true);
     setError(null);
     try {
-      const updated = await sendInvoiceAction(invoice.id);
+      const result = await sendInvoiceAction(invoice.id, {
+        recipient,
+        subject: emailSubject,
+        message: emailMessage,
+      });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      const updated = result.invoice;
       setInvoice((current) => ({ ...current, ...updated }));
       setMessage(`Invoice emailed to ${updated.lastSentTo}.`);
+      setShowEmailForm(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to send invoice.");
     } finally {
@@ -129,7 +147,11 @@ export default function InvoiceDetail({
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => void send()}
+            onClick={() => {
+              setError(null);
+              setMessage(null);
+              setShowEmailForm(true);
+            }}
             disabled={
               saving ||
               invoice.status === "Void" ||
@@ -137,7 +159,7 @@ export default function InvoiceDetail({
             }
             className="min-h-11 rounded-lg bg-blue-700 px-4 py-2 font-semibold text-white"
           >
-            Email Invoice
+            {invoice.sentAt ? "Resend Invoice" : "Email Invoice"}
           </button>
           <button
             type="button"
@@ -158,6 +180,72 @@ export default function InvoiceDetail({
       </div>
       {error && <p role="alert" className="mt-4 text-red-600">{error}</p>}
       {message && <p role="status" className="mt-4 text-green-700">{message}</p>}
+      {showEmailForm && (
+        <section className="mt-6 rounded-2xl border border-green-200 bg-white p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold">Review invoice email</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                The current invoice PDF will be attached automatically.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowEmailForm(false)}
+              disabled={saving}
+              className="min-h-11 rounded-lg border px-4 py-2 font-semibold"
+            >
+              Cancel
+            </button>
+          </div>
+          {!invoice.customer.email && (
+            <p role="alert" className="mt-4 text-amber-800">
+              This customer does not have an email address on file. Enter a recipient below.
+            </p>
+          )}
+          <div className="mt-4 grid gap-4">
+            <label className="grid gap-1 font-semibold">
+              Recipient
+              <input
+                type="email"
+                required
+                value={recipient}
+                onChange={(event) => setRecipient(event.target.value)}
+                className="rounded-lg border p-3 font-normal"
+                autoComplete="email"
+              />
+            </label>
+            <label className="grid gap-1 font-semibold">
+              Subject
+              <input
+                required
+                maxLength={200}
+                value={emailSubject}
+                onChange={(event) => setEmailSubject(event.target.value)}
+                className="rounded-lg border p-3 font-normal"
+              />
+            </label>
+            <label className="grid gap-1 font-semibold">
+              Message
+              <textarea
+                required
+                maxLength={2000}
+                value={emailMessage}
+                onChange={(event) => setEmailMessage(event.target.value)}
+                className="min-h-28 rounded-lg border p-3 font-normal"
+              />
+            </label>
+          </div>
+          <button
+            type="button"
+            onClick={() => void send()}
+            disabled={saving || !recipient.trim() || !emailSubject.trim() || !emailMessage.trim()}
+            className="mt-4 min-h-11 rounded-lg bg-blue-700 px-4 py-2 font-semibold text-white disabled:opacity-60"
+          >
+            {saving ? "Sending…" : invoice.sentAt ? "Resend Invoice" : "Send Invoice"}
+          </button>
+        </section>
+      )}
       <section className="mt-6 rounded-2xl border bg-white p-6">
         <h2 className="text-xl font-bold">Status</h2>
         <div className="mt-3 flex flex-wrap gap-3">

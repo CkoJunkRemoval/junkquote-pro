@@ -57,13 +57,6 @@ export async function sendOrEnqueueCommunication(
       job: await enqueueCommunication(companyId, input, options.queue),
     };
   const provider = options.provider ?? selectCommunicationProvider();
-  if (options.provider)
-    return {
-      mode: "synchronous" as const,
-      result: await provider.send(input, {
-        idempotencyKey: input.idempotencyKey,
-      }),
-    };
   const requestId = createRequestId();
   const delivery = await beginDelivery({
     companyId,

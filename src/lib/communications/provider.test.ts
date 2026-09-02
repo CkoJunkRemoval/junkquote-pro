@@ -55,6 +55,7 @@ describe("email provider", () => {
           to: "to@example.com",
           subject: "Hi",
           body: "Private body",
+          attachments: [{ filename: "invoice.pdf", content: "base64", contentType: "application/pdf" }],
         },
         {
           idempotencyKey: "key-1",
@@ -72,5 +73,6 @@ describe("email provider", () => {
     expect(JSON.stringify(fetcher.mock.calls)).toContain(
       "X-JunkQuote-Request-ID",
     );
+    expect(JSON.stringify(fetcher.mock.calls)).toContain("invoice.pdf");
   });
 });

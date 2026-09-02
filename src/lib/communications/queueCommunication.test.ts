@@ -1,15 +1,20 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+const deliveryMocks = vi.hoisted(() => ({ begin: vi.fn(), failed: vi.fn(), sent: vi.fn() }));
 vi.mock("@/lib/backgroundJobs/databaseQueue", () => ({ databaseJobQueue: {} }));
 vi.mock("./delivery", () => ({
-  beginDelivery: vi.fn(),
-  markDeliveryFailed: vi.fn(),
-  markDeliverySent: vi.fn(),
+  beginDelivery: deliveryMocks.begin,
+  markDeliveryFailed: deliveryMocks.failed,
+  markDeliverySent: deliveryMocks.sent,
 }));
 import {
   enqueueCommunication,
   sendOrEnqueueCommunication,
 } from "./queueCommunication";
 describe("communication queue", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    deliveryMocks.begin.mockResolvedValue({ id: "delivery-1" });
+  });
   it("enqueues email and future SMS payloads", async () => {
     const queue = {
       enqueue: vi.fn().mockResolvedValue({ id: "job" }),
@@ -64,5 +69,17 @@ describe("communication queue", () => {
     );
     expect(result.mode).toBe("synchronous");
     expect(provider.send).toHaveBeenCalledOnce();
+    expect(deliveryMocks.sent).toHaveBeenCalledWith("delivery-1", "console-1");
+  });
+  it("records a failed synchronous delivery without marking it sent", async () => {
+    const error = new Error("provider failed");
+    const provider = { send: vi.fn().mockRejectedValue(error) };
+    await expect(sendOrEnqueueCommunication(
+      "tenant-a",
+      { channel: "email", to: "a@test.invalid", body: "Body", idempotencyKey: "email-failed" },
+      { workersEnabled: false, provider },
+    )).rejects.toThrow("provider failed");
+    expect(deliveryMocks.failed).toHaveBeenCalledWith("delivery-1", error);
+    expect(deliveryMocks.sent).not.toHaveBeenCalled();
   });
 });

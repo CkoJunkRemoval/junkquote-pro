@@ -5,6 +5,11 @@ export type CommunicationMessage = {
   to: string;
   subject?: string;
   body: string;
+  attachments?: Array<{
+    filename: string;
+    content: string;
+    contentType?: string;
+  }>;
 };
 export type ProviderSendOptions = {
   idempotencyKey: string;
@@ -65,6 +70,11 @@ export class ResendEmailProvider implements CommunicationProvider {
           to: [message.to],
           subject: message.subject ?? "JunkQuote Pro notification",
           text: message.body,
+          attachments: message.attachments?.map((attachment) => ({
+            filename: attachment.filename,
+            content: attachment.content,
+            content_type: attachment.contentType,
+          })),
           headers: {
             ...(options.requestId
               ? { "X-JunkQuote-Request-ID": options.requestId }
