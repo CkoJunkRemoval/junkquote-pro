@@ -1,2 +1,2 @@
 import { redirect } from "next/navigation";
-export default function EstimatePage() { redirect("/estimates"); }
+export default function EstimatePage() { redirect("/estimates?new=1"); }

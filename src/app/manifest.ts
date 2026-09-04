@@ -52,7 +52,7 @@ export default function manifest(): MetadataRoute.Manifest {
       {
         name: "New Estimate",
         short_name: "New Estimate",
-        url: "/estimate",
+        url: "/estimates?new=1",
         icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }],
       },
       {

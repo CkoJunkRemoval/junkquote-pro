@@ -1,5 +1,8 @@
+// @vitest-environment jsdom
+
 import { renderToStaticMarkup } from "react-dom/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, cleanup } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import DashboardQuickActions, {
   isNewEstimateShortcut,
   NEW_ESTIMATE_HREF,
@@ -7,17 +10,21 @@ import DashboardQuickActions, {
 } from "./DashboardQuickActions";
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: routerPush }),
 }));
+const routerPush = vi.hoisted(() => vi.fn());
 vi.mock("@/app/actions/search/globalSearch", () => ({
   globalSearchAction: vi.fn(),
 }));
 vi.mock("./GlobalSearch", () => ({
-  default: () => <input aria-label="Search company workspace" className="min-h-11" />,
+  default: () => (
+    <input aria-label="Search company workspace" className="min-h-11" />
+  ),
 }));
 
 describe("dashboard quick actions", () => {
   beforeEach(() => vi.clearAllMocks());
+  afterEach(cleanup);
 
   it("shows the primary action when estimate creation is permitted", () => {
     const html = renderToStaticMarkup(
@@ -40,6 +47,14 @@ describe("dashboard quick actions", () => {
     routeToNewEstimate(push, setRouting);
     expect(setRouting).toHaveBeenCalledWith(true);
     expect(push).toHaveBeenCalledWith(NEW_ESTIMATE_HREF);
+  });
+
+  it("clicks the real New Estimate control with explicit new intent", () => {
+    render(<DashboardQuickActions canCreateEstimate />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Create new estimate" }),
+    );
+    expect(routerPush).toHaveBeenCalledWith("/estimates?new=1");
   });
 
   it("supports N and Ctrl+Shift+N shortcuts", () => {

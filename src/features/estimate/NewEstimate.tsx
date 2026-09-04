@@ -1,16 +1,14 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { useSearchParams } from "next/navigation";
 
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import StepHeader from "@/components/estimate/StepHeader";
 import EstimateSummary from "@/components/estimate/EstimateSummary";
 
-import {
-  EstimateProvider,
-  useEstimate,
-} from "./EstimateContext";
+import { EstimateProvider, useEstimate } from "./EstimateContext";
 
 import CustomerStep from "./steps/CustomerScreen";
 import PropertyStep from "./steps/PropertyScreen";
@@ -21,19 +19,17 @@ import ReviewEstimate from "./review/ReviewEstimate";
 import EstimateReady from "./ready/EstimateReady";
 import { deleteEstimateAction } from "@/app/actions/estimates/deleteEstimate";
 import { listDraftEstimatesAction } from "@/app/actions/estimates/listDraftEstimates";
+import { resolveEstimateIntent } from "./estimateIntent";
 
-type DraftEstimate = Awaited<ReturnType<typeof listDraftEstimatesAction>>[number];
+type DraftEstimate = Awaited<
+  ReturnType<typeof listDraftEstimatesAction>
+>[number];
 
 function getSavedEstimateId() {
   if (typeof window === "undefined") {
     return null;
   }
-
-  const searchParams = new URLSearchParams(window.location.search);
-  return (
-    (searchParams.get("new") === "1" ? "new" : searchParams.get("estimateId")) ||
-    window.localStorage.getItem("junkquote:estimateId")
-  );
+  return window.localStorage.getItem("junkquote:estimateId");
 }
 
 function clearSavedEstimateId() {
@@ -54,13 +50,19 @@ function ResumeDraftEstimates({
   const [drafts, setDrafts] = useState<DraftEstimate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [deletingEstimateId, setDeletingEstimateId] = useState<string | null>(null);
+  const [deletingEstimateId, setDeletingEstimateId] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     void listDraftEstimatesAction()
       .then(setDrafts)
       .catch((loadError) => {
-        setError(loadError instanceof Error ? loadError.message : "Unable to load drafts.");
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Unable to load drafts.",
+        );
       })
       .finally(() => setIsLoading(false));
   }, []);
@@ -76,13 +78,13 @@ function ResumeDraftEstimates({
     try {
       await deleteEstimateAction(estimateId);
       setDrafts((currentDrafts) =>
-        currentDrafts.filter((draft) => draft.id !== estimateId)
+        currentDrafts.filter((draft) => draft.id !== estimateId),
       );
     } catch (deleteError) {
       setError(
         deleteError instanceof Error
           ? deleteError.message
-          : "Unable to delete the draft estimate."
+          : "Unable to delete the draft estimate.",
       );
     } finally {
       setDeletingEstimateId(null);
@@ -95,7 +97,9 @@ function ResumeDraftEstimates({
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Estimates</h1>
-            <p className="mt-1 text-slate-600">Start a new estimate or continue a saved draft.</p>
+            <p className="mt-1 text-slate-600">
+              Start a new estimate or continue a saved draft.
+            </p>
           </div>
           <Button onClick={onStartNew}>Start New Estimate</Button>
         </div>
@@ -114,42 +118,45 @@ function ResumeDraftEstimates({
               const isDeleting = deletingEstimateId === draft.id;
 
               return (
-              <div
-                key={draft.id}
-                className="w-full rounded-xl border border-slate-200 p-4 text-left transition hover:border-blue-500 hover:bg-blue-50"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-slate-900">
-                      {draft.customer.firstName} {draft.customer.lastName}
-                    </p>
-                    <p className="text-sm text-slate-600">
-                      {draft.property.address}, {draft.property.city}, {draft.property.state} {draft.property.zip}
+                <div
+                  key={draft.id}
+                  className="w-full rounded-xl border border-slate-200 p-4 text-left transition hover:border-blue-500 hover:bg-blue-50"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-slate-900">
+                        {draft.customer.firstName} {draft.customer.lastName}
+                      </p>
+                      <p className="text-sm text-slate-600">
+                        {draft.property.address}, {draft.property.city},{" "}
+                        {draft.property.state} {draft.property.zip}
+                      </p>
+                    </div>
+                    <p className="text-sm text-slate-500">
+                      Updated {new Date(draft.updatedAt).toLocaleString()}
                     </p>
                   </div>
-                  <p className="text-sm text-slate-500">
-                    Updated {new Date(draft.updatedAt).toLocaleString()}
+                  <p className="mt-2 text-xs text-slate-500">
+                    Estimate ID: {draft.id}
                   </p>
+                  <div className="mt-4 flex gap-3">
+                    <Button
+                      type="button"
+                      onClick={() => onResume(draft.id)}
+                      disabled={isDeleting}
+                    >
+                      Open
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => void deleteDraft(draft.id)}
+                      disabled={isDeleting}
+                      variant="danger"
+                    >
+                      {isDeleting ? "Deleting..." : "Delete"}
+                    </Button>
+                  </div>
                 </div>
-                <p className="mt-2 text-xs text-slate-500">Estimate ID: {draft.id}</p>
-                <div className="mt-4 flex gap-3">
-                  <Button
-                    type="button"
-                    onClick={() => onResume(draft.id)}
-                    disabled={isDeleting}
-                  >
-                    Open
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => void deleteDraft(draft.id)}
-                    disabled={isDeleting}
-                    variant="danger"
-                  >
-                    {isDeleting ? "Deleting..." : "Delete"}
-                  </Button>
-                </div>
-              </div>
               );
             })}
           </div>
@@ -179,22 +186,21 @@ function EstimateWizard({
     wizardStep,
     setWizardStep,
   } = useEstimate();
-  const customerName = [
-    estimate.customer.firstName,
-    estimate.customer.lastName,
-  ]
+  const customerName = [estimate.customer.firstName, estimate.customer.lastName]
     .filter(Boolean)
     .join(" ");
 
   function leaveEstimate() {
-    const hasUnsavedInMemoryChanges = !estimateId && Boolean(
-      estimate.customerType ||
-      estimate.customer.firstName ||
-      estimate.customer.lastName ||
-      estimate.customer.phone ||
-      estimate.property.address ||
-      estimate.jobSites.length
-    );
+    const hasUnsavedInMemoryChanges =
+      !estimateId &&
+      Boolean(
+        estimate.customerType ||
+          estimate.customer.firstName ||
+          estimate.customer.lastName ||
+          estimate.customer.phone ||
+          estimate.property.address ||
+          estimate.jobSites.length,
+      );
 
     if (
       hasUnsavedInMemoryChanges &&
@@ -208,7 +214,10 @@ function EstimateWizard({
   }
 
   async function deleteCurrentDraft() {
-    if (!estimateId || !window.confirm("Delete this draft estimate? This cannot be undone.")) {
+    if (
+      !estimateId ||
+      !window.confirm("Delete this draft estimate? This cannot be undone.")
+    ) {
       return;
     }
 
@@ -223,7 +232,7 @@ function EstimateWizard({
       setDeleteError(
         deleteError instanceof Error
           ? deleteError.message
-          : "Unable to delete the draft estimate."
+          : "Unable to delete the draft estimate.",
       );
       setIsDeleting(false);
     }
@@ -288,7 +297,6 @@ function EstimateWizard({
 
   return (
     <div className="estimate-walkthrough-theme max-w-7xl mx-auto py-12 px-6">
-
       <StepHeader
         step={wizardStep}
         totalSteps={6}
@@ -316,30 +324,20 @@ function EstimateWizard({
 
       <div
         className={`grid gap-8 ${
-          showSidebar
-            ? "grid-cols-1 xl:grid-cols-3"
-            : "grid-cols-1"
+          showSidebar ? "grid-cols-1 xl:grid-cols-3" : "grid-cols-1"
         }`}
       >
-
-        <div
-          className={
-            showSidebar
-              ? "xl:col-span-2"
-              : "w-full"
-          }
-        >
-
+        <div className={showSidebar ? "xl:col-span-2" : "w-full"}>
           <Card>
-
             {isLoadingEstimate ? (
-              <p className="py-12 text-center text-slate-600">Loading saved estimate…</p>
+              <p className="py-12 text-center text-slate-600">
+                Loading saved estimate…
+              </p>
             ) : (
               renderStep()
             )}
 
             <div className="mt-10 flex justify-between">
-
               <Button
                 onClick={previousStep}
                 disabled={wizardStep === 1 || isLoadingEstimate}
@@ -353,31 +351,32 @@ function EstimateWizard({
                   Continue
                 </Button>
               )}
-
             </div>
-
           </Card>
-
         </div>
 
-        {showSidebar && !isLoadingEstimate && (
-          <EstimateSummary />
-        )}
-
+        {showSidebar && !isLoadingEstimate && <EstimateSummary />}
       </div>
-
     </div>
   );
 }
 
 export default function NewEstimate() {
+  const searchParams = useSearchParams();
   const savedEstimateId = useSyncExternalStore(
     () => () => undefined,
     getSavedEstimateId,
-    () => null
+    () => null,
   );
-  const [selectedEstimateId, setSelectedEstimateId] = useState<string | null>(null);
-  const resumeEstimateId = selectedEstimateId ?? savedEstimateId;
+  const [selectedEstimateId, setSelectedEstimateId] = useState<string | null>(
+    null,
+  );
+  const resumeEstimateId = resolveEstimateIntent({
+    explicitNew: searchParams.get("new") === "1",
+    explicitEstimateId: searchParams.get("estimateId"),
+    selectedEstimateId,
+    persistedEstimateId: savedEstimateId,
+  });
 
   async function deleteCurrentDraft(estimateId: string) {
     await deleteEstimateAction(estimateId);
@@ -404,6 +403,7 @@ export default function NewEstimate() {
 
   return (
     <EstimateProvider
+      key={`estimate-workflow:${resumeEstimateId}`}
       initialEstimateId={resumeEstimateId === "new" ? null : resumeEstimateId}
     >
       <EstimateWizard

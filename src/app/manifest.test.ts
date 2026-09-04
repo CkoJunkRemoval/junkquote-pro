@@ -24,6 +24,10 @@ describe("web manifest", () => {
     expect(
       value.shortcuts?.every((shortcut) => shortcut.url.startsWith("/")),
     ).toBe(true);
+    expect(
+      value.shortcuts?.find((shortcut) => shortcut.name === "New Estimate")
+        ?.url,
+    ).toBe("/estimates?new=1");
     expect(JSON.stringify(value)).not.toContain("junkquote.pro");
     expect(JSON.stringify(value)).not.toContain("junkquoteprohq.com");
   });

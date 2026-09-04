@@ -26,5 +26,5 @@ export async function saveCommunicationAction(data:FormData){const c=await conte
 export async function createDemoDataAction(){const c=await context();await createDemoData(c.companyId);await done(c.companyId,c.user.id,"demo")}
 export async function deleteDemoDataAction(){const c=await context();await deleteDemoData(c.companyId);await done(c.companyId,c.user.id,"demo_deleted")}
 export async function skipOnboardingAction(){const c=await context();await prisma.companyOnboarding.upsert({where:{companyId:c.companyId},create:{companyId:c.companyId,skippedAt:new Date()},update:{skippedAt:new Date()}});redirect("/dashboard")}
-export async function finishOnboardingAction(){const c=await context();await prisma.companyOnboarding.update({where:{companyId:c.companyId},data:{completedAt:new Date(),dismissedAt:null}});redirect("/estimates")}
+export async function finishOnboardingAction(){const c=await context();await prisma.companyOnboarding.update({where:{companyId:c.companyId},data:{completedAt:new Date(),dismissedAt:null}});redirect("/estimates?new=1")}
 export async function dismissOnboardingAction(){const c=await context();await prisma.companyOnboarding.update({where:{companyId:c.companyId},data:{dismissedAt:new Date()}});revalidatePath("/dashboard")}
