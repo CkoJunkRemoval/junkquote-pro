@@ -395,10 +395,7 @@ export async function createManualEntry(
           correctedAt: new Date(),
         },
       });
-      const totals = deriveSessionMinutes([
-        clockInEvent,
-        clockOutEvent,
-      ]);
+      const totals = deriveSessionMinutes([clockInEvent, clockOutEvent]);
       const session = await tx.workSession.create({
         data: {
           companyId,
@@ -820,7 +817,8 @@ async function changeTimesheet(
       await notifyOnce(tx, {
         companyId,
         userId: row.employee.userId,
-        title: status === "Approved" ? "Timesheet approved" : "Timesheet rejected",
+        title:
+          status === "Approved" ? "Timesheet approved" : "Timesheet rejected",
         body:
           status === "Approved"
             ? "Your timesheet was approved."
@@ -860,7 +858,9 @@ export async function setPayPeriodLocked(
     });
     if (!period) throw new Error("Pay period not found.");
     if ((period.status === "Locked") === locked)
-      throw new Error(`Pay period is already ${locked ? "locked" : "unlocked"}.`);
+      throw new Error(
+        `Pay period is already ${locked ? "locked" : "unlocked"}.`,
+      );
     const updated = await tx.payPeriod.update({
       where: { id: period.id },
       data: {
@@ -1074,6 +1074,116 @@ export async function getTimekeepingEmployeeForUser(
       status: true,
       employeeNumber: true,
     },
+  });
+}
+
+const workforceRoleForMembership = (role: string) =>
+  role === "Owner"
+    ? "Owner"
+    : role === "Manager" || role === "Admin"
+      ? "Manager"
+      : role === "Office"
+        ? "Office"
+        : "CrewMember";
+
+export async function recoverTimekeepingEmployeeForUser(
+  companyId: string,
+  userId: string,
+) {
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.employee.findFirst({
+      where: { companyId, userId },
+    });
+    if (existing) return existing;
+    const membership = await tx.companyMembership.findFirst({
+      where: { companyId, userId, status: "Active" },
+      include: {
+        user: { select: { firstName: true, lastName: true, email: true } },
+      },
+    });
+    if (!membership) throw new Error("Active company membership is required.");
+    const matches = await tx.employee.findMany({
+      where: {
+        companyId,
+        userId: null,
+        email: { equals: membership.user.email, mode: "insensitive" },
+      },
+      take: 2,
+    });
+    if (matches.length > 1)
+      throw new Error(
+        "Multiple workforce profiles match your email. Ask an administrator to link the correct profile.",
+      );
+    const employee = matches[0]
+      ? await tx.employee.update({
+          where: { id: matches[0].id },
+          data: { userId, invitationStatus: "Accepted" },
+        })
+      : await tx.employee.create({
+          data: {
+            companyId,
+            userId,
+            firstName: membership.user.firstName?.trim() || "Team",
+            lastName: membership.user.lastName?.trim() || "Member",
+            email: membership.user.email.toLowerCase(),
+            role: workforceRoleForMembership(membership.role),
+            workerType: membership.role === "Owner" ? "Owner" : "Employee",
+            status: "Active",
+            invitationStatus: "Accepted",
+            certifications: [],
+          },
+        });
+    await tx.auditEvent.create({
+      data: {
+        companyId,
+        actingUserId: userId,
+        eventType: matches[0]
+          ? "workforce.application_access_linked"
+          : "workforce.self_profile_created",
+        entityType: "Employee",
+        entityId: employee.id,
+      },
+    });
+    return employee;
+  });
+}
+
+export async function updateActiveWorkforceLocation(
+  companyId: string,
+  userId: string,
+  input: { latitude: number; longitude: number; accuracy: number },
+) {
+  for (const value of [input.latitude, input.longitude, input.accuracy])
+    if (!Number.isFinite(value))
+      throw new Error("Valid location coordinates are required.");
+  if (
+    Math.abs(input.latitude) > 90 ||
+    Math.abs(input.longitude) > 180 ||
+    input.accuracy < 0
+  )
+    throw new Error("Valid location coordinates are required.");
+  return prisma.$transaction(async (tx) => {
+    const employee = await tx.employee.findFirst({
+      where: { companyId, userId, status: "Active" },
+      select: { id: true },
+    });
+    if (!employee)
+      throw new Error("A linked active workforce profile is required.");
+    const session = await tx.workSession.findFirst({
+      where: { companyId, employeeId: employee.id, clockOutAt: null },
+      orderBy: { clockInAt: "desc" },
+      select: { id: true, clockInEventId: true },
+    });
+    if (!session)
+      throw new Error("Location is accepted only during an active shift.");
+    return tx.timeClockEvent.updateMany({
+      where: { id: session.clockInEventId, companyId, employeeId: employee.id },
+      data: {
+        latitude: input.latitude,
+        longitude: input.longitude,
+        locationAccuracyMeters: input.accuracy,
+      },
+    });
   });
 }
 export async function getTimeClockOptions(

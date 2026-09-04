@@ -18,6 +18,7 @@ import {
   summarizeRoutes,
 } from "@/lib/routeIntelligence/engine";
 import { routeIntelligenceSettings } from "@/lib/routeIntelligence/settings";
+import { liveLocationStatus } from "./liveLocationStatus";
 
 export type DispatchView = "board" | "day" | "week" | "list";
 export type DispatchFilters = {
@@ -426,6 +427,68 @@ export async function getDispatchData(
     unavailableEmployeeIds: new Set(availability.map((row) => row.employeeId)),
     grouping: filters.grouping ?? "crewLead",
   });
+  const activeSessions = crewUserId
+    ? []
+    : await prisma.workSession.findMany({
+        where: { companyId, clockOutAt: null },
+        include: {
+          employee: {
+            select: {
+              firstName: true,
+              lastName: true,
+              assignedTruck: { select: { name: true } },
+            },
+          },
+          crew: { select: { name: true } },
+          allocations: {
+            where: { jobId: { not: null } },
+            take: 1,
+            include: { job: { select: { jobNumber: true } } },
+          },
+        },
+        orderBy: { clockInAt: "asc" },
+      });
+  const locationEvents = activeSessions.length
+    ? await prisma.timeClockEvent.findMany({
+        where: {
+          companyId,
+          id: { in: activeSessions.map((session) => session.clockInEventId) },
+        },
+        select: {
+          id: true,
+          latitude: true,
+          longitude: true,
+          locationAccuracyMeters: true,
+          updatedAt: true,
+          job: { select: { jobNumber: true } },
+        },
+      })
+    : [];
+  const locations = new Map(locationEvents.map((event) => [event.id, event]));
+  const liveCrews = activeSessions.map((session) => {
+    const location = locations.get(session.clockInEventId);
+    const locationUpdatedAt =
+      location?.latitude != null && location.longitude != null
+        ? location.updatedAt
+        : null;
+    return {
+      id: session.id,
+      workerName:
+        `${session.employee.firstName} ${session.employee.lastName}`.trim(),
+      crewName: session.crew?.name ?? null,
+      vehicleName: session.employee.assignedTruck?.name ?? null,
+      jobNumber:
+        location?.job?.jobNumber ??
+        session.allocations[0]?.job?.jobNumber ??
+        null,
+      clockInAt: session.clockInAt,
+      latitude: location?.latitude ?? null,
+      longitude: location?.longitude ?? null,
+      accuracy: location?.locationAccuracyMeters ?? null,
+      locationUpdatedAt,
+      locationStatus: liveLocationStatus(locationUpdatedAt),
+    };
+  });
   const filteredAlerts = filters.alertSeverity
     ? board.alerts.filter((row) => row.severity === filters.alertSeverity)
     : board.alerts;
@@ -532,6 +595,7 @@ export async function getDispatchData(
         ),
       ).size,
     },
+    liveCrews,
   };
 }
 

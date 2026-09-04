@@ -62,6 +62,21 @@ export async function clockEventAction(
   refresh();
 }
 
+export async function recoverTimekeepingProfileAction() {
+  const c = await context("time.self.clock");
+  await time.recoverTimekeepingEmployeeForUser(c.companyId, c.user.id);
+  refresh();
+}
+
+export async function updateActiveLocationAction(input: {
+  latitude: number;
+  longitude: number;
+  accuracy: number;
+}) {
+  const c = await context("time.self.clock");
+  return time.updateActiveWorkforceLocation(c.companyId, c.user.id, input);
+}
+
 export async function recordOfflineClockEventAction(input: {
   eventType: TimeClockEventType;
   deviceTimestamp: string;

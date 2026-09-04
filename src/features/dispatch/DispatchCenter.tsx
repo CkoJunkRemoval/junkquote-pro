@@ -204,6 +204,7 @@ export default function DispatchCenter({
       </nav>
 
       <Summary summary={initial.board.summary} />
+      <LiveCrews crews={initial.liveCrews} />
       <RouteIntelligencePanel
         data={initial}
         date={date}
@@ -344,6 +345,98 @@ export default function DispatchCenter({
         />
       )}
     </main>
+  );
+}
+
+function LiveCrews({ crews }: { crews: Data["liveCrews"] }) {
+  return (
+    <section
+      className="glass-card mt-5 p-4 sm:p-5"
+      aria-labelledby="live-crews-heading"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 id="live-crews-heading" className="text-xl font-bold">
+            Live Crews
+          </h2>
+          <p className="text-sm text-slate-300">
+            Only workforce members with an active shift appear here.
+          </p>
+        </div>
+        <Users aria-hidden />
+      </div>
+      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {crews.map((crew) => (
+          <article
+            key={crew.id}
+            className="rounded-xl border border-[var(--border-color)] bg-slate-950/40 p-4"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="font-bold">{crew.workerName}</h3>
+                <p className="text-sm text-slate-300">
+                  {crew.crewName || "No crew"}
+                  {crew.vehicleName ? ` · ${crew.vehicleName}` : ""}
+                </p>
+              </div>
+              <span className="status-chip rounded-full px-2 py-1 text-xs">
+                Active · {crew.locationStatus}
+              </span>
+            </div>
+            <dl className="mt-3 grid gap-1 text-sm">
+              <div>
+                <dt className="inline text-slate-400">Clocked in: </dt>
+                <dd className="inline">
+                  {new Date(crew.clockInAt).toLocaleString()}
+                </dd>
+              </div>
+              <div>
+                <dt className="inline text-slate-400">Assigned job: </dt>
+                <dd className="inline">{crew.jobNumber || "None"}</dd>
+              </div>
+              <div>
+                <dt className="inline text-slate-400">Location: </dt>
+                <dd className="inline">
+                  {crew.latitude == null
+                    ? "Unavailable"
+                    : `${crew.latitude.toFixed(5)}, ${crew.longitude!.toFixed(5)}`}
+                </dd>
+              </div>
+              <div>
+                <dt className="inline text-slate-400">Last update: </dt>
+                <dd className="inline">
+                  {crew.locationUpdatedAt
+                    ? new Date(crew.locationUpdatedAt).toLocaleString()
+                    : "Not reported"}
+                </dd>
+              </div>
+              {crew.accuracy != null && (
+                <div>
+                  <dt className="inline text-slate-400">Accuracy: </dt>
+                  <dd className="inline">±{Math.round(crew.accuracy)} m</dd>
+                </div>
+              )}
+            </dl>
+            {crew.latitude != null && (
+              <a
+                className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-lg border px-3 font-semibold"
+                href={`https://www.openstreetmap.org/?mlat=${crew.latitude}&mlon=${crew.longitude}#map=16/${crew.latitude}/${crew.longitude}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <MapPin size={16} />
+                View on Map
+              </a>
+            )}
+          </article>
+        ))}
+        {crews.length === 0 && (
+          <p className="rounded-xl border border-dashed border-slate-600 p-4 text-sm text-slate-300">
+            No workforce members are currently clocked in.
+          </p>
+        )}
+      </div>
+    </section>
   );
 }
 

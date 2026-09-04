@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const db = vi.hoisted(() => ({
-  employee: { findFirst: vi.fn() },
+  employee: {
+    findFirst: vi.fn(),
+    findMany: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+  },
+  companyMembership: { findFirst: vi.fn() },
   job: { findFirst: vi.fn() },
   crew: { findFirst: vi.fn() },
   payPeriod: { findFirst: vi.fn() },
@@ -10,6 +16,7 @@ const db = vi.hoisted(() => ({
     findUnique: vi.fn(),
     findMany: vi.fn(),
     create: vi.fn(),
+    updateMany: vi.fn(),
   },
   workSession: {
     findFirst: vi.fn(),
@@ -31,7 +38,12 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 
-import { allocateSessionTime, recordClockEvent } from "./service";
+import {
+  allocateSessionTime,
+  recordClockEvent,
+  recoverTimekeepingEmployeeForUser,
+  updateActiveWorkforceLocation,
+} from "./service";
 
 const input = {
   employeeId: "employee-1",
@@ -44,7 +56,10 @@ const input = {
 describe("tenant-scoped timekeeping service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    db.employee.findFirst.mockResolvedValue({ id: "employee-1", status: "Active" });
+    db.employee.findFirst.mockResolvedValue({
+      id: "employee-1",
+      status: "Active",
+    });
     db.payPeriod.findFirst.mockResolvedValue(null);
     db.timeClockEvent.findMany.mockResolvedValue([]);
     db.timeClockEvent.create.mockResolvedValue({
@@ -121,5 +136,84 @@ describe("tenant-scoped timekeeping service", () => {
     await expect(
       recordClockEvent("company-1", "user-1", input),
     ).rejects.toThrow("Locked pay-period");
+  });
+
+  it("links one matching unlinked workforce profile without creating a duplicate", async () => {
+    db.employee.findFirst.mockResolvedValueOnce(null);
+    db.companyMembership.findFirst.mockResolvedValue({
+      role: "Owner",
+      user: { firstName: "Ada", lastName: "Owner", email: "ada@example.com" },
+    });
+    db.employee.findMany.mockResolvedValue([{ id: "employee-existing" }]);
+    db.employee.update.mockResolvedValue({
+      id: "employee-existing",
+      userId: "user-1",
+    });
+    await recoverTimekeepingEmployeeForUser("company-1", "user-1");
+    expect(db.employee.update).toHaveBeenCalledWith({
+      where: { id: "employee-existing" },
+      data: { userId: "user-1", invitationStatus: "Accepted" },
+    });
+    expect(db.employee.create).not.toHaveBeenCalled();
+  });
+
+  it("creates one active owner workforce profile from an authenticated membership", async () => {
+    db.employee.findFirst.mockResolvedValueOnce(null);
+    db.companyMembership.findFirst.mockResolvedValue({
+      role: "Owner",
+      user: { firstName: "Ada", lastName: "Owner", email: "ada@example.com" },
+    });
+    db.employee.findMany.mockResolvedValue([]);
+    db.employee.create.mockResolvedValue({ id: "employee-new" });
+    await recoverTimekeepingEmployeeForUser("company-1", "user-1");
+    expect(db.employee.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        companyId: "company-1",
+        userId: "user-1",
+        role: "Owner",
+        workerType: "Owner",
+        status: "Active",
+      }),
+    });
+  });
+
+  it("accepts location only for the authenticated tenant worker's active session", async () => {
+    db.employee.findFirst.mockResolvedValue({ id: "employee-1" });
+    db.workSession.findFirst.mockResolvedValue({
+      id: "session-1",
+      clockInEventId: "event-1",
+    });
+    db.timeClockEvent.updateMany.mockResolvedValue({ count: 1 });
+    await updateActiveWorkforceLocation("company-1", "user-1", {
+      latitude: 40,
+      longitude: -73,
+      accuracy: 25,
+    });
+    expect(db.employee.findFirst).toHaveBeenCalledWith({
+      where: { companyId: "company-1", userId: "user-1", status: "Active" },
+      select: { id: true },
+    });
+    expect(db.timeClockEvent.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: "event-1",
+          companyId: "company-1",
+          employeeId: "employee-1",
+        },
+      }),
+    );
+  });
+
+  it("rejects location after clock-out or without an active session", async () => {
+    db.employee.findFirst.mockResolvedValue({ id: "employee-1" });
+    db.workSession.findFirst.mockResolvedValue(null);
+    await expect(
+      updateActiveWorkforceLocation("company-1", "user-1", {
+        latitude: 40,
+        longitude: -73,
+        accuracy: 25,
+      }),
+    ).rejects.toThrow("active shift");
+    expect(db.timeClockEvent.updateMany).not.toHaveBeenCalled();
   });
 });

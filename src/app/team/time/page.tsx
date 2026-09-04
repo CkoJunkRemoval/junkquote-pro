@@ -1,6 +1,7 @@
 import AppLayout from "@/components/layout/AppLayout";
 import {
   clockEventAction,
+  recoverTimekeepingProfileAction,
   requestCorrectionAction,
 } from "@/app/actions/timekeeping/timekeeping";
 import { requireTenantContext } from "@/lib/auth/tenant";
@@ -12,6 +13,7 @@ import {
   getTimekeepingEmployeeForUser,
   getTimekeepingSettings,
 } from "@/lib/timekeeping/service";
+import ActiveShiftLocation from "@/features/timekeeping/ActiveShiftLocation";
 
 const control = "min-h-11 rounded-xl border px-3 py-2";
 export default async function MyTimePage() {
@@ -29,9 +31,19 @@ export default async function MyTimePage() {
         </p>
         <h1 className="text-3xl font-bold">My Time</h1>
         {!employee ? (
-          <div className="glass-card mt-6 p-8">
-            A linked workforce profile is required before using the time clock.
-          </div>
+          <section className="glass-card mt-6 p-8">
+            <h2 className="text-xl font-bold">Set up My Time</h2>
+            <p className="mt-2 text-slate-300">
+              My Time needs a company-scoped workforce profile. We can safely
+              link an existing profile with your account email or create one
+              from your active company membership.
+            </p>
+            <form action={recoverTimekeepingProfileAction}>
+              <button className="ui-button ui-button--primary mt-5 rounded-xl px-4 font-semibold">
+                Create or Link Workforce Profile
+              </button>
+            </form>
+          </section>
         ) : (
           <Clock
             employeeId={employee.id}
@@ -135,6 +147,7 @@ async function Clock({
             )}
           </div>
         </form>
+        <ActiveShiftLocation active={state.clockedIn} />
       </section>
       <section className="glass-card mt-6 p-6">
         <h2 className="text-xl font-bold">Recent time history</h2>
