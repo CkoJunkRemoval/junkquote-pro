@@ -1,4 +1,6 @@
-export default function PricingCrewCallout({ monthlyCents }: { monthlyCents: number }) {
+import Link from "next/link";
+
+export default function PricingCrewCallout({ monthlyCents, comparisonHref }: { monthlyCents: number; comparisonHref?: string }) {
   const monthlyPrice = `$${monthlyCents / 100}/month total`;
 
   return (
@@ -12,6 +14,7 @@ export default function PricingCrewCallout({ monthlyCents }: { monthlyCents: num
         ))}
       </dl>
       <p className="mt-3 text-center text-sm font-black text-[#a4ef29]">No per-seat fees.</p>
+      {comparisonHref && <p className="mt-2 text-center"><Link href={comparisonHref} className="inline-flex min-h-11 items-center text-sm font-bold text-slate-200 underline decoration-2 underline-offset-4">Compare JunkQuote Pro and Housecall Pro</Link></p>}
     </aside>
   );
 }

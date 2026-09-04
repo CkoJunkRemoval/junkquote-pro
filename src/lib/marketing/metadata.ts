@@ -10,7 +10,7 @@ const socialImage = {
 };
 
 export function marketingMetadata(
-  path: "/" | "/about" | "/features" | "/pricing",
+  path: "/" | "/about" | "/features" | "/pricing" | "/vs-housecall-pro" | "/vs-jobber" | "/vs-junkiq",
   title: string,
   description: string,
 ): Metadata {
