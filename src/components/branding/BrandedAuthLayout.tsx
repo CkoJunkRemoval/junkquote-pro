@@ -23,9 +23,9 @@ export default function BrandedAuthLayout({
         </div>
         <div className="auth-marketing__copy">
           <p className="auth-marketing__eyebrow">Built for the field</p>
-          <h1>
+          <h2>
             Built for <span>Junk Removal</span> Pros
-          </h1>
+          </h2>
           <p>
             The all-in-one platform to run, grow, and scale your junk removal
             business.

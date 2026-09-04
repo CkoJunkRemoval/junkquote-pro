@@ -7,6 +7,7 @@ const read = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8"
 
 describe("launch polish public and invoice UX", () => {
   const home = read("src/app/page.tsx");
+  const homepageContent = `${home}\n${read("src/lib/marketing/homepage.ts")}`;
   const pricing = read("src/app/pricing/page.tsx");
   const invoice = read("src/features/invoices/InvoiceDetail.tsx");
   const estimate = read("src/features/estimate/ready/EstimateReady.tsx");
@@ -17,7 +18,7 @@ describe("launch polish public and invoice UX", () => {
     expect(home).toContain("Start Your 30-Day Professional Trial");
   });
   it("states the complete trial and Free fallback terms", () => {
-    for (const copy of ["30-Day Professional Trial", "No Credit Card Required", "Full Professional Access", "You automatically move to the Free plan", "6 estimates per month", "No charge and no credit card required"]) expect(home).toContain(copy);
+    for (const copy of ["30-Day Professional Trial", "No Credit Card Required", "Full Professional Access", "You automatically move to the Free plan", "6 estimates per month", "No charge and no credit card required"]) expect(homepageContent).toContain(copy);
   });
   it("renders public prices from the authoritative plan catalog", () => {
     expect(plans.Free.monthlyCents).toBe(0);
@@ -27,6 +28,8 @@ describe("launch polish public and invoice UX", () => {
     expect(plans.Enterprise).toMatchObject({ monthlyCents: 14900, yearlyCents: 149000 });
     expect(pricing).toContain("monthlyCents");
     expect(pricing).toContain("yearlyCents");
+    expect(pricing).toContain("A 10-person crew on Professional pays $89/month total—the same company price as a 3-person crew.");
+    expect(pricing).not.toContain("Housecall Pro");
   });
   it("removes customer-facing text delivery and exposes consistent invoice actions", () => {
     expect(estimate).not.toMatch(/Send by Text|Text Invoice|SMS Invoice/i);
