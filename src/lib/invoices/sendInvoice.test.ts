@@ -69,6 +69,45 @@ describe("sendInvoice", () => {
     expect(mocks.recordEvent).not.toHaveBeenCalled();
   });
 
+  it("emits safe provider checkpoints around the immediate provider call", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const provider = {
+      name: "resend",
+      send: vi.fn().mockResolvedValue({
+        providerMessageId: "provider-1",
+        providerStatus: 200,
+      }),
+    };
+    mocks.deliver.mockImplementation(async (_companyId, _message, options) => ({
+      mode: "synchronous",
+      result: await options.provider.send({}, {}),
+    }));
+
+    await sendInvoice("company-1", "invoice-1", "https://app.example.com", "user-1", {
+      recipient: "recipient@example.com",
+      subject: "Invoice",
+      message: "Ready.",
+    }, { provider, renderPdf: vi.fn().mockResolvedValue("pdf") });
+
+    const events = info.mock.calls.map(([entry]) => JSON.parse(String(entry)));
+    expect(events).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        event: "INVOICE_EMAIL_PROVIDER_SELECTED",
+        invoiceId: "invoice-1",
+        companyId: "company-1",
+        userId: "user-1",
+        provider: "resend",
+      }),
+      expect.objectContaining({ event: "INVOICE_EMAIL_PROVIDER_CALL_STARTED" }),
+      expect.objectContaining({
+        event: "INVOICE_EMAIL_PROVIDER_ACCEPTED",
+        providerStatus: 200,
+      }),
+    ]));
+    expect(JSON.stringify(events)).not.toContain("recipient@example.com");
+    info.mockRestore();
+  });
+
   it.each(["", "not-an-email"])("rejects invalid recipient %j before delivery", async (recipient) => {
     await expect(sendInvoice("company-1", "invoice-1", "https://app.example.com", "user-1", {
       recipient, subject: "Invoice", message: "Ready.",

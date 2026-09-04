@@ -1,7 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { renderInvoicePdf } from "@/data/output/renderInvoicePdf";
 import { sendOrEnqueueCommunication } from "@/lib/communications/queueCommunication";
-import type { CommunicationProvider } from "@/lib/communications/provider";
+import {
+  selectCommunicationProvider,
+  type CommunicationProvider,
+} from "@/lib/communications/provider";
 import { AppError } from "@/lib/errors/appError";
 import { recordEstimateEventInTransaction } from "@/lib/estimates/estimateEvents";
 import { getInvoiceDetail } from "@/lib/invoices/getInvoiceDetail";
@@ -27,6 +30,18 @@ const money = (value: number) =>
     style: "currency",
     currency: "USD",
   }).format(value);
+
+function providerFailureDetails(error: unknown) {
+  return error instanceof AppError
+    ? {
+        code: error.code,
+        providerStatus:
+          typeof error.details?.providerStatus === "number"
+            ? error.details.providerStatus
+            : undefined,
+      }
+    : { code: "UNEXPECTED_PROVIDER_ERROR" };
+}
 
 export async function sendInvoice(
   companyId: string,
@@ -80,6 +95,65 @@ export async function sendInvoice(
   const safeInvoiceNumber = invoiceNumber.replace(/[^a-zA-Z0-9_-]+/g, "-");
   const now = (dependencies.now ?? (() => new Date()))();
   const idempotencyKey = `invoice-email:${invoice.id}:${(dependencies.id ?? randomUUID)()}`;
+  let provider: CommunicationProvider;
+  try {
+    provider = dependencies.provider ?? selectCommunicationProvider();
+  } catch (error) {
+    console.error(JSON.stringify({
+      event: "INVOICE_EMAIL_PROVIDER_FAILED",
+      invoiceId,
+      companyId,
+      userId: createdByUserId,
+      provider: process.env.EMAIL_PROVIDER?.trim() || "unconfigured",
+      hasResendApiKey: Boolean(process.env.RESEND_API_KEY),
+      hasEmailFrom: Boolean(process.env.EMAIL_FROM),
+      ...providerFailureDetails(error),
+    }));
+    throw error;
+  }
+  console.info(JSON.stringify({
+    event: "INVOICE_EMAIL_PROVIDER_SELECTED",
+    invoiceId,
+    companyId,
+    userId: createdByUserId,
+    provider: provider.name ?? "custom",
+    hasResendApiKey: Boolean(process.env.RESEND_API_KEY),
+    hasEmailFrom: Boolean(process.env.EMAIL_FROM),
+  }));
+  const tracedProvider: CommunicationProvider = {
+    name: provider.name,
+    async send(message, options) {
+      console.info(JSON.stringify({
+        event: "INVOICE_EMAIL_PROVIDER_CALL_STARTED",
+        invoiceId,
+        companyId,
+        userId: createdByUserId,
+        provider: provider.name ?? "custom",
+      }));
+      try {
+        const result = await provider.send(message, options);
+        console.info(JSON.stringify({
+          event: "INVOICE_EMAIL_PROVIDER_ACCEPTED",
+          invoiceId,
+          companyId,
+          userId: createdByUserId,
+          provider: provider.name ?? "custom",
+          providerStatus: result.providerStatus,
+        }));
+        return result;
+      } catch (error) {
+        console.error(JSON.stringify({
+          event: "INVOICE_EMAIL_PROVIDER_FAILED",
+          invoiceId,
+          companyId,
+          userId: createdByUserId,
+          provider: provider.name ?? "custom",
+          ...providerFailureDetails(error),
+        }));
+        throw error;
+      }
+    },
+  };
   const delivery = await sendOrEnqueueCommunication(
     companyId,
     {
@@ -97,7 +171,7 @@ export async function sendInvoice(
       idempotencyKey,
       createdByUserId,
     },
-    { workersEnabled: false, provider: dependencies.provider },
+    { workersEnabled: false, provider: tracedProvider },
   );
   if (delivery.mode !== "synchronous") {
     throw new AppError("PROVIDER_FAILED", "Invoice email was not accepted by the provider.");

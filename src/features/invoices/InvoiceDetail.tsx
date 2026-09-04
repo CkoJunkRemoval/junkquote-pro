@@ -70,17 +70,15 @@ export default function InvoiceDetail({
         message: emailMessage,
       });
       if (!result.ok) {
-        setError(`Delivery failed: ${result.error}`);
+        setError(result.error);
         return;
       }
       const updated = result.invoice;
       setInvoice((current) => ({ ...current, ...updated }));
       setMessage(`Invoice emailed to ${updated.lastSentTo}.`);
       setShowEmailForm(false);
-    } catch (e) {
-      setError(
-        `Delivery failed: ${e instanceof Error ? e.message : "Unable to send invoice."}`,
-      );
+    } catch {
+      setError("We couldn't send this invoice email. Please try again.");
     } finally {
       setSaving(false);
     }

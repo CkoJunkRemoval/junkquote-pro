@@ -16,7 +16,14 @@ export async function updateDraftInvoiceAction(invoiceId: string, input: UpdateD
   return result;
 }
 export async function sendInvoiceAction(invoiceId: string, input: { recipient: string; subject: string; message: string }) {
+  console.info(JSON.stringify({ event: "INVOICE_EMAIL_ACTION_STARTED", invoiceId }));
   const c = await requireOperationalTenant();
+  console.info(JSON.stringify({
+    event: "INVOICE_EMAIL_AUTHORIZED",
+    invoiceId,
+    companyId: c.companyId,
+    userId: c.user.id,
+  }));
   const h = await headers();
   const configured = process.env.NEXT_PUBLIC_APP_URL?.trim();
   const host = h.get("x-forwarded-host") ?? h.get("host");

@@ -21,7 +21,7 @@ export interface CommunicationProvider {
   send(
     message: CommunicationMessage,
     options: ProviderSendOptions,
-  ): Promise<{ providerMessageId: string }>;
+  ): Promise<{ providerMessageId: string; providerStatus?: number }>;
 }
 export class ConsoleEmailProvider implements CommunicationProvider {
   readonly name = "console";
@@ -92,7 +92,7 @@ export class ResendEmailProvider implements CommunicationProvider {
           "Email provider rejected the message.",
           { providerStatus: response.status },
         );
-      return { providerMessageId: data.id };
+      return { providerMessageId: data.id, providerStatus: response.status };
     } catch (error) {
       if (error instanceof AppError) throw error;
       throw new AppError(

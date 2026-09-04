@@ -63,7 +63,7 @@ describe("email provider", () => {
           communicationId: "comm-1",
         },
       ),
-    ).resolves.toEqual({ providerMessageId: "email-1" });
+    ).resolves.toEqual({ providerMessageId: "email-1", providerStatus: 200 });
     await expect(
       provider.send(
         { channel: "email", to: "to@example.com", body: "Private body" },
