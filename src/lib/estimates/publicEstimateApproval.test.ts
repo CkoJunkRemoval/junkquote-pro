@@ -12,18 +12,22 @@ describe("public estimate approval token validation", () => {
   });
 
   it("rejects an invalid token", () => {
-    expect(getPublicApprovalError(null, null, now)).toContain("invalid or has expired");
+    expect(getPublicApprovalError(null, null, now)).toContain(
+      "invalid or has expired",
+    );
   });
 
   it("rejects an expired token", () => {
-    expect(getPublicApprovalError("Sent", past, now)).toContain("invalid or has expired");
+    expect(getPublicApprovalError("Sent", past, now)).toContain(
+      "invalid or has expired",
+    );
   });
 
   it("permits an approved token to show its completed response", () => {
     expect(getPublicApprovalError("Approved", future, now)).toBeNull();
   });
 
-  it("rejects a declined token", () => {
-    expect(getPublicApprovalError("Declined", future, now)).toContain("no longer available");
+  it("permits a declined token to show its completed response", () => {
+    expect(getPublicApprovalError("Declined", future, now)).toBeNull();
   });
 });

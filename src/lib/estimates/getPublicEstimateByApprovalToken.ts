@@ -1,25 +1,64 @@
 import { prisma } from "../prisma";
-import { getPublicApprovalError, type PublicApprovalStatus } from "./publicEstimateApproval";
+import {
+  getPublicApprovalError,
+  type PublicApprovalStatus,
+} from "./publicEstimateApproval";
 import { transitionEstimate } from "./estimateLifecycle";
-import { buildPersistedCustomerPricingBreakdown, type CustomerPricingBreakdown } from "@/data/pricing/livePricingBreakdown";
+import {
+  buildPersistedCustomerPricingBreakdown,
+  type CustomerPricingBreakdown,
+} from "@/data/pricing/livePricingBreakdown";
 
 export interface PublicEstimateApproval {
-  company: { name: string; phone: string | null; email: string | null; website: string | null; logoUrl: string | null; primaryColor: string | null; secondaryColor: string | null };
+  estimateNumber: string | null;
+  estimateDate: Date;
+  company: {
+    name: string;
+    phone: string | null;
+    email: string | null;
+    website: string | null;
+    logoUrl: string | null;
+    primaryColor: string | null;
+    secondaryColor: string | null;
+  };
   customerName: string;
-  propertyAddress: { address: string; city: string; state: string; zip: string };
+  propertyAddress: {
+    address: string;
+    city: string;
+    state: string;
+    zip: string;
+  };
   jobSites: Array<{
     name: string;
     customerNotes: string;
-    items: Array<{ name: string; category: string; quantity: number; notes: string }>;
+    items: Array<{
+      name: string;
+      category: string;
+      quantity: number;
+      notes: string;
+    }>;
   }>;
-  pricing: { subtotal: number; labor: number; disposal: number; discount: number; total: number };
+  pricing: {
+    subtotal: number;
+    labor: number;
+    disposal: number;
+    discount: number;
+    total: number;
+  };
   breakdown: CustomerPricingBreakdown;
   status: PublicApprovalStatus;
   approvalTokenExpiresAt: Date;
-  signature?: { signerName: string; signedAt: Date; method: string; data: string };
+  signature?: {
+    signerName: string;
+    signedAt: Date;
+    method: string;
+    data: string;
+  };
 }
 
-export async function getPublicEstimateByApprovalToken(token: string): Promise<PublicEstimateApproval> {
+export async function getPublicEstimateByApprovalToken(
+  token: string,
+): Promise<PublicEstimateApproval> {
   if (!token) {
     throw new Error("This approval link is invalid or has expired.");
   }
@@ -39,8 +78,8 @@ export async function getPublicEstimateByApprovalToken(token: string): Promise<P
     },
   });
   const error = getPublicApprovalError(
-    estimate?.status as PublicApprovalStatus | undefined ?? null,
-    estimate?.approvalTokenExpiresAt ?? null
+    (estimate?.status as PublicApprovalStatus | undefined) ?? null,
+    estimate?.approvalTokenExpiresAt ?? null,
   );
 
   if (error || !estimate || !estimate.approvalTokenExpiresAt) {
@@ -49,9 +88,14 @@ export async function getPublicEstimateByApprovalToken(token: string): Promise<P
 
   const status = estimate.status as PublicApprovalStatus;
   const publicStatus = status === "Sent" ? "Viewed" : status;
-  if (status === "Sent") await transitionEstimate(estimate.companyId,estimate.id,"Viewed",{actor:{label:"Customer"}});
+  if (status === "Sent")
+    await transitionEstimate(estimate.companyId, estimate.id, "Viewed", {
+      actor: { label: "Customer" },
+    });
 
   return {
+    estimateNumber: estimate.displayNumber,
+    estimateDate: estimate.createdAt,
     company: {
       name: estimate.company.displayName || estimate.company.name,
       phone: estimate.company.phone,
@@ -61,7 +105,8 @@ export async function getPublicEstimateByApprovalToken(token: string): Promise<P
       primaryColor: estimate.company.primaryColor,
       secondaryColor: estimate.company.secondaryColor,
     },
-    customerName: `${estimate.customer.firstName} ${estimate.customer.lastName}`.trim(),
+    customerName:
+      `${estimate.customer.firstName} ${estimate.customer.lastName}`.trim(),
     propertyAddress: {
       address: estimate.property.address,
       city: estimate.property.city,
@@ -86,15 +131,33 @@ export async function getPublicEstimateByApprovalToken(token: string): Promise<P
       total: estimate.pricingTotal,
     },
     breakdown: buildPersistedCustomerPricingBreakdown({
-      items: estimate.jobSites.flatMap(site=>site.items),
+      items: estimate.jobSites.flatMap((site) => site.items),
       rules: estimate.appliedPricingRules,
-      pricing: {subtotal:estimate.pricingSubtotal,labor:estimate.pricingLabor,disposal:estimate.pricingDisposal,discount:estimate.pricingDiscount,total:estimate.pricingTotal},
-      tax:{enabled:estimate.pricingProfile.taxEnabled,rate:estimate.pricingProfile.taxRate},
+      pricing: {
+        subtotal: estimate.pricingSubtotal,
+        labor: estimate.pricingLabor,
+        disposal: estimate.pricingDisposal,
+        discount: estimate.pricingDiscount,
+        total: estimate.pricingTotal,
+      },
+      tax: {
+        enabled: estimate.pricingProfile.taxEnabled,
+        rate: estimate.pricingProfile.taxRate,
+      },
     }),
     status: publicStatus,
     approvalTokenExpiresAt: estimate.approvalTokenExpiresAt,
-    signature: estimate.signatureData && estimate.signerName && estimate.signedAt && estimate.signatureMethod
-      ? { signerName: estimate.signerName, signedAt: estimate.signedAt, method: estimate.signatureMethod, data: estimate.signatureData }
-      : undefined,
+    signature:
+      estimate.signatureData &&
+      estimate.signerName &&
+      estimate.signedAt &&
+      estimate.signatureMethod
+        ? {
+            signerName: estimate.signerName,
+            signedAt: estimate.signedAt,
+            method: estimate.signatureMethod,
+            data: estimate.signatureData,
+          }
+        : undefined,
   };
 }
