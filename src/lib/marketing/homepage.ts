@@ -5,6 +5,8 @@ export const homepageFaqs = [
   ["How is pricing structured?", "Per company, not per seat. A 10-person crew pays the same as a 3-person crew."],
 ] as const;
 
+export const founderLinkedInUrl = "https://www.linkedin.com/in/chris-ostrander-94837b432/";
+
 export function homepageStructuredData(siteUrl: URL) {
   return {
     "@context": "https://schema.org",
