@@ -19,10 +19,16 @@ describe("marketing polish", () => {
     expect(html).toContain("No per-seat fees.");
   });
 
-  it.each([
-    ["homepage", renderToStaticMarkup(<Home />)],
-    ["about page", renderToStaticMarkup(<About />)],
-  ])("adds the verified safe founder LinkedIn link on the %s", (_page, html) => {
+  it("keeps the homepage founder card focused on the about page", () => {
+    const html = renderToStaticMarkup(<Home />);
+    expect(html).not.toContain(founderLinkedInUrl);
+    expect(html).not.toContain('aria-label="Chris on LinkedIn"');
+    expect(html).toContain("Meet the Founder");
+    expect(html).toContain('href="/about"');
+  });
+
+  it("keeps the verified safe founder LinkedIn link on the about page", () => {
+    const html = renderToStaticMarkup(<About />);
     expect(html).toContain(`href="${founderLinkedInUrl}"`);
     expect(html).toContain('aria-label="Chris on LinkedIn"');
     expect(html).toContain('target="_blank"');
