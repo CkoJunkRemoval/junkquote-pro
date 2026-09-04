@@ -44,7 +44,7 @@ export default function Sidebar({ collapsed, mobileOpen, onClose, onToggle }: { 
   const [visibleModules, setVisibleModules] = useState<CompanyModule[]>([]);
   useEffect(() => { void getCompanyBranding().then((value) => setCompany({ displayName: value.displayName || value.name, logoUrl: value.logoUrl })).catch(() => undefined); }, []);
   useEffect(() => { void getVisibleNavigationModules().then(setVisibleModules).catch(() => setVisibleModules([])); }, []);
-  const width = collapsed ? "lg:w-20" : "lg:w-64";
+  const width = collapsed ? "lg:w-20" : "lg:w-[17rem]";
   const visibleItems = items.filter((item) => visibleModules.includes(item.module));
 
   return <>
@@ -67,7 +67,7 @@ export default function Sidebar({ collapsed, mobileOpen, onClose, onToggle }: { 
         {visibleItems.map(({ label, href, icon: Icon }) => {
           const moreSpecificItemMatches = visibleItems.some((item) => item.href.startsWith(`${href}/`) && (pathname === item.href || pathname.startsWith(`${item.href}/`)));
           const active = pathname === href || (pathname.startsWith(`${href}/`) && !moreSpecificItemMatches) || (href === "/estimates" && pathname === "/estimate");
-          return <Link key={href} href={href} onClick={onClose} title={collapsed && !mobileOpen ? label : undefined} aria-current={active ? "page" : undefined} className={`sidebar-link flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${active ? "sidebar-link--active" : "text-slate-300"}`}><Icon className="shrink-0" size={19} /><span className={`truncate ${collapsed ? "lg:hidden" : ""}`}>{label}</span></Link>;
+          return <Link key={href} href={href} onClick={onClose} title={collapsed ? label : undefined} aria-current={active ? "page" : undefined} className={`sidebar-link flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${active ? "sidebar-link--active" : "text-slate-300"}`}><Icon className="shrink-0" size={19} /><span className={`min-w-0 whitespace-normal leading-5 ${collapsed ? "lg:sr-only" : ""}`}>{label}</span></Link>;
         })}
       </nav>
       <div className="hidden border-t border-white/10 p-3 lg:block"><button aria-label={collapsed ? "Expand navigation" : "Collapse navigation"} onClick={onToggle} className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2.5 text-slate-300 hover:bg-white/5"><ChevronLeft className={`shrink-0 ${collapsed ? "rotate-180" : ""}`} size={20} /><span className={collapsed ? "hidden" : ""}>Collapse</span></button></div>

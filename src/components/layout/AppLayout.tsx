@@ -10,6 +10,9 @@ type Props = {
   dashboard?: { canCreateEstimate: boolean };
 };
 
+export const SIDEBAR_COLLAPSED_PREFERENCE_KEY =
+  "junkquote:sidebar-collapsed:user-v1";
+
 export default function AppLayout({ children, dashboard }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const collapsed = useSyncExternalStore(
@@ -21,13 +24,14 @@ export default function AppLayout({ children, dashboard }: Props) {
         window.removeEventListener("junkquote:sidebar", onStoreChange);
       };
     },
-    () => window.localStorage.getItem("junkquote:sidebar-collapsed") === "true",
+    () =>
+      window.localStorage.getItem(SIDEBAR_COLLAPSED_PREFERENCE_KEY) === "true",
     () => false,
   );
 
   function toggleSidebar() {
     const next = !collapsed;
-    window.localStorage.setItem("junkquote:sidebar-collapsed", String(next));
+    window.localStorage.setItem(SIDEBAR_COLLAPSED_PREFERENCE_KEY, String(next));
     window.dispatchEvent(new Event("junkquote:sidebar"));
   }
 
