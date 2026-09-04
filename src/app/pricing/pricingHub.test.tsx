@@ -15,11 +15,27 @@ vi.mock("@/auth", () => ({ auth: vi.fn(async () => null) }));
 const source = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
 
 describe("public pricing and comparison hub", () => {
-  it("uses normal homepage navigation to /pricing without toggle or reveal behavior", () => {
+  it("renders a distinct responsive homepage Pricing destination without toggle or reveal behavior", () => {
     const html = renderToStaticMarkup(<Home />);
     const homeSource = source("src/app/page.tsx");
-    expect(html).toContain('href="/pricing"');
+    const pricingEntry = html.match(/<a[^>]*aria-label="Pricing and software comparisons"[^>]*>.*?<\/a>/)?.[0];
+    expect(pricingEntry).toBeTruthy();
+    expect(pricingEntry).toContain('href="/pricing"');
+    expect(pricingEntry).toContain("Pricing");
+    expect(pricingEntry).toContain("w-full");
+    expect(pricingEntry).toContain("sm:w-auto");
+    expect(pricingEntry).toContain("order-last");
+    expect(pricingEntry).toContain("sm:order-none");
+    expect(pricingEntry).toContain("focus-visible:outline");
+    expect(pricingEntry).toContain("<svg");
+    expect(html).toContain("View Pricing &amp; Compare");
     expect(homeSource).not.toMatch(/pricing.*(?:toggle|modal|reveal)|#pricing/i);
+  });
+
+  it("keeps the remodeled pricing comparison hub intact", () => {
+    const pricingSource = source("src/app/pricing/page.tsx");
+    expect(pricingSource).toContain("Simple pricing. See how JunkQuote Pro compares.");
+    expect(pricingSource).toContain("<PricingComparisonOverview />");
   });
 
   it("keeps plan rendering and the crew callout tied to authoritative pricing", () => {
