@@ -28,8 +28,9 @@ describe("launch polish public and invoice UX", () => {
     expect(plans.Enterprise).toMatchObject({ monthlyCents: 14900, yearlyCents: 149000 });
     expect(pricing).toContain("monthlyCents");
     expect(pricing).toContain("yearlyCents");
-    expect(pricing).toContain('<PricingCrewCallout monthlyCents={plans.Professional.monthlyCents} comparisonHref="/vs-housecall-pro" />');
-    expect(pricing).not.toContain("Housecall Pro");
+    expect(pricing).toContain("<PricingCrewCallout monthlyCents={plans.Professional.monthlyCents} />");
+    expect(pricing).toContain("<PricingComparisonOverview />");
+    expect(pricing).not.toContain("$1,049");
   });
   it("removes customer-facing text delivery and exposes consistent invoice actions", () => {
     expect(estimate).not.toMatch(/Send by Text|Text Invoice|SMS Invoice/i);

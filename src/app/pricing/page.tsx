@@ -1,16 +1,22 @@
 import Link from "next/link";
-import { plans } from "@/lib/billing/config";
-import { billingFeatureLabel } from "@/lib/billing/presentation";
 import { auth } from "@/auth";
 import AppLayout from "@/components/layout/AppLayout";
+import PricingComparisonOverview from "@/components/marketing/PricingComparisonOverview";
+import PricingCrewCallout from "@/components/marketing/PricingCrewCallout";
 import PlanCards from "@/features/billing/PlanCards";
 import { requireTenantContext } from "@/lib/auth/tenant";
+import { plans } from "@/lib/billing/config";
 import { getCompanyEntitlements } from "@/lib/billing/entitlements";
+import { billingFeatureLabel } from "@/lib/billing/presentation";
 import { isBillingAvailable } from "@/lib/billing/stripe";
 import { marketingMetadata } from "@/lib/marketing/metadata";
-import PricingCrewCallout from "@/components/marketing/PricingCrewCallout";
 
-export const metadata = marketingMetadata("/pricing", "JunkQuote Pro Pricing | Junk Removal Software", "Simple per-company pricing for JunkQuote Pro. Compare plans for junk removal estimating, job management, scheduling, customers, and business operations.");
+export const metadata = marketingMetadata(
+  "/pricing",
+  "JunkQuote Pro Pricing | Junk Removal Software",
+  "See JunkQuote Pro's per-company pricing and compare its junk-removal workflow with Housecall Pro, Jobber, and JunkIQ.",
+);
+
 export default async function PricingPage() {
   if (await auth()) {
     const context = await requireTenantContext();
@@ -18,5 +24,44 @@ export default async function PricingPage() {
     const billingEnabled = isBillingAvailable();
     return <AppLayout><main className="contrast-controls mx-auto max-w-6xl p-6 sm:p-10"><h1 className="text-4xl font-bold">Plans built for junk removal teams</h1><p className="mt-2 text-slate-600">Choose monthly or yearly billing. Checkout and payment details are handled securely by Stripe.</p>{!billingEnabled&&<div className="surface-warning mt-5 rounded-xl border border-amber-300 p-4"><strong>Online billing is temporarily unavailable.</strong><p>Your existing account and application data remain available. Contact a platform administrator to change plans.</p></div>}<div className="mt-8"><PlanCards current={entitlements.subscription?.plan} billingEnabled={billingEnabled}/></div></main></AppLayout>;
   }
-  return <main className="min-h-screen overflow-x-hidden bg-[#050806] px-5 py-10 text-white sm:px-8"><div className="mx-auto max-w-7xl"><nav aria-label="Public navigation" className="flex min-h-11 flex-wrap items-center justify-between gap-x-4"><Link href="/" className="inline-flex min-h-11 items-center text-lg font-black tracking-tight">JunkQuote <span className="ml-1 text-[#a4ef29]">Pro</span></Link><div className="flex flex-wrap items-center justify-end gap-1"><Link href="/features" className="inline-flex min-h-11 items-center px-3 font-semibold text-slate-200">Features</Link><Link href="/pricing" aria-current="page" className="inline-flex min-h-11 items-center px-3 font-semibold text-slate-200">Pricing</Link><Link href="/about" className="inline-flex min-h-11 items-center px-3 font-semibold text-slate-200">About</Link><Link href="/sign-in" className="inline-flex min-h-11 items-center px-3 font-semibold text-slate-200">Sign in</Link></div></nav><header className="mx-auto max-w-3xl py-14 text-center"><p className="font-bold uppercase tracking-[.2em] text-[#a4ef29]">Simple pricing</p><h1 className="mt-3 text-4xl font-black sm:text-6xl">Choose the plan that fits your operation.</h1><p className="mt-5 text-lg text-slate-300">Start with 30 days of full Professional access. No credit card required. If you do not subscribe, you automatically move to Free.</p><p className="mt-4 font-bold text-[#a4ef29]">One company price. No per-seat fees; each plan includes the user limit shown below.</p><PricingCrewCallout monthlyCents={plans.Professional.monthlyCents} comparisonHref="/vs-housecall-pro" /></header><div className="grid gap-5 lg:grid-cols-4">{Object.values(plans).map(plan=>{const annualSaving=(plan.monthlyCents*12-plan.yearlyCents)/100;return <article key={plan.name} className={`relative rounded-2xl border p-6 ${plan.name==="Professional"?"border-[#a4ef29] bg-[#10180d]":"border-white/15 bg-[#0d130e]"}`}>{plan.name==="Professional"&&<span className="absolute right-4 top-4 max-w-32 rounded-full bg-[#a4ef29] px-3 py-1 text-center text-xs font-black leading-tight text-black">Recommended for Growing Teams</span>}<h2 className={`text-2xl font-black ${plan.name==="Professional"?"pr-32":""}`}>{plan.name}</h2><p className="mt-2 min-h-12 text-sm text-slate-300">{plan.description}</p><p className="mt-5 text-3xl font-black">${plan.monthlyCents/100}<span className="text-sm font-normal text-slate-400">/month</span></p>{plan.name==="Free"?<p className="mt-2 min-h-10 text-sm text-slate-300">Free stays available.</p>:<p className="mt-2 min-h-10 text-sm text-slate-300">${plan.yearlyCents/100}/year · Save ${annualSaving}/year</p>}<ul className="mt-5 space-y-2 text-sm"><li>{plan.monthlyEstimateLimit===Number.MAX_SAFE_INTEGER?"Unlimited estimates":`${plan.monthlyEstimateLimit} estimates per month`}</li><li>{plan.userLimit} user{plan.userLimit===1?"":"s"}</li>{plan.features.slice(0,6).map(feature=><li key={feature}>✓ {billingFeatureLabel(feature)}</li>)}</ul><Link href="/sign-up" className={`mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-xl px-4 text-center font-bold ${plan.name==="Professional"?"bg-[#a4ef29] text-black":"border border-white/20"}`}>Start Your 30-Day Professional Trial</Link></article>})}</div><p className="mt-10 text-center text-slate-300">Monthly or yearly billing is available for Starter, Professional, and Enterprise. You can upgrade at any time.</p></div></main>;
+
+  return (
+    <main className="min-h-screen overflow-x-hidden bg-[#050806] text-white">
+      <header className="border-b border-[#a4ef29]/20 bg-black/80">
+        <nav aria-label="Public navigation" className="mx-auto flex min-h-16 max-w-7xl flex-wrap items-center justify-between gap-x-4 px-5 py-2 sm:px-8">
+          <Link href="/" className="inline-flex min-h-11 items-center text-lg font-black tracking-tight">JunkQuote <span className="ml-1 text-[#a4ef29]">Pro</span></Link>
+          <div className="flex flex-wrap items-center justify-end gap-1"><Link href="/features" className="inline-flex min-h-11 items-center px-3 font-semibold text-slate-200">Features</Link><Link href="/pricing" aria-current="page" className="inline-flex min-h-11 items-center px-3 font-semibold text-slate-200">Pricing</Link><Link href="/about" className="inline-flex min-h-11 items-center px-3 font-semibold text-slate-200">About</Link><Link href="/sign-in" className="inline-flex min-h-11 items-center px-3 font-semibold text-slate-200">Sign in</Link></div>
+        </nav>
+      </header>
+
+      <section className="border-b border-white/10 px-5 py-16 text-center sm:px-8 sm:py-24">
+        <div className="mx-auto max-w-4xl">
+          <p className="font-bold uppercase tracking-[.2em] text-[#a4ef29]">Pricing and comparisons</p>
+          <h1 className="mt-3 text-4xl font-black tracking-tight sm:text-6xl">Simple pricing. See how JunkQuote Pro compares.</h1>
+          <p className="mx-auto mt-5 max-w-3xl text-lg text-slate-300">Per-company pricing for software built around junk removal estimating and operations. Start with 30 days of full Professional access—no credit card required.</p>
+          <p className="mt-4 font-bold text-[#a4ef29]">One company price. No per-seat fees; each plan includes the user limit shown below.</p>
+          <PricingCrewCallout monthlyCents={plans.Professional.monthlyCents} />
+        </div>
+      </section>
+
+      <section aria-labelledby="plans-heading" className="px-5 py-16 sm:px-8">
+        <div className="mx-auto max-w-7xl">
+          <p className="text-sm font-bold uppercase tracking-[.2em] text-[#a4ef29]">JunkQuote Pro plans</p>
+          <h2 id="plans-heading" className="mt-3 text-3xl font-black sm:text-5xl">Choose the plan that fits your operation.</h2>
+          <p className="mt-4 max-w-3xl text-lg text-slate-300">If you do not subscribe after the trial, your company automatically moves to Free.</p>
+          <div className="mt-10 grid gap-5 lg:grid-cols-4">
+            {Object.values(plans).map((plan) => {
+              const annualSaving = (plan.monthlyCents * 12 - plan.yearlyCents) / 100;
+              return <article key={plan.name} className={`relative rounded-2xl border p-6 ${plan.name === "Professional" ? "border-[#a4ef29] bg-[#10180d]" : "border-white/15 bg-[#0d130e]"}`}>{plan.name === "Professional" && <span className="absolute right-4 top-4 max-w-32 rounded-full bg-[#a4ef29] px-3 py-1 text-center text-xs font-black leading-tight text-black">Recommended for Growing Teams</span>}<h3 className={`text-2xl font-black ${plan.name === "Professional" ? "pr-32" : ""}`}>{plan.name}</h3><p className="mt-2 min-h-12 text-sm text-slate-300">{plan.description}</p><p className="mt-5 text-3xl font-black">${plan.monthlyCents / 100}<span className="text-sm font-normal text-slate-400">/month</span></p>{plan.name === "Free" ? <p className="mt-2 min-h-10 text-sm text-slate-300">Free stays available.</p> : <p className="mt-2 min-h-10 text-sm text-slate-300">${plan.yearlyCents / 100}/year · Save ${annualSaving}/year</p>}<ul className="mt-5 space-y-2 text-sm"><li>{plan.monthlyEstimateLimit === Number.MAX_SAFE_INTEGER ? "Unlimited estimates" : `${plan.monthlyEstimateLimit} estimates per month`}</li><li>{plan.userLimit} user{plan.userLimit === 1 ? "" : "s"}</li>{plan.features.slice(0, 6).map((feature) => <li key={feature}>✓ {billingFeatureLabel(feature)}</li>)}</ul><Link href="/sign-up" className={`mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-xl px-4 text-center font-bold ${plan.name === "Professional" ? "bg-[#a4ef29] text-black" : "border border-white/20"}`}>Start Your 30-Day Professional Trial</Link></article>;
+            })}
+          </div>
+          <p className="mt-10 text-center text-slate-300">Monthly or yearly billing is available for Starter, Professional, and Enterprise. You can upgrade at any time.</p>
+        </div>
+      </section>
+
+      <PricingComparisonOverview />
+
+      <footer className="px-5 py-12 text-center sm:px-8"><h2 className="text-3xl font-black">Ready to see how it fits your company?</h2><Link href="/sign-up" className="mt-6 inline-flex min-h-12 items-center justify-center rounded-xl bg-[#a4ef29] px-6 py-3 font-black text-black">Start Your 30-Day Professional Trial</Link><p className="mt-4 text-sm text-slate-400">No credit card required. Full Professional access for 30 days.</p></footer>
+    </main>
+  );
 }

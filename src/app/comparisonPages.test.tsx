@@ -65,11 +65,13 @@ describe("public competitor comparison pages", () => {
     }
   });
 
-  it("adds all comparison pages to the sitemap and links pricing to Housecall Pro comparison", () => {
+  it("adds all comparison pages to the sitemap and pricing overview", () => {
     const urls = sitemap().map((entry) => entry.url);
     for (const path of ["/vs-housecall-pro", "/vs-jobber", "/vs-junkiq"]) expect(urls).toContain(`https://junkquoteprohq.com${path}`);
     const pricing = readFileSync(resolve(process.cwd(), "src/app/pricing/page.tsx"), "utf8");
-    expect(pricing).toContain('comparisonHref="/vs-housecall-pro"');
+    const overview = readFileSync(resolve(process.cwd(), "src/components/marketing/PricingComparisonOverview.tsx"), "utf8");
+    expect(pricing).toContain("<PricingComparisonOverview />");
+    for (const path of ["/vs-housecall-pro", "/vs-jobber", "/vs-junkiq"]) expect(overview).toContain(path);
   });
 
   it("avoids unsupported competitor absence and savings claims", () => {

@@ -15,6 +15,7 @@ export type ComparisonPageData = {
   competitorPricing: string;
   competitorPricingUrl: string;
   comparisonAnswer: string;
+  overview: { pricing: string; users: string; trial: string };
   sources: { label: string; url: string }[];
 };
 
@@ -45,6 +46,7 @@ export const comparisonPages: Record<ComparisonPageData["slug"], ComparisonPageD
     ],
     competitorPricing: "Housecall Pro publishes multiple plans with different included-user allowances. Check its official pricing page for the current plan and team-size total.",
     competitorPricingUrl: "https://www.housecallpro.com/pricing/",
+    overview: { pricing: "View current pricing", users: "Plan and user allowance dependent", trial: "View current terms" },
     comparisonAnswer: "JunkQuote Pro is purpose-built for junk removal estimating and operations. Housecall Pro offers a broader field-service platform. Compare the workflow fit, current plan details, and total price for your team.",
     sources: [
       { label: "Housecall Pro pricing and plan details", url: "https://www.housecallpro.com/pricing/" },
@@ -69,6 +71,7 @@ export const comparisonPages: Record<ComparisonPageData["slug"], ComparisonPageD
     ],
     competitorPricing: "Jobber publishes several plans and asks for team size when recommending a plan. Check its official pricing page for the current total for your team.",
     competitorPricingUrl: "https://www.getjobber.com/pricing/",
+    overview: { pricing: "View current pricing", users: "Plan and team-size dependent", trial: "View current terms" },
     comparisonAnswer: "JunkQuote Pro focuses specifically on junk removal workflows. Jobber supports many home and commercial service industries. Compare how each estimating flow matches the way your crew quotes junk and verify the current plan total for your team.",
     sources: [{ label: "Jobber pricing and feature comparison", url: "https://www.getjobber.com/pricing/" }],
   },
@@ -91,6 +94,7 @@ export const comparisonPages: Record<ComparisonPageData["slug"], ComparisonPageD
     ],
     competitorPricing: "JunkIQ currently publishes one $79/month price with unlimited users and a 7-day free trial. Verify its official page before choosing because competitor terms can change.",
     competitorPricingUrl: "https://junkiq.app/",
+    overview: { pricing: "$79/month", users: "Unlimited users", trial: "7-day free trial" },
     comparisonAnswer: "Both are built for junk removal companies. The useful comparison is how each product handles estimating, approvals, dispatch, crew operations, fleet work, and the current total price for your company.",
     sources: [{ label: "JunkIQ product, pricing, and trial details", url: "https://junkiq.app/" }],
   },
