@@ -66,12 +66,21 @@ afterEach(() => {
 });
 
 describe("invoice email review UI", () => {
+  it("renders a newly-created invoice without an optional job relation", () => {
+    render(<InvoiceDetail initialInvoice={invoice as never} />);
+
+    expect(screen.getByRole("heading", { name: "INV-123" })).toBeTruthy();
+    expect(screen.getByText("Balance due")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Send Invoice" })).toBeTruthy();
+  });
+
   it("invokes the real action binding once with reviewed invoice data", async () => {
     let resolveSend!: (value: unknown) => void;
     actions.sendInvoice.mockReturnValue(new Promise((resolve) => { resolveSend = resolve; }));
     render(<InvoiceDetail initialInvoice={invoice as never} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Email Invoice" }));
+    const startingUrl = window.location.href;
+    fireEvent.click(screen.getByRole("button", { name: "Send Invoice" }));
     fireEvent.change(screen.getByLabelText("Recipient"), {
       target: { value: "reviewed@example.com" },
     });
@@ -95,6 +104,8 @@ describe("invoice email review UI", () => {
     await waitFor(() => expect(screen.getByRole("status").textContent).toContain(
       "Invoice emailed to reviewed@example.com.",
     ));
+    expect(window.location.href).toBe(startingUrl);
+    expect(screen.getByRole("heading", { name: "INV-123" })).toBeTruthy();
   });
 
   it("keeps the review UI open and shows a safe action error", async () => {
@@ -104,7 +115,7 @@ describe("invoice email review UI", () => {
     });
     render(<InvoiceDetail initialInvoice={invoice as never} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Email Invoice" }));
+    fireEvent.click(screen.getByRole("button", { name: "Send Invoice" }));
     fireEvent.click(screen.getByRole("button", { name: "Send Invoice" }));
 
     await waitFor(() => expect(screen.getByRole("alert").textContent).toContain(

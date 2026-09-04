@@ -1,7 +1,8 @@
 import type { CommunicationChannel, CommunicationRecipientType, Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { enqueueCommunication } from "./queueCommunication";
+import { enqueueCommunication, sendOrEnqueueCommunication } from "./queueCommunication";
 import { beginDelivery, markDeliveryFailed } from "./delivery";
+import { selectCommunicationProvider, type CommunicationProvider } from "./provider";
 import { nextAllowedDelivery } from "./quietHours";
 import { renderCommunicationTemplate, sanitizeCommunicationText, validateCommunicationTemplate } from "./templates";
 
@@ -201,6 +202,7 @@ function safeError(error:unknown) { return (error instanceof Error ? error.messa
 export async function manualSendCommunication(input:{
   companyId:string;actingUserId:string;sourceType:string;sourceId:string;customerId:string;subject:string;body:string;
 }) {
+  console.info(JSON.stringify({event:"COMMUNICATION_MANUAL_SEND_STARTED",companyId:input.companyId,userId:input.actingUserId,sourceType:input.sourceType,sourceId:input.sourceId}));
   const customer = await prisma.customer.findFirst({ where:{id:input.customerId,companyId:input.companyId},select:{id:true,email:true} });
   if (!customer?.email) throw new Error("Customer email is unavailable.");
   const authorized = input.sourceType === "Customer" ? input.sourceId === customer.id
@@ -212,7 +214,32 @@ export async function manualSendCommunication(input:{
   const body = sanitizeCommunicationText(input.body), subject = sanitizeCommunicationText(input.subject);
   if (!body || !subject) throw new Error("Subject and message are required.");
   const event = await prisma.communicationEvent.create({ data:{companyId:input.companyId,eventType:"MANUAL_SEND",sourceType:input.sourceType,sourceId:input.sourceId,payload:{customerId:customer.id},dedupeKey:`manual:${input.actingUserId}:${crypto.randomUUID()}`,status:"Processed",processedAt:new Date()} });
-  return createDelivery({companyId:input.companyId,eventId:event.id,templateId:null,channel:"Email",recipientType:"Customer",recipientId:customer.id,destination:customer.email,subject,body,scheduledFor:new Date(),delayReason:null,sourceType:input.sourceType,sourceId:input.sourceId});
+  let provider: CommunicationProvider;
+  try {
+    provider = selectCommunicationProvider();
+  } catch (error) {
+    const value=error as {code?:unknown;details?:{providerStatus?:unknown}};
+    console.error(JSON.stringify({event:"COMMUNICATION_MANUAL_PROVIDER_FAILED",companyId:input.companyId,userId:input.actingUserId,sourceType:input.sourceType,sourceId:input.sourceId,provider:process.env.EMAIL_PROVIDER?.trim()||"unconfigured",applicationErrorCode:typeof value?.code==="string"?value.code:undefined,providerStatus:typeof value?.details?.providerStatus==="number"?value.details.providerStatus:undefined,hasResendApiKey:Boolean(process.env.RESEND_API_KEY),hasEmailFrom:Boolean(process.env.EMAIL_FROM)}));
+    throw error;
+  }
+  const tracedProvider: CommunicationProvider = {
+    name: provider.name,
+    async send(message, options) {
+      console.info(JSON.stringify({event:"COMMUNICATION_MANUAL_PROVIDER_CALL_STARTED",companyId:input.companyId,userId:input.actingUserId,sourceType:input.sourceType,sourceId:input.sourceId,provider:provider.name??"custom"}));
+      try {
+        const result = await provider.send(message, options);
+        console.info(JSON.stringify({event:"COMMUNICATION_MANUAL_PROVIDER_ACCEPTED",companyId:input.companyId,userId:input.actingUserId,sourceType:input.sourceType,sourceId:input.sourceId,provider:provider.name??"custom",providerStatus:result.providerStatus}));
+        return result;
+      } catch (error) {
+        const value=error as {code?:unknown;details?:{providerStatus?:unknown}};
+        console.error(JSON.stringify({event:"COMMUNICATION_MANUAL_PROVIDER_FAILED",companyId:input.companyId,userId:input.actingUserId,sourceType:input.sourceType,sourceId:input.sourceId,provider:provider.name??"custom",applicationErrorCode:typeof value?.code==="string"?value.code:undefined,providerStatus:typeof value?.details?.providerStatus==="number"?value.details.providerStatus:undefined}));
+        throw error;
+      }
+    },
+  };
+  const sent = await sendOrEnqueueCommunication(input.companyId,{channel:"email",to:customer.email,subject,body,idempotencyKey:`manual:${event.id}`,createdByUserId:input.actingUserId},{workersEnabled:false,provider:tracedProvider});
+  if(sent.mode!=="synchronous")throw new Error("Manual email was not accepted by the provider.");
+  return prisma.communicationDelivery.update({where:{id:sent.delivery.id},data:{eventId:event.id,recipientType:"Customer",recipientId:customer.id,destination:customer.email,subject,renderedBody:body,scheduledFor:new Date()}});
 }
 
 export async function emitCommunicationEventForSource(input:{

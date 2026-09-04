@@ -72,7 +72,7 @@ export async function sendOrEnqueueCommunication(
       communicationId: delivery.id,
     });
     await markDeliverySent(delivery.id, result.providerMessageId);
-    return { mode: "synchronous" as const, result };
+    return { mode: "synchronous" as const, result, delivery };
   } catch (error) {
     await markDeliveryFailed(delivery.id, error);
     throw error;

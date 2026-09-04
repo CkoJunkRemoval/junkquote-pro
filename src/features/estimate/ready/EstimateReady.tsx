@@ -66,7 +66,11 @@ export default function EstimateReady() {
       return delivery.approvalUrl;
     } catch (error) {
       setDeliveryError(
-        error instanceof Error ? error.message : "Unable to prepare estimate delivery."
+        method === "email"
+          ? "We couldn't send this estimate email. Please try again."
+          : error instanceof Error
+            ? error.message
+            : "Unable to prepare estimate delivery."
       );
       return null;
     } finally {
@@ -189,7 +193,7 @@ export default function EstimateReady() {
                   type="button"
                   disabled={isPreparingDelivery}
                   onClick={() => void prepareDelivery("email").then((url) => {
-                    if (url) setDeliveryMessage("Email delivery is not connected yet. Share the generated link manually.");
+                    if (url) setDeliveryMessage("Estimate email sent successfully.");
                   })}
                 >
                   Send by Email

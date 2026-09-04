@@ -30,7 +30,7 @@ describe("launch polish public and invoice UX", () => {
   });
   it("removes customer-facing text delivery and exposes consistent invoice actions", () => {
     expect(estimate).not.toMatch(/Send by Text|Text Invoice|SMS Invoice/i);
-    for (const label of ["Email Invoice", "Copy Payment Link", "Download PDF"]) expect(invoice).toContain(label);
+    for (const label of ["Send Invoice", "Copy Payment Link", "Download PDF"]) expect(invoice).toContain(label);
     expect(invoice).toContain("Payment link copied");
     expect(invoice).toContain('role="alert"');
   });

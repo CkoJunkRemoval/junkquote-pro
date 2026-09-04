@@ -10,5 +10,6 @@ export async function prepareEstimateDeliveryAction(
   estimateId: string,
   method: EstimateDeliveryMethod
 ) {
-  const { companyId } = await requireCompanyRole("Owner", "Admin", "Manager", "Office"); return prepareEstimateDelivery(companyId, estimateId, method);
+  const { companyId, user } = await requireCompanyRole("Owner", "Admin", "Manager", "Office");
+  return prepareEstimateDelivery(companyId, estimateId, method, user.id);
 }

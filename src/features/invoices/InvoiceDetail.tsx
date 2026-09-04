@@ -150,7 +150,7 @@ export default function InvoiceDetail({
             onClick={() => {
               setError(null);
               setMessage(null);
-              setShowEmailForm(true);
+              setShowEmailForm((current) => !current);
             }}
             disabled={
               saving ||
@@ -159,7 +159,7 @@ export default function InvoiceDetail({
             }
             className="min-h-11 rounded-lg bg-blue-700 px-4 py-2 font-semibold text-white"
           >
-            {invoice.sentAt ? "Resend Invoice" : "Email Invoice"}
+            {showEmailForm ? "Close Email Review" : invoice.sentAt ? "Resend Invoice" : "Send Invoice"}
           </button>
           <button
             type="button"

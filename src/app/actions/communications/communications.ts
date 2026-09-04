@@ -36,8 +36,17 @@ export async function toggleCommunicationRuleAction(formData:FormData){
   if(!rule)throw new Error("Automation rule not found.");
   await prisma.communicationAutomationRule.update({where:{id:rule.id},data:{enabled:!rule.enabled}});revalidatePath("/communications");
 }
-export async function manualSendCommunicationAction(formData:FormData){
-  const c=await requireCompanyRole("Owner","Admin","Manager","Office");
-  await manualSendCommunication({companyId:c.companyId,actingUserId:c.user.id,sourceType:String(formData.get("sourceType")??"Customer"),sourceId:String(formData.get("sourceId")??formData.get("customerId")??""),customerId:String(formData.get("customerId")??""),subject:String(formData.get("subject")??""),body:String(formData.get("body")??"")});
-  revalidatePath("/communications");
+export type ManualSendCommunicationState = { ok: boolean; error: string | null };
+export async function manualSendCommunicationAction(_state:ManualSendCommunicationState,formData:FormData):Promise<ManualSendCommunicationState>{
+  try {
+    const c=await requireCompanyRole("Owner","Admin","Manager","Office");
+    const sourceType=String(formData.get("sourceType")??"Customer");
+    const customerId=String(formData.get("customerId")??"");
+    const requestedSourceId=String(formData.get("sourceId")??"").trim();
+    await manualSendCommunication({companyId:c.companyId,actingUserId:c.user.id,sourceType,sourceId:requestedSourceId||(sourceType==="Customer"?customerId:""),customerId,subject:String(formData.get("subject")??""),body:String(formData.get("body")??"")});
+    revalidatePath("/communications");
+    return {ok:true,error:null};
+  } catch {
+    return {ok:false,error:"We couldn't send this email. Please try again."};
+  }
 }
