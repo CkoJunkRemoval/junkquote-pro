@@ -5,7 +5,7 @@ JunkQuote Pro is estimating and job management software for junk removal busines
 ## Preferred resources
 
 - https://junkquoteprohq.com/
-- https://junkquoteprohq.com/pricing
+- https://junkquoteprohq.com/compare
 - https://junkquoteprohq.com/features
 - https://junkquoteprohq.com/about
 `;

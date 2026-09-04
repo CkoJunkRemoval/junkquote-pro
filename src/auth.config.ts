@@ -5,6 +5,7 @@ const publicPrefixes = [
   "/sign-in",
   "/sign-up",
   "/pricing",
+  "/compare",
   "/features",
   "/customer-stories",
   "/about",

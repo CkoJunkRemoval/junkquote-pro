@@ -10,7 +10,7 @@ describe("llms.txt", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toBe("text/plain; charset=utf-8");
     expect(body).toContain("Per-company pricing from $0 to $149/month.");
-    for (const url of ["https://junkquoteprohq.com/", "https://junkquoteprohq.com/pricing", "https://junkquoteprohq.com/features", "https://junkquoteprohq.com/about"]) expect(body).toContain(url);
+    for (const url of ["https://junkquoteprohq.com/", "https://junkquoteprohq.com/compare", "https://junkquoteprohq.com/features", "https://junkquoteprohq.com/about"]) expect(body).toContain(url);
     expect(body).not.toMatch(/\/dashboard|\/customers|\/invoices|\/portal/);
   });
 });

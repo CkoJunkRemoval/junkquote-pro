@@ -65,12 +65,13 @@ describe("public competitor comparison pages", () => {
     }
   });
 
-  it("adds all comparison pages to the sitemap and pricing overview", () => {
+  it("adds all comparison pages to the sitemap and comparison overview", () => {
     const urls = sitemap().map((entry) => entry.url);
     for (const path of ["/vs-housecall-pro", "/vs-jobber", "/vs-junkiq"]) expect(urls).toContain(`https://junkquoteprohq.com${path}`);
-    const pricing = readFileSync(resolve(process.cwd(), "src/app/pricing/page.tsx"), "utf8");
+    const pricing = readFileSync(resolve(process.cwd(), "src/app/compare/page.tsx"), "utf8");
     const overview = readFileSync(resolve(process.cwd(), "src/components/marketing/PricingComparisonOverview.tsx"), "utf8");
     expect(pricing).toContain("<PricingComparisonOverview />");
+    expect(readFileSync(resolve(process.cwd(), "src/components/marketing/ComparisonPage.tsx"), "utf8")).toContain('href="/compare"');
     for (const path of ["/vs-housecall-pro", "/vs-jobber", "/vs-junkiq"]) expect(overview).toContain(path);
   });
 

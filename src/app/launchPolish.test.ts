@@ -8,7 +8,7 @@ const read = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8"
 describe("launch polish public and invoice UX", () => {
   const home = read("src/app/page.tsx");
   const homepageContent = `${home}\n${read("src/lib/marketing/homepage.ts")}`;
-  const pricing = read("src/app/pricing/page.tsx");
+  const pricing = read("src/app/compare/page.tsx");
   const invoice = read("src/features/invoices/InvoiceDetail.tsx");
   const estimate = read("src/features/estimate/ready/EstimateReady.tsx");
   const mutation = read("src/app/actions/invoices/invoiceMutations.ts");

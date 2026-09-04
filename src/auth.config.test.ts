@@ -28,6 +28,7 @@ describe("production route protection", () => {
     expect(isPublicAuthPath("/sign-in")).toBe(true);
     expect(isPublicAuthPath("/reset-password/token")).toBe(true);
     expect(isPublicAuthPath("/customer-stories")).toBe(true);
+    expect(isPublicAuthPath("/compare")).toBe(true);
     expect(isPublicAuthPath("/llms.txt")).toBe(true);
     expect(isPublicAuthPath("/customers")).toBe(false);
     expect(isPublicAuthPath("/customers/customer-id")).toBe(false);
