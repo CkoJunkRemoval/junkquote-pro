@@ -19,9 +19,9 @@ export function buildProductionContentSecurityPolicy(storageUrl?: string) {
     `img-src 'self' data: blob:${storageOrigin ? ` ${storageOrigin}` : ""}`,
     "font-src 'self' data:",
     "style-src 'self' 'unsafe-inline'",
-    "script-src 'self' 'unsafe-inline' https://js.stripe.com",
+    "script-src 'self' 'unsafe-inline' https://js.stripe.com https://in.heycatch.ai",
     "worker-src 'self' blob:",
-    "connect-src 'self' https://api.stripe.com https://*.supabase.co https://*.vercel-insights.com",
+    "connect-src 'self' https://api.stripe.com https://*.supabase.co https://*.vercel-insights.com https://in.heycatch.ai",
     "frame-src https://js.stripe.com https://hooks.stripe.com",
     "upgrade-insecure-requests",
   ].join("; ");

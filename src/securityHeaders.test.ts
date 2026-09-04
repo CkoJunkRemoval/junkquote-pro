@@ -24,6 +24,9 @@ describe("security headers", () => {
     );
     expect(headers.find((header) => header.key === "Content-Security-Policy")?.value)
       .not.toContain("'unsafe-eval'");
+    const csp = headers.find((header) => header.key === "Content-Security-Policy")?.value;
+    expect(csp).toContain("script-src 'self' 'unsafe-inline' https://js.stripe.com https://in.heycatch.ai");
+    expect(csp).toContain("connect-src 'self' https://api.stripe.com https://*.supabase.co https://*.vercel-insights.com https://in.heycatch.ai");
   });
 
   it("permits the evaluator required by the Next.js development runtime only in development", async () => {
